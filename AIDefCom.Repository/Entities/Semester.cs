@@ -1,0 +1,21 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace AIDefCom.Repository.Entities
+{
+    public class Semester
+    {
+        public int Id { get; set; } // Primary Key
+        public string SemesterName { get; set; } = string.Empty;
+        public int Year { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+
+        // Foreign Key to Major
+        public int MajorId { get; set; }
+        public Major? Major { get; set; }
+    }
+}
