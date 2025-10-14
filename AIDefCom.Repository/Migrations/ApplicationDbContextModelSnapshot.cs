@@ -172,8 +172,9 @@ namespace AIDefCom.Repository.Migrations
                     b.Property<TimeSpan>("EndTime")
                         .HasColumnType("time");
 
-                    b.Property<int>("GroupId")
-                        .HasColumnType("int");
+                    b.Property<string>("GroupId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Location")
                         .IsRequired()
@@ -195,11 +196,12 @@ namespace AIDefCom.Repository.Migrations
 
             modelBuilder.Entity("AIDefCom.Repository.Entities.Group", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<string>("ProjectCode")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("SemesterId")
                         .HasColumnType("int");
@@ -277,8 +279,9 @@ namespace AIDefCom.Repository.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("GroupId")
-                        .HasColumnType("int");
+                    b.Property<string>("GroupId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("NoteContent")
                         .HasColumnType("nvarchar(max)");
@@ -473,8 +476,9 @@ namespace AIDefCom.Repository.Migrations
                     b.Property<string>("Gender")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("GroupId")
-                        .HasColumnType("int");
+                    b.Property<string>("GroupId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("Role")
                         .HasColumnType("nvarchar(max)");
