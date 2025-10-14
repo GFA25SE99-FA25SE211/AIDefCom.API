@@ -11,7 +11,7 @@ namespace AIDefCom.Repository.Entities
         public int Id { get; set; } // Primary Key
 
         // Foreign Key to Group
-        public int GroupId { get; set; }
+        public string GroupId { get; set; }
         public Group? Group { get; set; }
 
         public string Location { get; set; } = string.Empty;

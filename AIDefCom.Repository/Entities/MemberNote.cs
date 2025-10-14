@@ -15,7 +15,7 @@ namespace AIDefCom.Repository.Entities
         public AppUser? User { get; set; }
 
         // Foreign Key to Group
-        public int GroupId { get; set; }
+        public string GroupId { get; set; }
         public Group? Group { get; set; }
 
         public string? NoteContent { get; set; }

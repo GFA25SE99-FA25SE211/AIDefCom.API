@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AIDefCom.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class UpdateProjectCode : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -286,8 +286,8 @@ namespace AIDefCom.Repository.Migrations
                 name: "Groups",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ProjectCode = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     TopicTitle_EN = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     TopicTitle_VN = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     SemesterId = table.Column<int>(type: "int", nullable: false),
@@ -310,7 +310,7 @@ namespace AIDefCom.Repository.Migrations
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    GroupId = table.Column<int>(type: "int", nullable: false),
+                    GroupId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     Location = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     DefenseDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     StartTime = table.Column<TimeSpan>(type: "time", nullable: false),
@@ -336,7 +336,7 @@ namespace AIDefCom.Repository.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    GroupId = table.Column<int>(type: "int", nullable: false),
+                    GroupId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     NoteContent = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
@@ -363,7 +363,7 @@ namespace AIDefCom.Repository.Migrations
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    GroupId = table.Column<int>(type: "int", nullable: false),
+                    GroupId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
                     Gender = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Role = table.Column<string>(type: "nvarchar(max)", nullable: true)
