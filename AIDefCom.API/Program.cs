@@ -1,14 +1,14 @@
 using AIDefCom.API.Mapper;
 using AIDefCom.Repository;
 using AIDefCom.Repository.Entities;
+using AIDefCom.Repository.UnitOfWork;
 using AIDefCom.Service.Dto.Account;
-using AIDefCom.Service.Services.EmailService; 
+using AIDefCom.Service.Services.EmailService;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System;
 using System.Collections.Concurrent;
 using System.Text;
 
@@ -20,14 +20,44 @@ namespace AIDefCom.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // 1?? Controller + Swagger
             builder.Services.AddControllers();
-
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
 
-            builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(
-                builder.Configuration.GetConnectionString("DefaultConnection")));
+            // ?? Swagger + JWT Config
+            builder.Services.AddSwaggerGen(option =>
+            {
+                option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    In = ParameterLocation.Header,
+                    Description = "Enter token: Bearer {your token}",
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.Http,
+                    BearerFormat = "JWT",
+                    Scheme = "Bearer"
+                });
 
+                option.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        new string[] {}
+                    }
+                });
+            });
+
+            // 2?? Database
+            builder.Services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            // 3?? Identity
             builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
             {
                 options.Password.RequiredLength = 6;
@@ -39,6 +69,7 @@ namespace AIDefCom.API
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
+            // 4?? JWT Authentication
             var secretKey = builder.Configuration["AppSettings:Token"];
             if (string.IsNullOrEmpty(secretKey))
                 throw new InvalidOperationException("JWT Secret Key is missing in appsettings.json.");
@@ -69,35 +100,13 @@ namespace AIDefCom.API
                 options.Scope.Add("https://www.googleapis.com/auth/calendar.events");
             });
 
-            builder.Services.AddSwaggerGen(option =>
-            {
-                option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                {
-                    In = ParameterLocation.Header,
-                    Description = "Please enter a valid token",
-                    Name = "Authorization",
-                    Type = SecuritySchemeType.Http,
-                    BearerFormat = "JWT",
-                    Scheme = "Bearer"
-                });
-                option.AddSecurityRequirement(new OpenApiSecurityRequirement
-                {
-                    {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
-                        },
-                        new string[] { }
-                    }
-                });
-            });
-
+            // 5?? Authorization
             builder.Services.AddAuthorization();
+
+            // 6?? AutoMapper
             builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
+
+            // 7?? Cache & Session
             builder.Services.AddDistributedMemoryCache();
             builder.Services.AddSession(options =>
             {
@@ -106,6 +115,7 @@ namespace AIDefCom.API
                 options.Cookie.IsEssential = true;
             });
 
+            // 8?? CORS
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowAll", policy =>
@@ -116,21 +126,29 @@ namespace AIDefCom.API
                 });
             });
 
-            //// ? Thêm SignalR vào d?ch v?
-            //builder.Services.AddSignalR();
-
-            // C?u hình Email Service
-            var emailConfig = builder.Configuration.GetSection("EmailConfiguration").Get<EmailConfiguration>()
+            // 9?? Email Service Config
+            var emailConfig = builder.Configuration
+                .GetSection("EmailConfiguration")
+                .Get<EmailConfiguration>()
                 ?? throw new InvalidOperationException("Missing Email Configuration in appsettings.json.");
 
-            builder.Services.Configure<EmailConfiguration>(builder.Configuration.GetSection("EmailConfiguration"));
+            builder.Services.Configure<EmailConfiguration>(
+                builder.Configuration.GetSection("EmailConfiguration"));
+
             builder.Services.AddSingleton(emailConfig);
             builder.Services.AddSingleton(new ConcurrentDictionary<string, OtpEntry>());
             builder.Services.AddTransient<IEmailService, EmailService>();
+
+            // ?? Repository + UnitOfWork + Excel Import Service
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+            // ? (Tu? ch?n) Thêm AddProjectServices n?u b?n ?ã gom DI khác ? ?ó
             builder.Services.AddProjectServices();
 
+            // ?? Build app
             var app = builder.Build();
 
+            // 11?? Middleware pipeline
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
@@ -144,11 +162,7 @@ namespace AIDefCom.API
             app.UseAuthentication();
             app.UseAuthorization();
 
-
             app.MapControllers();
-
-            //// ? ??ng ký Hub cho SignalR
-            //app.MapHub<ChatHub>("/chatHub");
 
             app.Run();
         }
