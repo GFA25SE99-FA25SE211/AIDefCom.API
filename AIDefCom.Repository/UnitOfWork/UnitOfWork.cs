@@ -12,6 +12,7 @@ using AIDefCom.Repository.Repositories.RubricRepository;
 using AIDefCom.Repository.Repositories.SemesterRepository;
 using AIDefCom.Repository.Repositories.StudentRepository;
 using System;
+using AIDefCom.Repository.Repositories.RecordingRepository;
 using System.Threading.Tasks;
 
 namespace AIDefCom.Repository.UnitOfWork
@@ -33,6 +34,7 @@ namespace AIDefCom.Repository.UnitOfWork
         public ICouncilRepository Councils { get; }
         public ICommitteeAssignmentRepository CommitteeAssignments { get; }
         public IProjectTaskRepository ProjectTasks { get; }
+        public IRecordingRepository Recordings { get; }
 
         public UnitOfWork(
             ApplicationDbContext context,
@@ -48,7 +50,8 @@ namespace AIDefCom.Repository.UnitOfWork
             IMemberNoteRepository memberNoteRepository,
             ICouncilRepository councilRepository,
             ICommitteeAssignmentRepository committeeAssignmentRepository,
-            IProjectTaskRepository projectTaskRepository)
+            IProjectTaskRepository projectTaskRepository,
+            IRecordingRepository recordingRepository)
         {
             _context = context;
             AppUsers = appUserRepository;
@@ -64,9 +67,14 @@ namespace AIDefCom.Repository.UnitOfWork
             Councils = councilRepository;
             CommitteeAssignments = committeeAssignmentRepository;
             ProjectTasks = projectTaskRepository;
+            Recordings = recordingRepository;
         }
 
         public async Task<int> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync();
+        }
+        public async Task<int> CompleteAsync()
         {
             return await _context.SaveChangesAsync();
         }

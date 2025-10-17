@@ -31,6 +31,7 @@ namespace AIDefCom.Repository
         public DbSet<ProjectTask> Tasks { get; set; }
         public DbSet<Score> Scores { get; set; }
         public DbSet<MemberNote> MemberNotes { get; set; }
+        public DbSet<Recording> Recordings { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -75,6 +76,20 @@ namespace AIDefCom.Repository
                 .HasOne(t => t.Session)
                 .WithMany()
                 .HasForeignKey(t => t.SessionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Recording: TranscriptId is optional int FK
+            modelBuilder.Entity<Recording>()
+                .HasOne(r => r.Transcript)
+                .WithMany()
+                .HasForeignKey(r => r.TranscriptId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Recording: UserId is string FK to AspNetUsers
+            modelBuilder.Entity<Recording>()
+                .HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // Report: SessionId is int
