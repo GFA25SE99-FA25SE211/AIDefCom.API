@@ -4,6 +4,7 @@ using AIDefCom.Repository;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AIDefCom.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251015082539_AddRecordingEntity")]
+    partial class AddRecordingEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -368,15 +371,9 @@ namespace AIDefCom.Repository.Migrations
                     b.Property<int?>("TranscriptId")
                         .HasColumnType("int");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("TranscriptId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Recordings");
                 });
@@ -824,15 +821,7 @@ namespace AIDefCom.Repository.Migrations
                         .HasForeignKey("TranscriptId")
                         .OnDelete(DeleteBehavior.SetNull);
 
-                    b.HasOne("AIDefCom.Repository.Entities.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("Transcript");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("AIDefCom.Repository.Entities.Report", b =>
