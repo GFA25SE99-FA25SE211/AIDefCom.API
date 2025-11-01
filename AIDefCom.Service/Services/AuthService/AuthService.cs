@@ -106,19 +106,20 @@ namespace AIDefCom.Service.Services.AuthService
 
         public async Task<TokenResponseDto?> LoginAsync(LoginDto request)
         {
-            var user = await _userManager.FindByNameAsync(request.Username);
+            var user = await _userManager.FindByEmailAsync(request.Email);
             if (user == null)
-                throw new Exception("Invalid username or password.");
+                throw new Exception("Invalid email or password.");
 
             var result = await _signInManager.PasswordSignInAsync(user, request.Password, false, false);
             if (!result.Succeeded)
-                throw new Exception("Invalid username or password.");
+                throw new Exception("Invalid email or password.");
 
             var tokenResponse = await CreateTokenResponse(user);
             tokenResponse.EmailConfirmed = user.EmailConfirmed;
 
             return tokenResponse;
         }
+
 
         public async Task<string> LogoutAsync(string username)
         {
@@ -296,9 +297,89 @@ namespace AIDefCom.Service.Services.AuthService
 
         public async Task<TokenResponseDto> GoogleLoginAsync(GoogleUserLoginDTO googleLoginDTO)
         {
-            var payload = await GoogleJsonWebSignature.ValidateAsync(googleLoginDTO.Token, new GoogleJsonWebSignature.ValidationSettings());
+            var payload = await GoogleJsonWebSignature.ValidateAsync(
+                googleLoginDTO.Token,
+                new GoogleJsonWebSignature.ValidationSettings()
+            );
+
             if (payload == null)
-                throw new Exception("Invalid Id Token");
+                throw new Exception("Invalid Google ID token.");
+
+            var user = await _userManager.FindByEmailAsync(payload.Email);
+            bool isNewUser = false;
+
+            if (user == null)
+            {
+                isNewUser = true;
+
+                user = new AppUser
+                {
+                    Email = payload.Email,
+                    UserName = payload.Email,
+                    FullName = payload.Name ?? string.Empty,
+                    EmailConfirmed = true,
+                    IsDelete = false
+                };
+
+                string defaultPassword = "AIDefCom@123";
+                var result = await _userManager.CreateAsync(user, defaultPassword);
+                if (!result.Succeeded)
+                    throw new Exception($"Failed to create user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+
+                var defaultRole = "Student";
+                if (!await _roleManager.RoleExistsAsync(defaultRole))
+                {
+                    var roleResult = await _roleManager.CreateAsync(new IdentityRole(defaultRole));
+                    if (!roleResult.Succeeded)
+                        throw new Exception("Failed to create default role.");
+                }
+                await _userManager.AddToRoleAsync(user, defaultRole);
+
+                var info = new UserLoginInfo("Google", payload.Subject, "Google");
+                var loginResult = await _userManager.AddLoginAsync(user, info);
+                if (!loginResult.Succeeded)
+                    throw new Exception("Failed to link Google login.");
+            }
+            else
+            {
+                var info = new UserLoginInfo("Google", payload.Subject, "Google");
+                var existingLogin = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
+
+                if (existingLogin == null)
+                {
+                    var linkResult = await _userManager.AddLoginAsync(user, info);
+                    if (!linkResult.Succeeded)
+                        throw new Exception("Failed to link Google login to existing user.");
+                }
+
+                if (user.IsDelete)
+                {
+                    user.IsDelete = false;
+                    await _userManager.UpdateAsync(user);
+                }
+            }
+
+            var refreshToken = await GenerateAndSaveRefreshToken(user);
+            var accessToken = CreateToken(user);
+
+            return new TokenResponseDto
+            {
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                EmailConfirmed = user.EmailConfirmed,
+                HasPassword = true,
+                IsNewUser = isNewUser
+            };
+        }
+        public async Task<TokenResponseDto> GoogleLoginAsMemberAsync(GoogleUserLoginDTO googleLoginDTO)
+        {
+            var payload = await GoogleJsonWebSignature.ValidateAsync(
+                googleLoginDTO.Token,
+                new GoogleJsonWebSignature.ValidationSettings()
+            );
+
+            if (payload == null)
+                throw new Exception("Invalid Google ID token.");
 
             var user = await _userManager.FindByEmailAsync(payload.Email);
             bool isNewUser = false;
@@ -310,33 +391,44 @@ namespace AIDefCom.Service.Services.AuthService
                 {
                     Email = payload.Email,
                     UserName = payload.Email,
-                    EmailConfirmed = true
+                    FullName = payload.Name ?? string.Empty,
+                    EmailConfirmed = true,
+                    IsDelete = false
                 };
 
-                var result = await _userManager.CreateAsync(user);
+                string defaultPassword = "AIDefCom@123";
+                var result = await _userManager.CreateAsync(user, defaultPassword);
                 if (!result.Succeeded)
-                    throw new Exception("Failed to create user");
+                    throw new Exception($"Failed to create user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
 
-                await _userManager.AddToRoleAsync(user, "User");
+                var defaultRole = "Member";
+                if (!await _roleManager.RoleExistsAsync(defaultRole))
+                {
+                    var roleResult = await _roleManager.CreateAsync(new IdentityRole(defaultRole));
+                    if (!roleResult.Succeeded)
+                        throw new Exception("Failed to create Member role.");
+                }
+                await _userManager.AddToRoleAsync(user, defaultRole);
 
                 var info = new UserLoginInfo("Google", payload.Subject, "Google");
                 var loginResult = await _userManager.AddLoginAsync(user, info);
                 if (!loginResult.Succeeded)
-                    throw new Exception("Failed to add external login");
+                    throw new Exception("Failed to link Google login.");
             }
 
-            bool hasPassword = await _userManager.HasPasswordAsync(user);
             var refreshToken = await GenerateAndSaveRefreshToken(user);
+            var accessToken = CreateToken(user);
 
             return new TokenResponseDto
             {
-                EmailConfirmed = user.EmailConfirmed,
-                AccessToken = CreateToken(user),
+                AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                HasPassword = hasPassword,
+                EmailConfirmed = user.EmailConfirmed,
+                HasPassword = true,
                 IsNewUser = isNewUser
             };
         }
+
 
         public async Task<TokenResponseDto> GoogleSetPasswordAsync(SetPasswordDTO request, string token)
         {
