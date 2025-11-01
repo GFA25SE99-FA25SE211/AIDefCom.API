@@ -84,20 +84,20 @@ namespace AIDefCom.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
-                return BadRequest(new { message = "Username and password cannot be empty." });
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+                return BadRequest(new { message = "Email and password cannot be empty." });
 
             try
             {
                 var result = await authService.LoginAsync(request);
                 if (result == null)
-                    return Unauthorized(new { message = "Invalid username or password." });
+                    return Unauthorized(new { message = "Invalid email or password." });
 
                 return Ok(result);
             }
             catch (Exception ex)
             {
-                return BadRequest(new { message = "An unexpected error occurred.", details = ex.Message });
+                return BadRequest(new { message = "Login failed.", details = ex.Message });
             }
         }
 
@@ -114,6 +114,21 @@ namespace AIDefCom.API.Controllers
                 return BadRequest(new { message = "Google login failed.", details = ex.Message });
             }
         }
+
+        [HttpPost("login/google/member")]
+        public async Task<IActionResult> GoogleLoginAsMember([FromBody] GoogleUserLoginDTO googleLoginDTO)
+        {
+            try
+            {
+                var response = await authService.GoogleLoginAsMemberAsync(googleLoginDTO);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = "Google Member login failed.", details = ex.Message });
+            }
+        }
+
         [HttpPut("roles/assign")]
         public async Task<IActionResult> AssignRole([FromBody] SetRoleRequestDto request)
         {
