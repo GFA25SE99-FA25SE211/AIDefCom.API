@@ -12,13 +12,17 @@ namespace AIDefCom.Repository.Entities
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
 
-        // Foreign Key to AppUser (Assigned_by)
+        // Foreign Key to CommitteeAssignment (Assigned_by)
         public string AssignedById { get; set; } = string.Empty;
-        public AppUser? AssignedBy { get; set; }
+        public CommitteeAssignment? AssignedBy { get; set; }
 
-        // Foreign Key to AppUser (Assigned_to)
+        // Foreign Key to CommitteeAssignment (Assigned_to)
         public string AssignedToId { get; set; } = string.Empty;
-        public AppUser? AssignedTo { get; set; }
+        public CommitteeAssignment? AssignedTo { get; set; }
+
+        // Foreign Key to Rubric
+        public int RubricId { get; set; }
+        public Rubric? Rubric { get; set; }
 
         public string Status { get; set; } = string.Empty;
     }

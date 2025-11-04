@@ -22,7 +22,6 @@ namespace AIDefCom.Repository.Repositories.SemesterRepository
         public async Task<IEnumerable<Semester>> GetAllAsync()
         {
             return await _set.AsNoTracking()
-                             .Include(s => s.Major)
                              .OrderByDescending(s => s.Year)
                              .ThenBy(s => s.SemesterName)
                              .ToListAsync();
@@ -31,16 +30,13 @@ namespace AIDefCom.Repository.Repositories.SemesterRepository
         public async Task<Semester?> GetByIdAsync(int id)
         {
             return await _set.AsNoTracking()
-                             .Include(s => s.Major)
                              .FirstOrDefaultAsync(s => s.Id == id);
         }
 
         public async Task<IEnumerable<Semester>> GetByMajorIdAsync(int majorId)
         {
-            return await _set.AsNoTracking()
-                             .Include(s => s.Major)
-                             .Where(s => s.MajorId == majorId)
-                             .ToListAsync();
+            // Semester không còn MajorId, method này có thể bỏ hoặc return empty
+            return await Task.FromResult(Enumerable.Empty<Semester>());
         }
 
         public async Task AddAsync(Semester semester)
@@ -57,7 +53,6 @@ namespace AIDefCom.Repository.Repositories.SemesterRepository
             existing.Year = semester.Year;
             existing.StartDate = semester.StartDate;
             existing.EndDate = semester.EndDate;
-            existing.MajorId = semester.MajorId;
         }
 
         public async Task DeleteAsync(int id)
@@ -68,10 +63,10 @@ namespace AIDefCom.Repository.Repositories.SemesterRepository
 
         public async Task<bool> ExistsByNameAsync(string name, int year, int majorId)
         {
+            // Semester không còn MajorId, chỉ check name và year
             return await _set.AnyAsync(s =>
                 s.SemesterName == name &&
-                s.Year == year &&
-                s.MajorId == majorId);
+                s.Year == year);
         }
     }
 }

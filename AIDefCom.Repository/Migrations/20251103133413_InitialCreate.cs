@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace AIDefCom.Repository.Migrations
 {
     /// <inheritdoc />
-    public partial class UpdateProjectCode : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -55,18 +55,17 @@ namespace AIDefCom.Repository.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Councils",
+                name: "CouncilRoles",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                    RoleName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Councils", x => x.Id);
+                    table.PrimaryKey("PK_CouncilRoles", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -96,6 +95,22 @@ namespace AIDefCom.Repository.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Rubrics", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Semesters",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    SemesterName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Year = table.Column<int>(type: "int", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    EndDate = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Semesters", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -205,51 +220,62 @@ namespace AIDefCom.Repository.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Tasks",
+                name: "Lecturers",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    AssignedById = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    AssignedToId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Gender = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Department = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AcademicRank = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Degree = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Tasks", x => x.Id);
+                    table.PrimaryKey("PK_Lecturers", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Tasks_AspNetUsers_AssignedById",
-                        column: x => x.AssignedById,
+                        name: "FK_Lecturers_AspNetUsers_Id",
+                        column: x => x.Id,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Tasks_AspNetUsers_AssignedToId",
-                        column: x => x.AssignedToId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Semesters",
+                name: "Students",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Gender = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Students", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Students_AspNetUsers_Id",
+                        column: x => x.Id,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Councils",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    SemesterName = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Year = table.Column<int>(type: "int", nullable: false),
-                    StartDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    EndDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    MajorId = table.Column<int>(type: "int", nullable: false)
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    MajorId = table.Column<int>(type: "int", nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Semesters", x => x.Id);
+                    table.PrimaryKey("PK_Councils", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Semesters_Majors_MajorId",
+                        name: "FK_Councils_Majors_MajorId",
                         column: x => x.MajorId,
                         principalTable: "Majors",
                         principalColumn: "Id",
@@ -287,19 +313,58 @@ namespace AIDefCom.Repository.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ProjectCode = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     TopicTitle_EN = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     TopicTitle_VN = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     SemesterId = table.Column<int>(type: "int", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    MajorId = table.Column<int>(type: "int", nullable: false),
+                    ProjectCode = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Groups", x => x.Id);
                     table.ForeignKey(
+                        name: "FK_Groups_Majors_MajorId",
+                        column: x => x.MajorId,
+                        principalTable: "Majors",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
                         name: "FK_Groups_Semesters_SemesterId",
                         column: x => x.SemesterId,
                         principalTable: "Semesters",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CommitteeAssignments",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    CouncilId = table.Column<int>(type: "int", nullable: false),
+                    CouncilRoleId = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CommitteeAssignments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CommitteeAssignments_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_CommitteeAssignments_CouncilRoles_CouncilRoleId",
+                        column: x => x.CouncilRoleId,
+                        principalTable: "CouncilRoles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_CommitteeAssignments_Councils_CouncilId",
+                        column: x => x.CouncilId,
+                        principalTable: "Councils",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -316,11 +381,18 @@ namespace AIDefCom.Repository.Migrations
                     StartTime = table.Column<TimeSpan>(type: "time", nullable: false),
                     EndTime = table.Column<TimeSpan>(type: "time", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CouncilId = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_DefenseSessions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_DefenseSessions_Councils_CouncilId",
+                        column: x => x.CouncilId,
+                        principalTable: "Councils",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_DefenseSessions_Groups_GroupId",
                         column: x => x.GroupId,
@@ -330,12 +402,39 @@ namespace AIDefCom.Repository.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "MemberNotes",
+                name: "StudentGroups",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    GroupId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    GroupRole = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StudentGroups", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_StudentGroups_Groups_GroupId",
+                        column: x => x.GroupId,
+                        principalTable: "Groups",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_StudentGroups_Students_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Students",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MemberNotes",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    CommitteeAssignmentId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     GroupId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     NoteContent = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
@@ -344,9 +443,9 @@ namespace AIDefCom.Repository.Migrations
                 {
                     table.PrimaryKey("PK_MemberNotes", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_MemberNotes_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
+                        name: "FK_MemberNotes_CommitteeAssignments_CommitteeAssignmentId",
+                        column: x => x.CommitteeAssignmentId,
+                        principalTable: "CommitteeAssignments",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
@@ -358,63 +457,37 @@ namespace AIDefCom.Repository.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Students",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    GroupId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    DateOfBirth = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    Gender = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Role = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Students", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Students_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_Students_Groups_GroupId",
-                        column: x => x.GroupId,
-                        principalTable: "Groups",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "CommitteeAssignments",
+                name: "Tasks",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    CouncilId = table.Column<int>(type: "int", nullable: false),
-                    SessionId = table.Column<int>(type: "int", nullable: false),
-                    Role = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Title = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    AssignedById = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    AssignedToId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    RubricId = table.Column<int>(type: "int", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_CommitteeAssignments", x => x.Id);
+                    table.PrimaryKey("PK_Tasks", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_CommitteeAssignments_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
+                        name: "FK_Tasks_CommitteeAssignments_AssignedById",
+                        column: x => x.AssignedById,
+                        principalTable: "CommitteeAssignments",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_CommitteeAssignments_Councils_CouncilId",
-                        column: x => x.CouncilId,
-                        principalTable: "Councils",
+                        name: "FK_Tasks_CommitteeAssignments_AssignedToId",
+                        column: x => x.AssignedToId,
+                        principalTable: "CommitteeAssignments",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_CommitteeAssignments_DefenseSessions_SessionId",
-                        column: x => x.SessionId,
-                        principalTable: "DefenseSessions",
+                        name: "FK_Tasks_Rubrics_RubricId",
+                        column: x => x.RubricId,
+                        principalTable: "Rubrics",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -436,30 +509,6 @@ namespace AIDefCom.Repository.Migrations
                     table.PrimaryKey("PK_Reports", x => x.Id);
                     table.ForeignKey(
                         name: "FK_Reports_DefenseSessions_SessionId",
-                        column: x => x.SessionId,
-                        principalTable: "DefenseSessions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Transcripts",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    SessionId = table.Column<int>(type: "int", nullable: false),
-                    TranscriptText = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    IsApproved = table.Column<bool>(type: "bit", nullable: false),
-                    Audio = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Transcripts", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Transcripts_DefenseSessions_SessionId",
                         column: x => x.SessionId,
                         principalTable: "DefenseSessions",
                         principalColumn: "Id",
@@ -509,6 +558,62 @@ namespace AIDefCom.Repository.Migrations
                         onDelete: ReferentialAction.Restrict);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "Transcripts",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    SessionId = table.Column<int>(type: "int", nullable: false),
+                    TranscriptText = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    IsApproved = table.Column<bool>(type: "bit", nullable: false),
+                    Audio = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Transcripts", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Transcripts_DefenseSessions_SessionId",
+                        column: x => x.SessionId,
+                        principalTable: "DefenseSessions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Recordings",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    BlobPath = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    BlobUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    MimeType = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DurationSeconds = table.Column<int>(type: "int", nullable: true),
+                    SizeBytes = table.Column<long>(type: "bigint", nullable: true),
+                    CreatedUtc = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    TranscriptId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Recordings", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Recordings_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Recordings_Transcripts_TranscriptId",
+                        column: x => x.TranscriptId,
+                        principalTable: "Transcripts",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
                 table: "AspNetRoleClaims",
@@ -554,9 +659,9 @@ namespace AIDefCom.Repository.Migrations
                 column: "CouncilId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_CommitteeAssignments_SessionId",
+                name: "IX_CommitteeAssignments_CouncilRoleId",
                 table: "CommitteeAssignments",
-                column: "SessionId");
+                column: "CouncilRoleId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_CommitteeAssignments_UserId",
@@ -564,9 +669,24 @@ namespace AIDefCom.Repository.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Councils_MajorId",
+                table: "Councils",
+                column: "MajorId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DefenseSessions_CouncilId",
+                table: "DefenseSessions",
+                column: "CouncilId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_DefenseSessions_GroupId",
                 table: "DefenseSessions",
                 column: "GroupId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Groups_MajorId",
+                table: "Groups",
+                column: "MajorId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Groups_SemesterId",
@@ -584,13 +704,23 @@ namespace AIDefCom.Repository.Migrations
                 column: "RubricId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_MemberNotes_CommitteeAssignmentId",
+                table: "MemberNotes",
+                column: "CommitteeAssignmentId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_MemberNotes_GroupId",
                 table: "MemberNotes",
                 column: "GroupId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MemberNotes_UserId",
-                table: "MemberNotes",
+                name: "IX_Recordings_TranscriptId",
+                table: "Recordings",
+                column: "TranscriptId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Recordings_UserId",
+                table: "Recordings",
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
@@ -619,19 +749,15 @@ namespace AIDefCom.Repository.Migrations
                 column: "StudentId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Semesters_MajorId",
-                table: "Semesters",
-                column: "MajorId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Students_GroupId",
-                table: "Students",
+                name: "IX_StudentGroups_GroupId",
+                table: "StudentGroups",
                 column: "GroupId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Students_UserId",
-                table: "Students",
-                column: "UserId");
+                name: "IX_StudentGroups_UserId_GroupId",
+                table: "StudentGroups",
+                columns: new[] { "UserId", "GroupId" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tasks_AssignedById",
@@ -642,6 +768,11 @@ namespace AIDefCom.Repository.Migrations
                 name: "IX_Tasks_AssignedToId",
                 table: "Tasks",
                 column: "AssignedToId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tasks_RubricId",
+                table: "Tasks",
+                column: "RubricId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Transcripts_SessionId",
@@ -668,7 +799,7 @@ namespace AIDefCom.Repository.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "CommitteeAssignments");
+                name: "Lecturers");
 
             migrationBuilder.DropTable(
                 name: "MajorRubrics");
@@ -677,28 +808,34 @@ namespace AIDefCom.Repository.Migrations
                 name: "MemberNotes");
 
             migrationBuilder.DropTable(
+                name: "Recordings");
+
+            migrationBuilder.DropTable(
                 name: "Reports");
 
             migrationBuilder.DropTable(
                 name: "Scores");
 
             migrationBuilder.DropTable(
-                name: "Tasks");
+                name: "StudentGroups");
 
             migrationBuilder.DropTable(
-                name: "Transcripts");
+                name: "Tasks");
 
             migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "Councils");
-
-            migrationBuilder.DropTable(
-                name: "Rubrics");
+                name: "Transcripts");
 
             migrationBuilder.DropTable(
                 name: "Students");
+
+            migrationBuilder.DropTable(
+                name: "CommitteeAssignments");
+
+            migrationBuilder.DropTable(
+                name: "Rubrics");
 
             migrationBuilder.DropTable(
                 name: "DefenseSessions");
@@ -707,13 +844,19 @@ namespace AIDefCom.Repository.Migrations
                 name: "AspNetUsers");
 
             migrationBuilder.DropTable(
+                name: "CouncilRoles");
+
+            migrationBuilder.DropTable(
+                name: "Councils");
+
+            migrationBuilder.DropTable(
                 name: "Groups");
 
             migrationBuilder.DropTable(
-                name: "Semesters");
+                name: "Majors");
 
             migrationBuilder.DropTable(
-                name: "Majors");
+                name: "Semesters");
         }
     }
 }

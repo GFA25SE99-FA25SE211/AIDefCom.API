@@ -27,12 +27,10 @@ namespace AIDefCom.Service.Services.StudentService
             return list.Select(s => new StudentReadDto
             {
                 Id = s.Id,
-                UserId = s.UserId,
-                UserName = s.User?.FullName,
-                GroupId = s.GroupId,
+                UserName = s.FullName,
+                Email = s.Email,
                 DateOfBirth = s.DateOfBirth,
-                Gender = s.Gender,
-                Role = s.Role
+                Gender = s.Gender
             });
         }
 

@@ -27,8 +27,8 @@ namespace AIDefCom.Service.Services.MemberNoteService
             return list.Select(n => new MemberNoteReadDto
             {
                 Id = n.Id,
-                UserId = n.UserId,
-                UserName = n.User?.FullName,
+                CommitteeAssignmentId = n.CommitteeAssignmentId,
+                UserName = n.CommitteeAssignment?.Lecturer?.FullName,
                 GroupId = n.GroupId,
                 NoteContent = n.NoteContent,
                 CreatedAt = n.CreatedAt

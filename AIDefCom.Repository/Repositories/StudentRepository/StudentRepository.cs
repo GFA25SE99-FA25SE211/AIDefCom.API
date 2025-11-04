@@ -22,33 +22,33 @@ namespace AIDefCom.Repository.Repositories.StudentRepository
         public async Task<IEnumerable<Student>> GetAllAsync()
         {
             return await _set.AsNoTracking()
-                             .Include(s => s.User)
-                             .Include(s => s.Group)
-                             .OrderBy(s => s.User!.FullName)
+                             .OrderBy(s => s.FullName)
                              .ToListAsync();
         }
 
         public async Task<Student?> GetByIdAsync(string id)
         {
             return await _set.AsNoTracking()
-                             .Include(s => s.User)
-                             .Include(s => s.Group)
                              .FirstOrDefaultAsync(s => s.Id == id);
         }
 
         public async Task<IEnumerable<Student>> GetByGroupIdAsync(string groupId)
         {
+            // Student không còn GroupId trực tiếp, cần query qua StudentGroup
+            var studentIds = await _context.StudentGroups
+                .Where(sg => sg.GroupId == groupId)
+                .Select(sg => sg.UserId)
+                .ToListAsync();
+
             return await _set.AsNoTracking()
-                             .Include(s => s.User)
-                             .Where(s => s.GroupId == groupId)
+                             .Where(s => studentIds.Contains(s.Id))
                              .ToListAsync();
         }
 
         public async Task<IEnumerable<Student>> GetByUserIdAsync(string userId)
         {
             return await _set.AsNoTracking()
-                             .Include(s => s.Group)
-                             .Where(s => s.UserId == userId)
+                             .Where(s => s.Id == userId)
                              .ToListAsync();
         }
 
@@ -62,11 +62,12 @@ namespace AIDefCom.Repository.Repositories.StudentRepository
             var existing = await _set.FirstOrDefaultAsync(x => x.Id == student.Id);
             if (existing == null) return;
 
-            existing.UserId = student.UserId;
-            existing.GroupId = student.GroupId;
             existing.DateOfBirth = student.DateOfBirth;
             existing.Gender = student.Gender;
-            existing.Role = student.Role;
+            // Note: Student inherits from AppUser, so FullName, Email, etc. can also be updated
+            existing.FullName = student.FullName;
+            existing.Email = student.Email;
+            existing.PhoneNumber = student.PhoneNumber;
         }
 
         public async Task DeleteAsync(string id)

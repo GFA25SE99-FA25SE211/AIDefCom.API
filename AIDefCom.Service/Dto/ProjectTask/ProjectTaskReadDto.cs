@@ -15,6 +15,7 @@ namespace AIDefCom.Service.Dto.ProjectTask
         public string? AssignedByName { get; set; }
         public string AssignedToId { get; set; } = string.Empty;
         public string? AssignedToName { get; set; }
+        public int RubricId { get; set; }
         public string Status { get; set; } = string.Empty;
     }
 }

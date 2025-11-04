@@ -46,19 +46,20 @@ namespace AIDefCom.API.Controllers
             return Ok(new { message = "Committee assignments by session retrieved successfully.", data });
         }
 
-        [HttpGet("user/{userId}")]
-        public async Task<IActionResult> GetByUserId(string userId)
+        [HttpGet("lecturer/{lecturerId}")]
+        public async Task<IActionResult> GetByLecturerId(string lecturerId)
         {
-            var data = await service.GetByUserIdAsync(userId);
-            return Ok(new { message = "Committee assignments by user retrieved successfully.", data });
+            var data = await service.GetByLecturerIdAsync(lecturerId);
+            return Ok(new { message = "Committee assignments by lecturer retrieved successfully.", data });
         }
 
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] CommitteeAssignmentCreateDto dto)
         {
             var id = await service.AddAsync(dto);
-            var created = await service.GetByIdAsync(id);
-            return CreatedAtAction(nameof(GetById), new { id }, new { message = "Committee assignment created successfully.", data = created });
+            // Convert string id to int for GetByIdAsync (or change GetByIdAsync to accept string)
+            // For now, return the id directly
+            return Ok(new { message = "Committee assignment created successfully.", id });
         }
 
         [HttpPut("{id}")]

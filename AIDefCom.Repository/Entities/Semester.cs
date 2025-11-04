@@ -13,9 +13,5 @@ namespace AIDefCom.Repository.Entities
         public int Year { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
-
-        // Foreign Key to Major
-        public int MajorId { get; set; }
-        public Major? Major { get; set; }
     }
 }

@@ -27,11 +27,11 @@ namespace AIDefCom.Service.Services.CommitteeAssignmentService
             return list.Select(a => new CommitteeAssignmentReadDto
             {
                 Id = a.Id,
-                UserId = a.UserId,
-                UserName = a.User?.FullName,
+                LecturerId = a.LecturerId,
+                LecturerName = a.Lecturer?.FullName,
                 CouncilId = a.CouncilId,
-                SessionId = a.SessionId,
-                Role = a.Role
+                CouncilRoleId = a.CouncilRoleId,
+                RoleName = a.CouncilRole?.RoleName
             });
         }
 
@@ -53,15 +53,16 @@ namespace AIDefCom.Service.Services.CommitteeAssignmentService
             return _mapper.Map<IEnumerable<CommitteeAssignmentReadDto>>(list);
         }
 
-        public async Task<IEnumerable<CommitteeAssignmentReadDto>> GetByUserIdAsync(string userId)
+        public async Task<IEnumerable<CommitteeAssignmentReadDto>> GetByLecturerIdAsync(string lecturerId)
         {
-            var list = await _uow.CommitteeAssignments.GetByUserIdAsync(userId);
+            var list = await _uow.CommitteeAssignments.GetByLecturerIdAsync(lecturerId);
             return _mapper.Map<IEnumerable<CommitteeAssignmentReadDto>>(list);
         }
 
-        public async Task<int> AddAsync(CommitteeAssignmentCreateDto dto)
+        public async Task<string> AddAsync(CommitteeAssignmentCreateDto dto)
         {
             var entity = _mapper.Map<CommitteeAssignment>(dto);
+            entity.Id = Guid.NewGuid().ToString();
             await _uow.CommitteeAssignments.AddAsync(entity);
             await _uow.SaveChangesAsync();
             return entity.Id;

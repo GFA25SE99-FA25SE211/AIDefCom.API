@@ -13,7 +13,5 @@ namespace AIDefCom.Service.Dto.Semester
         public int Year { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
-        public int MajorId { get; set; }
-        public string? MajorName { get; set; }
     }
 }
