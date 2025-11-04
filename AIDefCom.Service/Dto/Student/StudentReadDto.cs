@@ -9,11 +9,9 @@ namespace AIDefCom.Service.Dto.Student
     public class StudentReadDto
     {
         public string Id { get; set; } = string.Empty;
-        public string UserId { get; set; } = string.Empty;
         public string? UserName { get; set; }
-        public string GroupId { get; set; } = string.Empty;
+        public string? Email { get; set; }
         public DateTime? DateOfBirth { get; set; }
         public string? Gender { get; set; }
-        public string? Role { get; set; }
     }
 }

@@ -30,9 +30,7 @@ namespace AIDefCom.Service.Services.SemesterService
                 SemesterName = s.SemesterName,
                 Year = s.Year,
                 StartDate = s.StartDate,
-                EndDate = s.EndDate,
-                MajorId = s.MajorId,
-                MajorName = s.Major?.MajorName
+                EndDate = s.EndDate
             });
         }
 
@@ -45,22 +43,20 @@ namespace AIDefCom.Service.Services.SemesterService
                 SemesterName = s.SemesterName,
                 Year = s.Year,
                 StartDate = s.StartDate,
-                EndDate = s.EndDate,
-                MajorId = s.MajorId,
-                MajorName = s.Major?.MajorName
+                EndDate = s.EndDate
             };
         }
 
         public async Task<IEnumerable<SemesterReadDto>> GetByMajorIdAsync(int majorId)
         {
-            var list = await _uow.Semesters.GetByMajorIdAsync(majorId);
-            return _mapper.Map<IEnumerable<SemesterReadDto>>(list);
+            // Semester không còn MajorId, return empty
+            return await Task.FromResult(Enumerable.Empty<SemesterReadDto>());
         }
 
         public async Task<int> AddAsync(SemesterCreateDto dto)
         {
-            if (await _uow.Semesters.ExistsByNameAsync(dto.SemesterName, dto.Year, dto.MajorId))
-                throw new InvalidOperationException("This semester already exists for the selected major and year.");
+            if (await _uow.Semesters.ExistsByNameAsync(dto.SemesterName, dto.Year, 0))
+                throw new InvalidOperationException("This semester already exists for the year.");
 
             var entity = _mapper.Map<Semester>(dto);
             await _uow.Semesters.AddAsync(entity);

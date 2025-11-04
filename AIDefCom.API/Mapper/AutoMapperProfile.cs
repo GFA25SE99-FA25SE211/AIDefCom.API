@@ -28,8 +28,8 @@ namespace AIDefCom.API.Mapper
             CreateMap<MajorUpdateDto, Major>();
 
             CreateMap<MajorRubric, MajorRubricReadDto>()
-    .ForMember(d => d.MajorName, o => o.MapFrom(s => s.Major.MajorName))
-    .ForMember(d => d.RubricName, o => o.MapFrom(s => s.Rubric.RubricName));
+                .ForMember(d => d.MajorName, o => o.MapFrom(s => s.Major!.MajorName))
+                .ForMember(d => d.RubricName, o => o.MapFrom(s => s.Rubric!.RubricName));
 
             CreateMap<MajorRubricCreateDto, MajorRubric>();
             CreateMap<MajorRubricUpdateDto, MajorRubric>();
@@ -38,18 +38,20 @@ namespace AIDefCom.API.Mapper
             CreateMap<ReportCreateDto, Report>();
             CreateMap<ReportUpdateDto, Report>();
 
-            CreateMap<Semester, SemesterReadDto>()
-    .ForMember(dest => dest.MajorName, opt => opt.MapFrom(src => src.Major.MajorName));
+            // Semester - không còn Major relationship
+            CreateMap<Semester, SemesterReadDto>();
             CreateMap<SemesterCreateDto, Semester>();
             CreateMap<SemesterUpdateDto, Semester>();
 
+            // Student - kế thừa AppUser, không còn User
             CreateMap<Student, StudentReadDto>()
-    .ForMember(d => d.UserName, opt => opt.MapFrom(s => s.User.FullName));
+                .ForMember(d => d.UserName, opt => opt.MapFrom(s => s.FullName))
+                .ForMember(d => d.Email, opt => opt.MapFrom(s => s.Email));
             CreateMap<StudentCreateDto, Student>();
             CreateMap<StudentUpdateDto, Student>();
 
             CreateMap<Group, GroupReadDto>()
-    .ForMember(dest => dest.SemesterName, opt => opt.MapFrom(src => src.Semester.SemesterName));
+                .ForMember(dest => dest.SemesterName, opt => opt.MapFrom(src => src.Semester!.SemesterName));
             CreateMap<GroupCreateDto, Group>();
             CreateMap<GroupUpdateDto, Group>();
 
@@ -57,8 +59,10 @@ namespace AIDefCom.API.Mapper
             CreateMap<DefenseSessionCreateDto, DefenseSession>();
             CreateMap<DefenseSessionUpdateDto, DefenseSession>();
 
+            // MemberNote - CommitteeAssignment thay vì User
             CreateMap<MemberNote, MemberNoteReadDto>()
-    .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.FullName));
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.CommitteeAssignment!.Lecturer!.FullName))
+                .ForMember(dest => dest.CommitteeAssignmentId, opt => opt.MapFrom(src => src.CommitteeAssignmentId));
             CreateMap<MemberNoteCreateDto, MemberNote>();
             CreateMap<MemberNoteUpdateDto, MemberNote>();
 
@@ -66,14 +70,17 @@ namespace AIDefCom.API.Mapper
             CreateMap<CouncilCreateDto, Council>();
             CreateMap<CouncilUpdateDto, Council>();
 
+            // CommitteeAssignment - có CouncilRole
             CreateMap<CommitteeAssignment, CommitteeAssignmentReadDto>()
-    .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.FullName));
+                .ForMember(dest => dest.LecturerName, opt => opt.MapFrom(src => src.Lecturer!.FullName))
+                .ForMember(dest => dest.RoleName, opt => opt.MapFrom(src => src.CouncilRole!.RoleName));
             CreateMap<CommitteeAssignmentCreateDto, CommitteeAssignment>();
             CreateMap<CommitteeAssignmentUpdateDto, CommitteeAssignment>();
 
+            // ProjectTask - AssignedBy/To là CommitteeAssignment
             CreateMap<ProjectTask, ProjectTaskReadDto>()
-    .ForMember(dest => dest.AssignedByName, opt => opt.MapFrom(src => src.AssignedBy.FullName))
-    .ForMember(dest => dest.AssignedToName, opt => opt.MapFrom(src => src.AssignedTo.FullName));
+                .ForMember(dest => dest.AssignedByName, opt => opt.MapFrom(src => src.AssignedBy!.Lecturer!.FullName))
+                .ForMember(dest => dest.AssignedToName, opt => opt.MapFrom(src => src.AssignedTo!.Lecturer!.FullName));
             CreateMap<ProjectTaskCreateDto, ProjectTask>();
             CreateMap<ProjectTaskUpdateDto, ProjectTask>();
 

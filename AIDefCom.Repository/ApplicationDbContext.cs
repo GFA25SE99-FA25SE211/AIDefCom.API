@@ -21,6 +21,8 @@ namespace AIDefCom.Repository
         public DbSet<Semester> Semesters { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<Student> Students { get; set; }
+        public DbSet<Lecturer> Lecturers { get; set; }
+        public DbSet<StudentGroup> StudentGroups { get; set; }
         public DbSet<DefenseSession> DefenseSessions { get; set; }
         public DbSet<Transcript> Transcripts { get; set; }
         public DbSet<Rubric> Rubrics { get; set; }
@@ -28,6 +30,7 @@ namespace AIDefCom.Repository
         public DbSet<Report> Reports { get; set; }
         public DbSet<CommitteeAssignment> CommitteeAssignments { get; set; }
         public DbSet<Council> Councils { get; set; }
+        public DbSet<CouncilRole> CouncilRoles { get; set; }
         public DbSet<ProjectTask> Tasks { get; set; }
         public DbSet<Score> Scores { get; set; }
         public DbSet<MemberNote> MemberNotes { get; set; }
@@ -37,86 +40,76 @@ namespace AIDefCom.Repository
         {
             base.OnModelCreating(modelBuilder);
 
-            // Student: UserId is string, GroupId is int
-            modelBuilder.Entity<Student>()
-                .HasOne(s => s.User)
-                .WithMany()
-                .HasForeignKey(s => s.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
+            // ============================================
+            // CONFIGURE TPT (Table-Per-Type) INHERITANCE
+            // ============================================
+            
+            // AppUser table: AspNetUsers (already created by Identity)
+            modelBuilder.Entity<AppUser>().ToTable("AspNetUsers");
+            
+            // Student table: Students (additional fields)
+            // Students inherits from AppUser
+            modelBuilder.Entity<Student>().ToTable("Students");
+            
+            // Lecturer table: Lecturers (additional fields)
+            // Lecturers inherits from AppUser
+            modelBuilder.Entity<Lecturer>().ToTable("Lecturers");
 
-            modelBuilder.Entity<Student>()
-                .HasOne(s => s.Group)
+            // ============================================
+            // STUDENT GROUP (Many-to-Many: Student <-> Group)
+            // ============================================
+            
+            modelBuilder.Entity<StudentGroup>()
+                .HasOne(sg => sg.Student)
                 .WithMany()
-                .HasForeignKey(s => s.GroupId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(sg => sg.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            // Semester: MajorId is int
-            modelBuilder.Entity<Semester>()
-                .HasOne(s => s.Major)
+            modelBuilder.Entity<StudentGroup>()
+                .HasOne(sg => sg.Group)
                 .WithMany()
-                .HasForeignKey(s => s.MajorId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey(sg => sg.GroupId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            // Group: SemesterId is int
+            // Unique constraint: One student can be in a group only once
+            modelBuilder.Entity<StudentGroup>()
+                .HasIndex(sg => new { sg.UserId, sg.GroupId })
+                .IsUnique();
+
+            // ============================================
+            // GROUP RELATIONSHIPS
+            // ============================================
+            
             modelBuilder.Entity<Group>()
                 .HasOne(g => g.Semester)
                 .WithMany()
                 .HasForeignKey(g => g.SemesterId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // DefenseSession: GroupId is int
-            modelBuilder.Entity<DefenseSession>()
-                .HasOne(d => d.Group)
+            modelBuilder.Entity<Group>()
+                .HasOne(g => g.Major)
                 .WithMany()
-                .HasForeignKey(d => d.GroupId)
+                .HasForeignKey(g => g.MajorId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Transcript: SessionId is int
-            modelBuilder.Entity<Transcript>()
-                .HasOne(t => t.Session)
+            // ============================================
+            // COUNCIL RELATIONSHIPS
+            // ============================================
+            
+            modelBuilder.Entity<Council>()
+                .HasOne(c => c.Major)
                 .WithMany()
-                .HasForeignKey(t => t.SessionId)
+                .HasForeignKey(c => c.MajorId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Recording: TranscriptId is optional int FK
-            modelBuilder.Entity<Recording>()
-                .HasOne(r => r.Transcript)
-                .WithMany()
-                .HasForeignKey(r => r.TranscriptId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            // Recording: UserId is string FK to AspNetUsers
-            modelBuilder.Entity<Recording>()
-                .HasOne(r => r.User)
-                .WithMany()
-                .HasForeignKey(r => r.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // Report: SessionId is int
-            modelBuilder.Entity<Report>()
-                .HasOne(r => r.Session)
-                .WithMany()
-                .HasForeignKey(r => r.SessionId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // MajorRubric: MajorId, RubricId
-            modelBuilder.Entity<MajorRubric>()
-                .HasOne(mr => mr.Major)
-                .WithMany()
-                .HasForeignKey(mr => mr.MajorId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<MajorRubric>()
-                .HasOne(mr => mr.Rubric)
-                .WithMany()
-                .HasForeignKey(mr => mr.RubricId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // CommitteeAssignment: UserId, CouncilId, SessionId
+            // ============================================
+            // COMMITTEE ASSIGNMENT RELATIONSHIPS
+            // ============================================
+            
             modelBuilder.Entity<CommitteeAssignment>()
-                .HasOne(ca => ca.User)
+                .HasOne(ca => ca.Lecturer)
                 .WithMany()
-                .HasForeignKey(ca => ca.UserId)
+                .HasForeignKey(ca => ca.LecturerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<CommitteeAssignment>()
@@ -126,12 +119,31 @@ namespace AIDefCom.Repository
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<CommitteeAssignment>()
-                .HasOne(ca => ca.Session)
+                .HasOne(ca => ca.CouncilRole)
                 .WithMany()
-                .HasForeignKey(ca => ca.SessionId)
+                .HasForeignKey(ca => ca.CouncilRoleId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // ProjectTask: AssignedById, AssignedToId
+            // ============================================
+            // DEFENSE SESSION RELATIONSHIPS
+            // ============================================
+            
+            modelBuilder.Entity<DefenseSession>()
+                .HasOne(d => d.Group)
+                .WithMany()
+                .HasForeignKey(d => d.GroupId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DefenseSession>()
+                .HasOne(d => d.Council)
+                .WithMany()
+                .HasForeignKey(d => d.CouncilId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ============================================
+            // PROJECT TASK RELATIONSHIPS
+            // ============================================
+            
             modelBuilder.Entity<ProjectTask>()
                 .HasOne(t => t.AssignedBy)
                 .WithMany()
@@ -144,7 +156,84 @@ namespace AIDefCom.Repository
                 .HasForeignKey(t => t.AssignedToId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Score: RubricId, EvaluatorId, StudentId, SessionId
+            modelBuilder.Entity<ProjectTask>()
+                .HasOne(t => t.Rubric)
+                .WithMany()
+                .HasForeignKey(t => t.RubricId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ============================================
+            // MEMBER NOTE RELATIONSHIPS
+            // ============================================
+            
+            modelBuilder.Entity<MemberNote>()
+                .HasOne(mn => mn.CommitteeAssignment)
+                .WithMany()
+                .HasForeignKey(mn => mn.CommitteeAssignmentId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<MemberNote>()
+                .HasOne(mn => mn.Group)
+                .WithMany()
+                .HasForeignKey(mn => mn.GroupId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ============================================
+            // TRANSCRIPT RELATIONSHIPS
+            // ============================================
+            
+            modelBuilder.Entity<Transcript>()
+                .HasOne(t => t.Session)
+                .WithMany()
+                .HasForeignKey(t => t.SessionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ============================================
+            // RECORDING RELATIONSHIPS
+            // ============================================
+            
+            modelBuilder.Entity<Recording>()
+                .HasOne(r => r.Transcript)
+                .WithMany()
+                .HasForeignKey(r => r.TranscriptId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Recording>()
+                .HasOne(r => r.User)
+                .WithMany()
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ============================================
+            // REPORT RELATIONSHIPS
+            // ============================================
+            
+            modelBuilder.Entity<Report>()
+                .HasOne(r => r.Session)
+                .WithMany()
+                .HasForeignKey(r => r.SessionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ============================================
+            // MAJOR RUBRIC RELATIONSHIPS
+            // ============================================
+            
+            modelBuilder.Entity<MajorRubric>()
+                .HasOne(mr => mr.Major)
+                .WithMany()
+                .HasForeignKey(mr => mr.MajorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<MajorRubric>()
+                .HasOne(mr => mr.Rubric)
+                .WithMany()
+                .HasForeignKey(mr => mr.RubricId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // ============================================
+            // SCORE RELATIONSHIPS
+            // ============================================
+            
             modelBuilder.Entity<Score>()
                 .HasOne(s => s.Rubric)
                 .WithMany()
@@ -167,19 +256,6 @@ namespace AIDefCom.Repository
                 .HasOne(s => s.Session)
                 .WithMany()
                 .HasForeignKey(s => s.SessionId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            // MemberNote: UserId, GroupId
-            modelBuilder.Entity<MemberNote>()
-                .HasOne(mn => mn.User)
-                .WithMany()
-                .HasForeignKey(mn => mn.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            modelBuilder.Entity<MemberNote>()
-                .HasOne(mn => mn.Group)
-                .WithMany()
-                .HasForeignKey(mn => mn.GroupId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

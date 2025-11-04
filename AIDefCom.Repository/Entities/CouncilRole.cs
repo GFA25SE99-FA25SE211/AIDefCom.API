@@ -6,16 +6,11 @@ using System.Threading.Tasks;
 
 namespace AIDefCom.Repository.Entities
 {
-    public class Council
+    public class CouncilRole
     {
         public int Id { get; set; } // Primary Key
+
+        public string RoleName { get; set; } = string.Empty;
         public string? Description { get; set; }
-        public DateTime CreatedDate { get; set; }
-        
-        // Foreign Key to Major
-        public int MajorId { get; set; }
-        public Major? Major { get; set; }
-        
-        public bool IsActive { get; set; } = true;
     }
 }

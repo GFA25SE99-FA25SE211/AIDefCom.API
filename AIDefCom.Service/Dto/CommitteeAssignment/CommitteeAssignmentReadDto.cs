@@ -8,11 +8,11 @@ namespace AIDefCom.Service.Dto.CommitteeAssignment
 {
     public class CommitteeAssignmentReadDto
     {
-        public int Id { get; set; }
-        public string UserId { get; set; } = string.Empty;
-        public string? UserName { get; set; }
+        public string Id { get; set; } = string.Empty;
+        public string LecturerId { get; set; } = string.Empty;
+        public string? LecturerName { get; set; }
         public int CouncilId { get; set; }
-        public int SessionId { get; set; }
-        public string Role { get; set; } = string.Empty;
+        public int CouncilRoleId { get; set; }
+        public string? RoleName { get; set; }
     }
 }

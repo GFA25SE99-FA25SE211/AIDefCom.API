@@ -22,46 +22,54 @@ namespace AIDefCom.Repository.Repositories.CommitteeAssignmentRepository
         public async Task<IEnumerable<CommitteeAssignment>> GetAllAsync()
         {
             return await _set.AsNoTracking()
-                             .Include(x => x.User)
+                             .Include(x => x.Lecturer)
                              .Include(x => x.Council)
-                             .Include(x => x.Session)
-                             .OrderBy(x => x.Role)
+                             .Include(x => x.CouncilRole)
+                             .OrderBy(x => x.CouncilRole!.RoleName)
                              .ToListAsync();
         }
 
         public async Task<CommitteeAssignment?> GetByIdAsync(int id)
         {
             return await _set.AsNoTracking()
-                             .Include(x => x.User)
+                             .Include(x => x.Lecturer)
                              .Include(x => x.Council)
-                             .Include(x => x.Session)
-                             .FirstOrDefaultAsync(x => x.Id == id);
+                             .Include(x => x.CouncilRole)
+                             .FirstOrDefaultAsync(x => x.Id == id.ToString());
         }
 
         public async Task<IEnumerable<CommitteeAssignment>> GetByCouncilIdAsync(int councilId)
         {
             return await _set.AsNoTracking()
-                             .Include(x => x.User)
-                             .Include(x => x.Session)
+                             .Include(x => x.Lecturer)
+                             .Include(x => x.CouncilRole)
                              .Where(x => x.CouncilId == councilId)
                              .ToListAsync();
         }
 
         public async Task<IEnumerable<CommitteeAssignment>> GetBySessionIdAsync(int sessionId)
         {
+            // CommitteeAssignment không còn SessionId
+            // Có thể query qua DefenseSession -> Council -> CommitteeAssignment
+            var councilIds = await _context.DefenseSessions
+                .Where(ds => ds.Id == sessionId)
+                .Select(ds => ds.CouncilId)
+                .ToListAsync();
+
             return await _set.AsNoTracking()
-                             .Include(x => x.User)
+                             .Include(x => x.Lecturer)
                              .Include(x => x.Council)
-                             .Where(x => x.SessionId == sessionId)
+                             .Include(x => x.CouncilRole)
+                             .Where(x => councilIds.Contains(x.CouncilId))
                              .ToListAsync();
         }
 
-        public async Task<IEnumerable<CommitteeAssignment>> GetByUserIdAsync(string userId)
+        public async Task<IEnumerable<CommitteeAssignment>> GetByLecturerIdAsync(string lecturerId)
         {
             return await _set.AsNoTracking()
                              .Include(x => x.Council)
-                             .Include(x => x.Session)
-                             .Where(x => x.UserId == userId)
+                             .Include(x => x.CouncilRole)
+                             .Where(x => x.LecturerId == lecturerId)
                              .ToListAsync();
         }
 
@@ -75,15 +83,14 @@ namespace AIDefCom.Repository.Repositories.CommitteeAssignmentRepository
             var existing = await _set.FirstOrDefaultAsync(x => x.Id == entity.Id);
             if (existing == null) return;
 
-            existing.UserId = entity.UserId;
+            existing.LecturerId = entity.LecturerId;
             existing.CouncilId = entity.CouncilId;
-            existing.SessionId = entity.SessionId;
-            existing.Role = entity.Role;
+            existing.CouncilRoleId = entity.CouncilRoleId;
         }
 
         public async Task DeleteAsync(int id)
         {
-            var existing = await _set.FindAsync(id);
+            var existing = await _set.FindAsync(id.ToString());
             if (existing != null)
                 _set.Remove(existing);
         }

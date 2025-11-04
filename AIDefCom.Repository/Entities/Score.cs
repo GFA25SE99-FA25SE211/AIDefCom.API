@@ -15,9 +15,9 @@ namespace AIDefCom.Repository.Entities
         public int RubricId { get; set; }
         public Rubric? Rubric { get; set; }
 
-        // Foreign Key to AppUser (Evaluator)
+        // Foreign Key to Lecturer (Evaluator)
         public string EvaluatorId { get; set; } = string.Empty;
-        public AppUser? Evaluator { get; set; }
+        public Lecturer? Evaluator { get; set; }
 
         // Foreign Key to Student
         public string StudentId { get; set; } = string.Empty;

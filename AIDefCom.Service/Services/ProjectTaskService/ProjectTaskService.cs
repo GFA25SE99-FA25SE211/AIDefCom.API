@@ -30,9 +30,10 @@ namespace AIDefCom.Service.Services.ProjectTaskService
                 Title = t.Title,
                 Description = t.Description,
                 AssignedById = t.AssignedById,
-                AssignedByName = t.AssignedBy?.FullName,
+                AssignedByName = t.AssignedBy?.Lecturer?.FullName,
                 AssignedToId = t.AssignedToId,
-                AssignedToName = t.AssignedTo?.FullName,
+                AssignedToName = t.AssignedTo?.Lecturer?.FullName,
+                RubricId = t.RubricId,
                 Status = t.Status
             });
         }

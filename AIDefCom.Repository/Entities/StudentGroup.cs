@@ -6,19 +6,18 @@ using System.Threading.Tasks;
 
 namespace AIDefCom.Repository.Entities
 {
-    public class MemberNote
+    public class StudentGroup
     {
         public int Id { get; set; } // Primary Key
 
-        // Foreign Key to CommitteeAssignment
-        public string CommitteeAssignmentId { get; set; } = string.Empty;
-        public CommitteeAssignment? CommitteeAssignment { get; set; }
+        // Foreign Key to Student (User_id in diagram)
+        public string UserId { get; set; } = string.Empty;
+        public Student? Student { get; set; }
 
         // Foreign Key to Group
         public string GroupId { get; set; } = string.Empty;
         public Group? Group { get; set; }
 
-        public string? NoteContent { get; set; }
-        public DateTime CreatedAt { get; set; }
+        public string? GroupRole { get; set; } // e.g., Leader, Member
     }
 }

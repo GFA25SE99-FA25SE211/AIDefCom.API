@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AIDefCom.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251015085310_AddUserIntoRecording")]
-    partial class AddUserIntoRecording
+    [Migration("20251103133413_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -101,24 +101,19 @@ namespace AIDefCom.Repository.Migrations
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
+
+                    b.UseTptMappingStrategy();
                 });
 
             modelBuilder.Entity("AIDefCom.Repository.Entities.CommitteeAssignment", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+                    b.Property<string>("Id")
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int>("CouncilId")
                         .HasColumnType("int");
 
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("SessionId")
+                    b.Property<int>("CouncilRoleId")
                         .HasColumnType("int");
 
                     b.Property<string>("UserId")
@@ -129,7 +124,7 @@ namespace AIDefCom.Repository.Migrations
 
                     b.HasIndex("CouncilId");
 
-                    b.HasIndex("SessionId");
+                    b.HasIndex("CouncilRoleId");
 
                     b.HasIndex("UserId");
 
@@ -153,9 +148,34 @@ namespace AIDefCom.Repository.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<int>("MajorId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("MajorId");
+
                     b.ToTable("Councils");
+                });
+
+            modelBuilder.Entity("AIDefCom.Repository.Entities.CouncilRole", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RoleName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("CouncilRoles");
                 });
 
             modelBuilder.Entity("AIDefCom.Repository.Entities.DefenseSession", b =>
@@ -165,6 +185,9 @@ namespace AIDefCom.Repository.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CouncilId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -192,6 +215,8 @@ namespace AIDefCom.Repository.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CouncilId");
+
                     b.HasIndex("GroupId");
 
                     b.ToTable("DefenseSessions");
@@ -201,6 +226,9 @@ namespace AIDefCom.Repository.Migrations
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("MajorId")
+                        .HasColumnType("int");
 
                     b.Property<string>("ProjectCode")
                         .IsRequired()
@@ -222,6 +250,8 @@ namespace AIDefCom.Repository.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("MajorId");
 
                     b.HasIndex("SemesterId");
 
@@ -279,6 +309,10 @@ namespace AIDefCom.Repository.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CommitteeAssignmentId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -289,15 +323,11 @@ namespace AIDefCom.Repository.Migrations
                     b.Property<string>("NoteContent")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("UserId")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(450)");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("GroupId");
+                    b.HasIndex("CommitteeAssignmentId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("GroupId");
 
                     b.ToTable("MemberNotes");
                 });
@@ -321,6 +351,9 @@ namespace AIDefCom.Repository.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("RubricId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -334,6 +367,8 @@ namespace AIDefCom.Repository.Migrations
                     b.HasIndex("AssignedById");
 
                     b.HasIndex("AssignedToId");
+
+                    b.HasIndex("RubricId");
 
                     b.ToTable("Tasks");
                 });
@@ -494,9 +529,6 @@ namespace AIDefCom.Repository.Migrations
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("MajorId")
-                        .HasColumnType("int");
-
                     b.Property<string>("SemesterName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -509,27 +541,22 @@ namespace AIDefCom.Repository.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("MajorId");
-
                     b.ToTable("Semesters");
                 });
 
-            modelBuilder.Entity("AIDefCom.Repository.Entities.Student", b =>
+            modelBuilder.Entity("AIDefCom.Repository.Entities.StudentGroup", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
 
-                    b.Property<DateTime?>("DateOfBirth")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Gender")
-                        .HasColumnType("nvarchar(max)");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("GroupId")
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("Role")
+                    b.Property<string>("GroupRole")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserId")
@@ -540,9 +567,10 @@ namespace AIDefCom.Repository.Migrations
 
                     b.HasIndex("GroupId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "GroupId")
+                        .IsUnique();
 
-                    b.ToTable("Students");
+                    b.ToTable("StudentGroups");
                 });
 
             modelBuilder.Entity("AIDefCom.Repository.Entities.Transcript", b =>
@@ -714,6 +742,41 @@ namespace AIDefCom.Repository.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("AIDefCom.Repository.Entities.Lecturer", b =>
+                {
+                    b.HasBaseType("AIDefCom.Repository.Entities.AppUser");
+
+                    b.Property<string>("AcademicRank")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DateOfBirth")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Degree")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Department")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Gender")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.ToTable("Lecturers", (string)null);
+                });
+
+            modelBuilder.Entity("AIDefCom.Repository.Entities.Student", b =>
+                {
+                    b.HasBaseType("AIDefCom.Repository.Entities.AppUser");
+
+                    b.Property<DateTime?>("DateOfBirth")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Gender")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.ToTable("Students", (string)null);
+                });
+
             modelBuilder.Entity("AIDefCom.Repository.Entities.CommitteeAssignment", b =>
                 {
                     b.HasOne("AIDefCom.Repository.Entities.Council", "Council")
@@ -722,9 +785,9 @@ namespace AIDefCom.Repository.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("AIDefCom.Repository.Entities.DefenseSession", "Session")
+                    b.HasOne("AIDefCom.Repository.Entities.CouncilRole", "CouncilRole")
                         .WithMany()
-                        .HasForeignKey("SessionId")
+                        .HasForeignKey("CouncilRoleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -736,29 +799,56 @@ namespace AIDefCom.Repository.Migrations
 
                     b.Navigation("Council");
 
-                    b.Navigation("Session");
+                    b.Navigation("CouncilRole");
 
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("AIDefCom.Repository.Entities.Council", b =>
+                {
+                    b.HasOne("AIDefCom.Repository.Entities.Major", "Major")
+                        .WithMany()
+                        .HasForeignKey("MajorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Major");
+                });
+
             modelBuilder.Entity("AIDefCom.Repository.Entities.DefenseSession", b =>
                 {
+                    b.HasOne("AIDefCom.Repository.Entities.Council", "Council")
+                        .WithMany()
+                        .HasForeignKey("CouncilId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("AIDefCom.Repository.Entities.Group", "Group")
                         .WithMany()
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.Navigation("Council");
+
                     b.Navigation("Group");
                 });
 
             modelBuilder.Entity("AIDefCom.Repository.Entities.Group", b =>
                 {
+                    b.HasOne("AIDefCom.Repository.Entities.Major", "Major")
+                        .WithMany()
+                        .HasForeignKey("MajorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("AIDefCom.Repository.Entities.Semester", "Semester")
                         .WithMany()
                         .HasForeignKey("SemesterId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("Major");
 
                     b.Navigation("Semester");
                 });
@@ -784,40 +874,48 @@ namespace AIDefCom.Repository.Migrations
 
             modelBuilder.Entity("AIDefCom.Repository.Entities.MemberNote", b =>
                 {
+                    b.HasOne("AIDefCom.Repository.Entities.CommitteeAssignment", "CommitteeAssignment")
+                        .WithMany()
+                        .HasForeignKey("CommitteeAssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("AIDefCom.Repository.Entities.Group", "Group")
                         .WithMany()
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("AIDefCom.Repository.Entities.AppUser", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                    b.Navigation("CommitteeAssignment");
 
                     b.Navigation("Group");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("AIDefCom.Repository.Entities.ProjectTask", b =>
                 {
-                    b.HasOne("AIDefCom.Repository.Entities.AppUser", "AssignedBy")
+                    b.HasOne("AIDefCom.Repository.Entities.CommitteeAssignment", "AssignedBy")
                         .WithMany()
                         .HasForeignKey("AssignedById")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("AIDefCom.Repository.Entities.AppUser", "AssignedTo")
+                    b.HasOne("AIDefCom.Repository.Entities.CommitteeAssignment", "AssignedTo")
                         .WithMany()
                         .HasForeignKey("AssignedToId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AIDefCom.Repository.Entities.Rubric", "Rubric")
+                        .WithMany()
+                        .HasForeignKey("RubricId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("AssignedBy");
 
                     b.Navigation("AssignedTo");
+
+                    b.Navigation("Rubric");
                 });
 
             modelBuilder.Entity("AIDefCom.Repository.Entities.Recording", b =>
@@ -884,34 +982,23 @@ namespace AIDefCom.Repository.Migrations
                     b.Navigation("Student");
                 });
 
-            modelBuilder.Entity("AIDefCom.Repository.Entities.Semester", b =>
-                {
-                    b.HasOne("AIDefCom.Repository.Entities.Major", "Major")
-                        .WithMany()
-                        .HasForeignKey("MajorId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Major");
-                });
-
-            modelBuilder.Entity("AIDefCom.Repository.Entities.Student", b =>
+            modelBuilder.Entity("AIDefCom.Repository.Entities.StudentGroup", b =>
                 {
                     b.HasOne("AIDefCom.Repository.Entities.Group", "Group")
                         .WithMany()
                         .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("AIDefCom.Repository.Entities.AppUser", "User")
+                    b.HasOne("AIDefCom.Repository.Entities.Student", "Student")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Group");
 
-                    b.Navigation("User");
+                    b.Navigation("Student");
                 });
 
             modelBuilder.Entity("AIDefCom.Repository.Entities.Transcript", b =>
@@ -972,6 +1059,24 @@ namespace AIDefCom.Repository.Migrations
                     b.HasOne("AIDefCom.Repository.Entities.AppUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AIDefCom.Repository.Entities.Lecturer", b =>
+                {
+                    b.HasOne("AIDefCom.Repository.Entities.AppUser", null)
+                        .WithOne()
+                        .HasForeignKey("AIDefCom.Repository.Entities.Lecturer", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AIDefCom.Repository.Entities.Student", b =>
+                {
+                    b.HasOne("AIDefCom.Repository.Entities.AppUser", null)
+                        .WithOne()
+                        .HasForeignKey("AIDefCom.Repository.Entities.Student", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

@@ -22,7 +22,7 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
         public async Task<IEnumerable<MemberNote>> GetAllAsync()
         {
             return await _set.AsNoTracking()
-                             .Include(n => n.User)
+                             .Include(n => n.CommitteeAssignment)
                              .Include(n => n.Group)
                              .OrderByDescending(n => n.CreatedAt)
                              .ToListAsync();
@@ -31,7 +31,7 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
         public async Task<MemberNote?> GetByIdAsync(int id)
         {
             return await _set.AsNoTracking()
-                             .Include(n => n.User)
+                             .Include(n => n.CommitteeAssignment)
                              .Include(n => n.Group)
                              .FirstOrDefaultAsync(n => n.Id == id);
         }
@@ -39,7 +39,7 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
         public async Task<IEnumerable<MemberNote>> GetByGroupIdAsync(string groupId)
         {
             return await _set.AsNoTracking()
-                             .Include(n => n.User)
+                             .Include(n => n.CommitteeAssignment)
                              .Where(n => n.GroupId == groupId)
                              .OrderByDescending(n => n.CreatedAt)
                              .ToListAsync();
@@ -49,7 +49,7 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
         {
             return await _set.AsNoTracking()
                              .Include(n => n.Group)
-                             .Where(n => n.UserId == userId)
+                             .Where(n => n.CommitteeAssignmentId == userId)
                              .OrderByDescending(n => n.CreatedAt)
                              .ToListAsync();
         }
@@ -66,7 +66,7 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
 
             existing.NoteContent = note.NoteContent;
             existing.GroupId = note.GroupId;
-            existing.UserId = note.UserId;
+            existing.CommitteeAssignmentId = note.CommitteeAssignmentId;
         }
 
         public async Task DeleteAsync(int id)
