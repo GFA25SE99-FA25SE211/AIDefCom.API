@@ -13,6 +13,7 @@ using AIDefCom.Repository.Repositories.RubricRepository;
 using AIDefCom.Repository.Repositories.SemesterRepository;
 using AIDefCom.Repository.Repositories.StudentRepository;
 using AIDefCom.Repository.Repositories.RecordingRepository;
+using AIDefCom.Repository.Repositories.TranscriptRepository;
 using AIDefCom.Repository.UnitOfWork;
 using AIDefCom.Service.Services.AuthService;
 using AIDefCom.Service.Services.CommitteeAssignmentService;
@@ -28,6 +29,7 @@ using AIDefCom.Service.Services.ReportService;
 using AIDefCom.Service.Services.RubricService;
 using AIDefCom.Service.Services.SemesterService;
 using AIDefCom.Service.Services.StudentService;
+using AIDefCom.Service.Services.TranscriptService;
 using Microsoft.Extensions.DependencyInjection;
 using AIDefCom.Service.Services.RecordingService;
 
@@ -52,6 +54,7 @@ namespace AIDefCom.API
             services.AddScoped<ICommitteeAssignmentRepository, CommitteeAssignmentRepository>();
             services.AddScoped<IProjectTaskRepository, ProjectTaskRepository>();
             services.AddScoped<IRecordingRepository, RecordingRepository>();
+            services.AddScoped<ITranscriptRepository, TranscriptRepository>();
 
             // Unit of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -73,6 +76,7 @@ namespace AIDefCom.API
             services.AddScoped<IProjectTaskService, ProjectTaskService>();
             services.AddScoped<RecordingStorageService>();
             services.AddScoped<IRecordingService, RecordingService>();
+            services.AddScoped<ITranscriptService, TranscriptService>();
 
             return services;
         }

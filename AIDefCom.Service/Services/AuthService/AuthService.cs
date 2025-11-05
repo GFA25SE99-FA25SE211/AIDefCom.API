@@ -17,19 +17,23 @@ using System.Threading.Tasks;
 
 namespace AIDefCom.Service.Services.AuthService
 {
-    public class AuthService(UserManager<AppUser> _userManager, SignInManager<AppUser> _signInManager, RoleManager<IdentityRole> _roleManager, IConfiguration _configuration, IEmailService _emailService) : IAuthService
+    public class AuthService(
+        UserManager<AppUser> _userManager,
+        SignInManager<AppUser> _signInManager,
+        RoleManager<IdentityRole> _roleManager,
+        IConfiguration _configuration,
+        IEmailService _emailService
+    ) : IAuthService
     {
+        // ------------------ REGISTER ------------------
         public async Task<AppUser?> RegisterAsync(AppUserDto request)
         {
-            if (await _userManager.FindByNameAsync(request.Username) != null)
-                throw new Exception("Username already exists.");
-
             if (await _userManager.FindByEmailAsync(request.Email) != null)
                 throw new Exception("Email already exists.");
 
             var user = new AppUser
             {
-                UserName = request.Username,
+                UserName = request.Email,
                 Email = request.Email,
                 EmailConfirmed = false,
                 FullName = request.FullName,
@@ -42,17 +46,15 @@ namespace AIDefCom.Service.Services.AuthService
 
             return user;
         }
+
         public async Task<AppUser?> RegisterWithRoleAsync(AppUserDto request)
         {
-            if (await _userManager.FindByNameAsync(request.Username) != null)
-                throw new Exception("Username already exists.");
-
             if (await _userManager.FindByEmailAsync(request.Email) != null)
                 throw new Exception("Email already exists.");
 
             var user = new AppUser
             {
-                UserName = request.Username,
+                UserName = request.Email,
                 Email = request.Email,
                 EmailConfirmed = false,
                 FullName = request.FullName,
@@ -72,11 +74,10 @@ namespace AIDefCom.Service.Services.AuthService
             }
 
             await _userManager.AddToRoleAsync(user, "Student");
-
             return user;
         }
 
-
+        // ------------------ ROLE MANAGEMENT ------------------
         public async Task<string> AddRoleAsync(string roleName)
         {
             var roleExists = await _roleManager.RoleExistsAsync(roleName);
@@ -91,9 +92,9 @@ namespace AIDefCom.Service.Services.AuthService
             return "Role created successfully.";
         }
 
-        public async Task<string> AssignRoleToUserAsync(string username, string role)
+        public async Task<string> AssignRoleToUserAsync(string email, string role)
         {
-            var user = await _userManager.FindByNameAsync(username);
+            var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
                 throw new Exception("User not found.");
 
@@ -104,6 +105,7 @@ namespace AIDefCom.Service.Services.AuthService
             return "Role assigned successfully.";
         }
 
+        // ------------------ LOGIN / LOGOUT ------------------
         public async Task<TokenResponseDto?> LoginAsync(LoginDto request)
         {
             var user = await _userManager.FindByEmailAsync(request.Email);
@@ -120,10 +122,9 @@ namespace AIDefCom.Service.Services.AuthService
             return tokenResponse;
         }
 
-
-        public async Task<string> LogoutAsync(string username)
+        public async Task<string> LogoutAsync(string email)
         {
-            var user = await _userManager.FindByNameAsync(username);
+            var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
                 throw new Exception("User not found.");
 
@@ -136,12 +137,13 @@ namespace AIDefCom.Service.Services.AuthService
             return "Logout successful.";
         }
 
-        public async Task<string> ChangePasswordAsync(string username, ChangePasswordDto request)
+        // ------------------ PASSWORD MANAGEMENT ------------------
+        public async Task<string> ChangePasswordAsync(string email, ChangePasswordDto request)
         {
             if (request.NewPassword != request.ConfirmNewPassword)
                 throw new Exception("New password and confirm password do not match.");
 
-            var user = await _userManager.FindByNameAsync(username);
+            var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
                 throw new Exception("User not found.");
 
@@ -151,6 +153,7 @@ namespace AIDefCom.Service.Services.AuthService
 
             return "Password changed successfully.";
         }
+
         public async Task<string> ForgotPassword(ForgotPasswordDto request)
         {
             var user = await _userManager.FindByEmailAsync(request.Email);
@@ -165,17 +168,16 @@ namespace AIDefCom.Service.Services.AuthService
                 new string[] { request.Email },
                 "Password Reset Request",
                 $@"
-        <h1>Password Reset</h1>
-        <p>Dear {request.Email},</p>
-        <p>Click the link below to reset your password:</p>
-        <p><a href='{resetLink}'>Reset Password</a></p>
-        <p>The link is valid for a limited time.</p>"
+                <h1>Password Reset</h1>
+                <p>Dear {request.Email},</p>
+                <p>Click the link below to reset your password:</p>
+                <p><a href='{resetLink}'>Reset Password</a></p>
+                <p>The link is valid for a limited time.</p>"
             );
 
             _emailService.SendEmail(message);
             return "Password reset email sent.";
         }
-
 
         public async Task<string> ResetPassword(ResetPasswordDto request)
         {
@@ -193,9 +195,10 @@ namespace AIDefCom.Service.Services.AuthService
             return "Password has been reset successfully.";
         }
 
-        public async Task<string> SoftDeleteAccountAsync(string username)
+        // ------------------ ACCOUNT STATUS ------------------
+        public async Task<string> SoftDeleteAccountAsync(string email)
         {
-            var user = await _userManager.FindByNameAsync(username);
+            var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
                 throw new Exception("User not found.");
 
@@ -205,9 +208,9 @@ namespace AIDefCom.Service.Services.AuthService
             return "User account has been soft deleted.";
         }
 
-        public async Task<string> RestoreAccountAsync(string username)
+        public async Task<string> RestoreAccountAsync(string email)
         {
-            var user = await _userManager.FindByNameAsync(username);
+            var user = await _userManager.FindByEmailAsync(email);
             if (user == null)
                 throw new Exception("User not found.");
 
@@ -220,7 +223,7 @@ namespace AIDefCom.Service.Services.AuthService
             return "User account has been restored.";
         }
 
-
+        // ------------------ TOKEN MANAGEMENT ------------------
         private async Task<TokenResponseDto> CreateTokenResponse(AppUser user)
         {
             return new TokenResponseDto
@@ -255,18 +258,16 @@ namespace AIDefCom.Service.Services.AuthService
         private string CreateToken(AppUser user)
         {
             var claims = new List<Claim>
-    {
-        new Claim(ClaimTypes.Name, user.UserName),
-        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-        new Claim(ClaimTypes.Email, user.Email),
-        new Claim("EmailConfirmed", user.EmailConfirmed.ToString())
-    };
+            {
+                new Claim(ClaimTypes.Name, user.UserName),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim("EmailConfirmed", user.EmailConfirmed.ToString())
+            };
 
             var roles = _userManager.GetRolesAsync(user).Result;
             foreach (var role in roles)
-            {
                 claims.Add(new Claim(ClaimTypes.Role, role));
-            }
 
             var secretKey = _configuration["AppSettings:Token"];
             if (string.IsNullOrEmpty(secretKey))
@@ -286,7 +287,6 @@ namespace AIDefCom.Service.Services.AuthService
             return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
         }
 
-
         private string GenerateRefreshToken()
         {
             var randomNumber = new byte[32];
@@ -295,6 +295,15 @@ namespace AIDefCom.Service.Services.AuthService
             return Convert.ToBase64String(randomNumber);
         }
 
+        private string GenerateSecurePassword(int length = 12)
+        {
+            const string validChars = "ABCDEFGHJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*?";
+            var random = new Random();
+            return new string(Enumerable.Repeat(validChars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+        // ------------------ GOOGLE AUTH ------------------
         public async Task<TokenResponseDto> GoogleLoginAsync(GoogleUserLoginDTO googleLoginDTO)
         {
             var payload = await GoogleJsonWebSignature.ValidateAsync(
@@ -307,10 +316,12 @@ namespace AIDefCom.Service.Services.AuthService
 
             var user = await _userManager.FindByEmailAsync(payload.Email);
             bool isNewUser = false;
+            string? firstGeneratedPassword = null;
 
             if (user == null)
             {
                 isNewUser = true;
+                string randomPassword = GenerateSecurePassword();
 
                 user = new AppUser
                 {
@@ -318,59 +329,57 @@ namespace AIDefCom.Service.Services.AuthService
                     UserName = payload.Email,
                     FullName = payload.Name ?? string.Empty,
                     EmailConfirmed = true,
-                    IsDelete = false
+                    IsDelete = false,
+                    HasGeneratedPassword = true,
+                    LastGeneratedPassword = randomPassword,
+                    PasswordGeneratedAt = DateTime.UtcNow
                 };
 
-                string defaultPassword = "AIDefCom@123";
-                var result = await _userManager.CreateAsync(user, defaultPassword);
-                if (!result.Succeeded)
-                    throw new Exception($"Failed to create user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                var createResult = await _userManager.CreateAsync(user, randomPassword);
+                if (!createResult.Succeeded)
+                    throw new Exception($"Failed to create user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
 
-                var defaultRole = "Student";
-                if (!await _roleManager.RoleExistsAsync(defaultRole))
-                {
-                    var roleResult = await _roleManager.CreateAsync(new IdentityRole(defaultRole));
-                    if (!roleResult.Succeeded)
-                        throw new Exception("Failed to create default role.");
-                }
+                firstGeneratedPassword = randomPassword;
+            }
+
+            var defaultRole = "Student";
+            if (!await _roleManager.RoleExistsAsync(defaultRole))
+                await _roleManager.CreateAsync(new IdentityRole(defaultRole));
+            if (!await _userManager.IsInRoleAsync(user, defaultRole))
                 await _userManager.AddToRoleAsync(user, defaultRole);
 
-                var info = new UserLoginInfo("Google", payload.Subject, "Google");
-                var loginResult = await _userManager.AddLoginAsync(user, info);
-                if (!loginResult.Succeeded)
-                    throw new Exception("Failed to link Google login.");
-            }
-            else
+            var info = new UserLoginInfo("Google", payload.Subject, "Google");
+            if (await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey) == null)
+                await _userManager.AddLoginAsync(user, info);
+
+            if (user.IsDelete)
             {
-                var info = new UserLoginInfo("Google", payload.Subject, "Google");
-                var existingLogin = await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey);
-
-                if (existingLogin == null)
-                {
-                    var linkResult = await _userManager.AddLoginAsync(user, info);
-                    if (!linkResult.Succeeded)
-                        throw new Exception("Failed to link Google login to existing user.");
-                }
-
-                if (user.IsDelete)
-                {
-                    user.IsDelete = false;
-                    await _userManager.UpdateAsync(user);
-                }
+                user.IsDelete = false;
+                await _userManager.UpdateAsync(user);
             }
 
             var refreshToken = await GenerateAndSaveRefreshToken(user);
             var accessToken = CreateToken(user);
 
-            return new TokenResponseDto
+            var response = new TokenResponseDto
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
                 EmailConfirmed = user.EmailConfirmed,
                 HasPassword = true,
-                IsNewUser = isNewUser
+                IsNewUser = isNewUser,
+                TemporaryPassword = firstGeneratedPassword
             };
+
+            if (firstGeneratedPassword != null)
+            {
+                user.LastGeneratedPassword = null;
+                await _userManager.UpdateAsync(user);
+            }
+
+            return response;
         }
+
         public async Task<TokenResponseDto> GoogleLoginAsMemberAsync(GoogleUserLoginDTO googleLoginDTO)
         {
             var payload = await GoogleJsonWebSignature.ValidateAsync(
@@ -383,52 +392,69 @@ namespace AIDefCom.Service.Services.AuthService
 
             var user = await _userManager.FindByEmailAsync(payload.Email);
             bool isNewUser = false;
+            string? firstGeneratedPassword = null;
 
             if (user == null)
             {
                 isNewUser = true;
+                string randomPassword = GenerateSecurePassword();
+
                 user = new AppUser
                 {
                     Email = payload.Email,
                     UserName = payload.Email,
                     FullName = payload.Name ?? string.Empty,
                     EmailConfirmed = true,
-                    IsDelete = false
+                    IsDelete = false,
+                    HasGeneratedPassword = true,
+                    LastGeneratedPassword = randomPassword,
+                    PasswordGeneratedAt = DateTime.UtcNow
                 };
 
-                string defaultPassword = "AIDefCom@123";
-                var result = await _userManager.CreateAsync(user, defaultPassword);
-                if (!result.Succeeded)
-                    throw new Exception($"Failed to create user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                var createResult = await _userManager.CreateAsync(user, randomPassword);
+                if (!createResult.Succeeded)
+                    throw new Exception($"Failed to create user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
 
-                var defaultRole = "Member";
-                if (!await _roleManager.RoleExistsAsync(defaultRole))
-                {
-                    var roleResult = await _roleManager.CreateAsync(new IdentityRole(defaultRole));
-                    if (!roleResult.Succeeded)
-                        throw new Exception("Failed to create Member role.");
-                }
+                firstGeneratedPassword = randomPassword;
+            }
+
+            var defaultRole = "Member";
+            if (!await _roleManager.RoleExistsAsync(defaultRole))
+                await _roleManager.CreateAsync(new IdentityRole(defaultRole));
+            if (!await _userManager.IsInRoleAsync(user, defaultRole))
                 await _userManager.AddToRoleAsync(user, defaultRole);
 
-                var info = new UserLoginInfo("Google", payload.Subject, "Google");
-                var loginResult = await _userManager.AddLoginAsync(user, info);
-                if (!loginResult.Succeeded)
-                    throw new Exception("Failed to link Google login.");
+            var info = new UserLoginInfo("Google", payload.Subject, "Google");
+            if (await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey) == null)
+                await _userManager.AddLoginAsync(user, info);
+
+            if (user.IsDelete)
+            {
+                user.IsDelete = false;
+                await _userManager.UpdateAsync(user);
             }
 
             var refreshToken = await GenerateAndSaveRefreshToken(user);
             var accessToken = CreateToken(user);
 
-            return new TokenResponseDto
+            var response = new TokenResponseDto
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
                 EmailConfirmed = user.EmailConfirmed,
                 HasPassword = true,
-                IsNewUser = isNewUser
+                IsNewUser = isNewUser,
+                TemporaryPassword = firstGeneratedPassword
             };
-        }
 
+            if (firstGeneratedPassword != null)
+            {
+                user.LastGeneratedPassword = null;
+                await _userManager.UpdateAsync(user);
+            }
+
+            return response;
+        }
 
         public async Task<TokenResponseDto> GoogleSetPasswordAsync(SetPasswordDTO request, string token)
         {
@@ -467,6 +493,5 @@ namespace AIDefCom.Service.Services.AuthService
                 HasPassword = true
             };
         }
-
     }
 }

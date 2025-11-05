@@ -12,6 +12,7 @@ using AIDefCom.Repository.Repositories.RubricRepository;
 using AIDefCom.Repository.Repositories.SemesterRepository;
 using AIDefCom.Repository.Repositories.StudentRepository;
 using AIDefCom.Repository.Repositories.RecordingRepository;
+using AIDefCom.Repository.Repositories.TranscriptRepository;
 using System;
 using System.Threading.Tasks;
 
@@ -32,8 +33,9 @@ namespace AIDefCom.Repository.UnitOfWork
         ICouncilRepository Councils { get; }
         ICommitteeAssignmentRepository CommitteeAssignments { get; }
         IProjectTaskRepository ProjectTasks { get; }
-        Task<int> SaveChangesAsync();
         IRecordingRepository Recordings { get; }
+        ITranscriptRepository Transcripts { get; }
+        Task<int> SaveChangesAsync();
         Task<int> CompleteAsync();
     }
 }

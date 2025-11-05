@@ -11,16 +11,16 @@ namespace AIDefCom.API.Controllers
     [ApiController]
     public class AuthController(IAuthService authService) : ControllerBase
     {
+        // ------------------ REGISTER ------------------
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] AppUserDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.Username) ||
+            if (string.IsNullOrWhiteSpace(request.Email) ||
                 string.IsNullOrWhiteSpace(request.Password) ||
-                string.IsNullOrWhiteSpace(request.Email) ||
                 string.IsNullOrWhiteSpace(request.FullName) ||
                 string.IsNullOrWhiteSpace(request.PhoneNumber))
             {
-                return BadRequest(new { message = "All fields (Username, Password, Email, FullName, PhoneNumber) are required." });
+                return BadRequest(new { message = "All fields (Email, Password, FullName, PhoneNumber) are required." });
             }
 
             try
@@ -32,7 +32,7 @@ namespace AIDefCom.API.Controllers
                 return Ok(new
                 {
                     user.Id,
-                    user.UserName,
+                    user.Email,
                     user.EmailConfirmed,
                     user.FullName,
                     user.PhoneNumber,
@@ -48,13 +48,12 @@ namespace AIDefCom.API.Controllers
         [HttpPost("register/student")]
         public async Task<IActionResult> RegisterWithRole([FromBody] AppUserDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.Username) ||
+            if (string.IsNullOrWhiteSpace(request.Email) ||
                 string.IsNullOrWhiteSpace(request.Password) ||
-                string.IsNullOrWhiteSpace(request.Email) ||
                 string.IsNullOrWhiteSpace(request.FullName) ||
                 string.IsNullOrWhiteSpace(request.PhoneNumber))
             {
-                return BadRequest(new { message = "All fields (Username, Password, Email, FullName, PhoneNumber) are required." });
+                return BadRequest(new { message = "All fields (Email, Password, FullName, PhoneNumber) are required." });
             }
 
             try
@@ -66,11 +65,11 @@ namespace AIDefCom.API.Controllers
                 return Ok(new
                 {
                     user.Id,
-                    user.UserName,
+                    user.Email,
                     user.EmailConfirmed,
                     user.FullName,
                     user.PhoneNumber,
-                    Role = "Customer",
+                    Role = "Student",
                     message = "User registered successfully with role 'Student'."
                 });
             }
@@ -80,7 +79,7 @@ namespace AIDefCom.API.Controllers
             }
         }
 
-
+        // ------------------ LOGIN ------------------
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto request)
         {
@@ -107,6 +106,18 @@ namespace AIDefCom.API.Controllers
             try
             {
                 var response = await authService.GoogleLoginAsync(googleLoginDTO);
+
+                if (!string.IsNullOrEmpty(response.TemporaryPassword))
+                {
+                    return Ok(new
+                    {
+                        message = "Account created successfully with Google login.",
+                        note = "Below is your one-time password for normal login. Save it securely.",
+                        temporaryPassword = response.TemporaryPassword,
+                        tokenData = response
+                    });
+                }
+
                 return Ok(response);
             }
             catch (Exception ex)
@@ -121,6 +132,18 @@ namespace AIDefCom.API.Controllers
             try
             {
                 var response = await authService.GoogleLoginAsMemberAsync(googleLoginDTO);
+
+                if (!string.IsNullOrEmpty(response.TemporaryPassword))
+                {
+                    return Ok(new
+                    {
+                        message = "Account created successfully with Google login.",
+                        note = "Below is your one-time password for normal login. Save it securely.",
+                        temporaryPassword = response.TemporaryPassword,
+                        tokenData = response
+                    });
+                }
+
                 return Ok(response);
             }
             catch (Exception ex)
@@ -129,15 +152,16 @@ namespace AIDefCom.API.Controllers
             }
         }
 
+        // ------------------ ROLE MANAGEMENT ------------------
         [HttpPut("roles/assign")]
         public async Task<IActionResult> AssignRole([FromBody] SetRoleRequestDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Role))
-                return BadRequest(new { Error = "Username and role cannot be empty." });
+            if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Role))
+                return BadRequest(new { Error = "Email and role cannot be empty." });
 
             try
             {
-                var result = await authService.AssignRoleToUserAsync(request.Username, request.Role);
+                var result = await authService.AssignRoleToUserAsync(request.Email, request.Role);
                 return Ok(new { Message = result });
             }
             catch (Exception ex)
@@ -163,6 +187,7 @@ namespace AIDefCom.API.Controllers
             }
         }
 
+        // ------------------ GOOGLE SET PASSWORD ------------------
         [HttpPost("google/set-password")]
         public async Task<IActionResult> GoogleSetPassword([FromBody] SetPasswordDTO setPasswordDTO, [FromHeader(Name = "Authorization")] string authorizationHeader)
         {
@@ -182,17 +207,18 @@ namespace AIDefCom.API.Controllers
             }
         }
 
+        // ------------------ LOGOUT ------------------
         [Authorize]
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
         {
-            var username = User.Identity?.Name;
-            if (string.IsNullOrEmpty(username))
-                return Unauthorized(new { message = "You need to be logged in to logout." });
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized(new { message = "Email claim not found in token." });
 
             try
             {
-                var result = await authService.LogoutAsync(username);
+                var result = await authService.LogoutAsync(email);
                 return Ok(new { message = result });
             }
             catch (Exception ex)
@@ -201,6 +227,7 @@ namespace AIDefCom.API.Controllers
             }
         }
 
+        // ------------------ CHANGE PASSWORD ------------------
         [Authorize]
         [HttpPut("password")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto request)
@@ -214,11 +241,11 @@ namespace AIDefCom.API.Controllers
 
             try
             {
-                var username = User.FindFirst(ClaimTypes.Name)?.Value;
-                if (string.IsNullOrEmpty(username))
-                    return Unauthorized(new { message = "User not found." });
+                var email = User.FindFirst(ClaimTypes.Email)?.Value;
+                if (string.IsNullOrEmpty(email))
+                    return Unauthorized(new { message = "Email claim not found." });
 
-                var result = await authService.ChangePasswordAsync(username, request);
+                var result = await authService.ChangePasswordAsync(email, request);
                 return Ok(new { message = result });
             }
             catch (Exception ex)
@@ -227,6 +254,7 @@ namespace AIDefCom.API.Controllers
             }
         }
 
+        // ------------------ REFRESH TOKEN ------------------
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshTokens([FromBody] RefreshTokenRequestDto request)
         {
@@ -247,12 +275,13 @@ namespace AIDefCom.API.Controllers
             }
         }
 
-        [HttpDelete("accounts/{username}")]
-        public async Task<IActionResult> SoftDeleteAccount(string username)
+        // ------------------ ACCOUNT MANAGEMENT ------------------
+        [HttpDelete("accounts/{email}")]
+        public async Task<IActionResult> SoftDeleteAccount(string email)
         {
             try
             {
-                var result = await authService.SoftDeleteAccountAsync(username);
+                var result = await authService.SoftDeleteAccountAsync(email);
                 return Ok(new { message = result });
             }
             catch (Exception ex)
@@ -261,12 +290,12 @@ namespace AIDefCom.API.Controllers
             }
         }
 
-        [HttpPut("accounts/{username}/restore")]
-        public async Task<IActionResult> RestoreAccount(string username)
+        [HttpPut("accounts/{email}/restore")]
+        public async Task<IActionResult> RestoreAccount(string email)
         {
             try
             {
-                var result = await authService.RestoreAccountAsync(username);
+                var result = await authService.RestoreAccountAsync(email);
                 return Ok(new { message = result });
             }
             catch (Exception ex)
@@ -275,6 +304,7 @@ namespace AIDefCom.API.Controllers
             }
         }
 
+        // ------------------ PASSWORD RECOVERY ------------------
         [HttpPost("password/forgot")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto request)
         {

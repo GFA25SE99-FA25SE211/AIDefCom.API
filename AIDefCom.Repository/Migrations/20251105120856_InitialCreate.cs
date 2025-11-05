@@ -34,6 +34,9 @@ namespace AIDefCom.Repository.Migrations
                     RefreshToken = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     RefreshTokenExpiryTime = table.Column<DateTime>(type: "datetime2", nullable: true),
                     IsDelete = table.Column<bool>(type: "bit", nullable: false),
+                    HasGeneratedPassword = table.Column<bool>(type: "bit", nullable: false),
+                    LastGeneratedPassword = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PasswordGeneratedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -342,19 +345,13 @@ namespace AIDefCom.Repository.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    LecturerId = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     CouncilId = table.Column<int>(type: "int", nullable: false),
                     CouncilRoleId = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_CommitteeAssignments", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_CommitteeAssignments_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_CommitteeAssignments_CouncilRoles_CouncilRoleId",
                         column: x => x.CouncilRoleId,
@@ -365,6 +362,12 @@ namespace AIDefCom.Repository.Migrations
                         name: "FK_CommitteeAssignments_Councils_CouncilId",
                         column: x => x.CouncilId,
                         principalTable: "Councils",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_CommitteeAssignments_Lecturers_LecturerId",
+                        column: x => x.LecturerId,
+                        principalTable: "Lecturers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
@@ -533,15 +536,15 @@ namespace AIDefCom.Repository.Migrations
                 {
                     table.PrimaryKey("PK_Scores", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Scores_AspNetUsers_EvaluatorId",
-                        column: x => x.EvaluatorId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
                         name: "FK_Scores_DefenseSessions_SessionId",
                         column: x => x.SessionId,
                         principalTable: "DefenseSessions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Scores_Lecturers_EvaluatorId",
+                        column: x => x.EvaluatorId,
+                        principalTable: "Lecturers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
@@ -664,9 +667,9 @@ namespace AIDefCom.Repository.Migrations
                 column: "CouncilRoleId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_CommitteeAssignments_UserId",
+                name: "IX_CommitteeAssignments_LecturerId",
                 table: "CommitteeAssignments",
-                column: "UserId");
+                column: "LecturerId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Councils_MajorId",
@@ -799,9 +802,6 @@ namespace AIDefCom.Repository.Migrations
                 name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
-                name: "Lecturers");
-
-            migrationBuilder.DropTable(
                 name: "MajorRubrics");
 
             migrationBuilder.DropTable(
@@ -841,16 +841,19 @@ namespace AIDefCom.Repository.Migrations
                 name: "DefenseSessions");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers");
+                name: "CouncilRoles");
 
             migrationBuilder.DropTable(
-                name: "CouncilRoles");
+                name: "Lecturers");
 
             migrationBuilder.DropTable(
                 name: "Councils");
 
             migrationBuilder.DropTable(
                 name: "Groups");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUsers");
 
             migrationBuilder.DropTable(
                 name: "Majors");
