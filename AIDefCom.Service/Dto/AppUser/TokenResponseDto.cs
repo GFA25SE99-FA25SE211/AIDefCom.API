@@ -13,5 +13,7 @@ namespace AIDefCom.Service.Dto.AppUser
         public bool EmailConfirmed { get; set; }
         public bool HasPassword { get; set; }
         public bool IsNewUser { get; set; }
+        public string? TemporaryPassword { get; set; }
+
     }
 }

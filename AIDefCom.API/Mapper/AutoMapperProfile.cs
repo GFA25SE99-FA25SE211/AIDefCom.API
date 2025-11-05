@@ -11,6 +11,7 @@ using AIDefCom.Service.Dto.Report;
 using AIDefCom.Service.Dto.Rubric;
 using AIDefCom.Service.Dto.Semester;
 using AIDefCom.Service.Dto.Student;
+using AIDefCom.Service.Dto.Transcript;
 using AutoMapper;
 
 namespace AIDefCom.API.Mapper
@@ -84,6 +85,10 @@ namespace AIDefCom.API.Mapper
             CreateMap<ProjectTaskCreateDto, ProjectTask>();
             CreateMap<ProjectTaskUpdateDto, ProjectTask>();
 
+            // Transcript mappings
+            CreateMap<Transcript, TranscriptReadDto>();
+            CreateMap<TranscriptCreateDto, Transcript>();
+            CreateMap<TranscriptUpdateDto, Transcript>();
         }
     }
 }

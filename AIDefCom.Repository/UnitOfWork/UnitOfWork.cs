@@ -13,6 +13,7 @@ using AIDefCom.Repository.Repositories.SemesterRepository;
 using AIDefCom.Repository.Repositories.StudentRepository;
 using System;
 using AIDefCom.Repository.Repositories.RecordingRepository;
+using AIDefCom.Repository.Repositories.TranscriptRepository;
 using System.Threading.Tasks;
 
 namespace AIDefCom.Repository.UnitOfWork
@@ -35,6 +36,7 @@ namespace AIDefCom.Repository.UnitOfWork
         public ICommitteeAssignmentRepository CommitteeAssignments { get; }
         public IProjectTaskRepository ProjectTasks { get; }
         public IRecordingRepository Recordings { get; }
+        public ITranscriptRepository Transcripts { get; }
 
         public UnitOfWork(
             ApplicationDbContext context,
@@ -51,7 +53,8 @@ namespace AIDefCom.Repository.UnitOfWork
             ICouncilRepository councilRepository,
             ICommitteeAssignmentRepository committeeAssignmentRepository,
             IProjectTaskRepository projectTaskRepository,
-            IRecordingRepository recordingRepository)
+            IRecordingRepository recordingRepository,
+            ITranscriptRepository transcriptRepository)
         {
             _context = context;
             AppUsers = appUserRepository;
@@ -68,6 +71,7 @@ namespace AIDefCom.Repository.UnitOfWork
             CommitteeAssignments = committeeAssignmentRepository;
             ProjectTasks = projectTaskRepository;
             Recordings = recordingRepository;
+            Transcripts = transcriptRepository;
         }
 
         public async Task<int> SaveChangesAsync()
