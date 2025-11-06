@@ -1,18 +1,33 @@
 ﻿using AIDefCom.Repository.Entities;
 using Microsoft.AspNetCore.Identity;
-using System;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace AIDefCom.Repository.Repositories.AppUserRepository
 {
-    public class AppUserRepository(UserManager<AppUser> _userManager) : IAppUserRepository
+    public class AppUserRepository : IAppUserRepository
     {
-        public async Task<AppUser> GetUserById(string id)
+        private readonly UserManager<AppUser> _userManager;
+
+        public AppUserRepository(UserManager<AppUser> userManager)
+        {
+            _userManager = userManager;
+        }
+
+        public async Task<IEnumerable<AppUser>> GetAllUsersAsync()
+        {
+            return await _userManager.Users.ToListAsync();
+        }
+
+        public async Task<AppUser?> GetUserByIdAsync(string id)
         {
             return await _userManager.FindByIdAsync(id);
+        }
+
+        public async Task<AppUser?> GetUserByEmailAsync(string email)
+        {
+            return await _userManager.FindByEmailAsync(email);
         }
     }
 }

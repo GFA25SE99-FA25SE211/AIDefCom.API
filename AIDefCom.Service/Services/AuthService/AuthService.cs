@@ -493,5 +493,51 @@ namespace AIDefCom.Service.Services.AuthService
                 HasPassword = true
             };
         }
+
+        public async Task<IEnumerable<AppUserListDto>> GetAllUsersAsync()
+        {
+            var users = _userManager.Users.ToList();
+            var result = new List<AppUserListDto>();
+
+            foreach (var user in users)
+            {
+                var roles = await _userManager.GetRolesAsync(user);
+                var mainRole = roles.FirstOrDefault() ?? "No Role";
+
+                result.Add(new AppUserListDto
+                {
+                    Id = user.Id,
+                    FullName = user.FullName,
+                    Email = user.Email ?? string.Empty,
+                    Role = mainRole,
+                    IsDelete = user.IsDelete,
+                    EmailConfirmed = user.EmailConfirmed
+                });
+            }
+
+            return result;
+        }
+        public async Task<AppUserResponseDto?> GetUserByIdAsync(string userId)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                throw new Exception("User not found.");
+
+            var roles = await _userManager.GetRolesAsync(user);
+
+            return new AppUserResponseDto
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                Email = user.Email ?? string.Empty,
+                PhoneNumber = user.PhoneNumber,
+                EmailConfirmed = user.EmailConfirmed,
+                IsDelete = user.IsDelete,
+                Roles = roles,
+                HasGeneratedPassword = user.HasGeneratedPassword,
+                PasswordGeneratedAt = user.PasswordGeneratedAt,
+                RefreshTokenExpiryTime = user.RefreshTokenExpiryTime
+            };
+        }
     }
 }

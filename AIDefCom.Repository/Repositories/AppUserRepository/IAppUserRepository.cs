@@ -1,14 +1,15 @@
 ﻿using AIDefCom.Repository.Entities;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace AIDefCom.Repository.Repositories.AppUserRepository
 {
     public interface IAppUserRepository
     {
-        Task<AppUser> GetUserById(string id);
+        Task<IEnumerable<AppUser>> GetAllUsersAsync();
+
+        Task<AppUser?> GetUserByIdAsync(string id);
+
+        Task<AppUser?> GetUserByEmailAsync(string email);
     }
 }

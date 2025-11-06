@@ -318,5 +318,37 @@ namespace AIDefCom.API.Controllers
             var result = await authService.ResetPassword(request);
             return Ok(new { message = result });
         }
+        
+        [HttpGet("users")]
+        public async Task<IActionResult> GetAllUsers()
+        {
+            try
+            {
+                var users = await authService.GetAllUsersAsync();
+                return Ok(users);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error while retrieving users.", details = ex.Message });
+            }
+        }
+
+        
+        [HttpGet("users/{id}")]
+        public async Task<IActionResult> GetUserById(string id)
+        {
+            try
+            {
+                var user = await authService.GetUserByIdAsync(id);
+                if (user == null)
+                    return NotFound(new { message = "User not found." });
+
+                return Ok(user);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error while retrieving user details.", details = ex.Message });
+            }
+        }
     }
 }
