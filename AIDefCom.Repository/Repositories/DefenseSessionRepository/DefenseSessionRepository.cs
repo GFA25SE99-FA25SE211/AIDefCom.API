@@ -18,7 +18,6 @@ namespace AIDefCom.Repository.Repositories.DefenseSessionRepository
             _context = context;
             _set = _context.Set<DefenseSession>();
         }
-
         public async Task<IEnumerable<DefenseSession>> GetAllAsync()
         {
             return await _set.AsNoTracking()
@@ -58,6 +57,7 @@ namespace AIDefCom.Repository.Repositories.DefenseSessionRepository
             existing.StartTime = session.StartTime;
             existing.EndTime = session.EndTime;
             existing.Status = session.Status;
+            existing.CouncilId = session.CouncilId;
         }
 
         public async Task DeleteAsync(int id)
@@ -65,6 +65,21 @@ namespace AIDefCom.Repository.Repositories.DefenseSessionRepository
             var entity = await _set.FindAsync(id);
             if (entity != null)
                 _set.Remove(entity);
+        }
+
+        
+        public IQueryable<DefenseSession> Query()
+        {
+            return _set.AsQueryable();
+        }
+
+        
+        public async Task<DefenseSession?> GetWithCouncilAsync(int id)
+        {
+            return await _set.AsNoTracking()
+                             .Include(x => x.Group)
+                             .Include(x => x.Council)
+                             .FirstOrDefaultAsync(x => x.Id == id);
         }
     }
 }

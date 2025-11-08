@@ -17,5 +17,7 @@ namespace AIDefCom.Repository.Repositories.CommitteeAssignmentRepository
         Task AddAsync(CommitteeAssignment entity);
         Task UpdateAsync(CommitteeAssignment entity);
         Task DeleteAsync(int id);
+        IQueryable<CommitteeAssignment> Query();
+
     }
 }

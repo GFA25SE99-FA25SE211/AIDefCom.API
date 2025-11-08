@@ -94,5 +94,10 @@ namespace AIDefCom.Repository.Repositories.CommitteeAssignmentRepository
             if (existing != null)
                 _set.Remove(existing);
         }
+        public IQueryable<CommitteeAssignment> Query()
+        {
+            return _set.AsQueryable();
+        }
+
     }
 }

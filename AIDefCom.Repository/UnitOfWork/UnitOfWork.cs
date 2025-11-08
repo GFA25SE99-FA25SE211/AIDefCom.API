@@ -11,9 +11,10 @@ using AIDefCom.Repository.Repositories.ReportRepository;
 using AIDefCom.Repository.Repositories.RubricRepository;
 using AIDefCom.Repository.Repositories.SemesterRepository;
 using AIDefCom.Repository.Repositories.StudentRepository;
-using System;
+using AIDefCom.Repository.Repositories.StudentGroupRepository;
 using AIDefCom.Repository.Repositories.RecordingRepository;
 using AIDefCom.Repository.Repositories.TranscriptRepository;
+using System;
 using System.Threading.Tasks;
 
 namespace AIDefCom.Repository.UnitOfWork
@@ -22,19 +23,29 @@ namespace AIDefCom.Repository.UnitOfWork
     {
         private readonly ApplicationDbContext _context;
 
-        public IAppUserRepository AppUsers { get; }
-        public IRubricRepository Rubrics { get; }
+        // ------------------ Academic Data ------------------
         public IMajorRepository Majors { get; }
+        public ISemesterRepository Semesters { get; }
+        public IGroupRepository Groups { get; }
+        public IStudentRepository Students { get; }
+        public IStudentGroupRepository StudentGroups { get; }
+
+        // ------------------ Rubrics & Evaluation ------------------
+        public IRubricRepository Rubrics { get; }
         public IMajorRubricRepository MajorRubrics { get; }
         public IReportRepository Reports { get; }
-        public ISemesterRepository Semesters { get; }
-        public IStudentRepository Students { get; }
-        public IGroupRepository Groups { get; }
-        public IDefenseSessionRepository DefenseSessions { get; }
         public IMemberNoteRepository MemberNotes { get; }
+
+        // ------------------ Defense & Committee ------------------
+        public IDefenseSessionRepository DefenseSessions { get; }
         public ICouncilRepository Councils { get; }
         public ICommitteeAssignmentRepository CommitteeAssignments { get; }
+
+        // ------------------ Users & Projects ------------------
+        public IAppUserRepository AppUsers { get; }
         public IProjectTaskRepository ProjectTasks { get; }
+
+        // ------------------ Media & Transcripts ------------------
         public IRecordingRepository Recordings { get; }
         public ITranscriptRepository Transcripts { get; }
 
@@ -48,6 +59,7 @@ namespace AIDefCom.Repository.UnitOfWork
             ISemesterRepository semesterRepository,
             IStudentRepository studentRepository,
             IGroupRepository groupRepository,
+            IStudentGroupRepository studentGroupRepository,
             IDefenseSessionRepository defenseSessionRepository,
             IMemberNoteRepository memberNoteRepository,
             ICouncilRepository councilRepository,
@@ -57,27 +69,40 @@ namespace AIDefCom.Repository.UnitOfWork
             ITranscriptRepository transcriptRepository)
         {
             _context = context;
-            AppUsers = appUserRepository;
-            Rubrics = rubricRepository;
+
+            // Academic Data
             Majors = majorRepository;
+            Semesters = semesterRepository;
+            Groups = groupRepository;
+            Students = studentRepository;
+            StudentGroups = studentGroupRepository;
+
+            // Rubrics & Evaluation
+            Rubrics = rubricRepository;
             MajorRubrics = majorRubricRepository;
             Reports = reportRepository;
-            Semesters = semesterRepository;
-            Students = studentRepository;
-            Groups = groupRepository;
-            DefenseSessions = defenseSessionRepository;
             MemberNotes = memberNoteRepository;
+
+            // Defense & Committee
+            DefenseSessions = defenseSessionRepository;
             Councils = councilRepository;
             CommitteeAssignments = committeeAssignmentRepository;
+
+            // Users & Projects
+            AppUsers = appUserRepository;
             ProjectTasks = projectTaskRepository;
+
+            // Media & Transcripts
             Recordings = recordingRepository;
             Transcripts = transcriptRepository;
         }
 
+        // ------------------ Core ------------------
         public async Task<int> SaveChangesAsync()
         {
             return await _context.SaveChangesAsync();
         }
+
         public async Task<int> CompleteAsync()
         {
             return await _context.SaveChangesAsync();

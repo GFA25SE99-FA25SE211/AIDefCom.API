@@ -16,5 +16,7 @@ namespace AIDefCom.Repository.Repositories.GroupRepository
         Task UpdateAsync(Group group);
         Task DeleteAsync(string id);
         Task<bool> ExistsByProjectCodeAsync(string code);
+        IQueryable<Group> Query();
+
     }
 }

@@ -70,5 +70,9 @@ namespace AIDefCom.Repository.Repositories.GroupRepository
         {
             return await _set.AnyAsync(g => g.ProjectCode == code);
         }
+        public IQueryable<Group> Query()
+        {
+            return _set.AsQueryable();
+        }
     }
 }

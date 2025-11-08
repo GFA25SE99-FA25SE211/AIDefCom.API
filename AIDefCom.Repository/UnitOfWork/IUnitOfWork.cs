@@ -11,6 +11,7 @@ using AIDefCom.Repository.Repositories.ReportRepository;
 using AIDefCom.Repository.Repositories.RubricRepository;
 using AIDefCom.Repository.Repositories.SemesterRepository;
 using AIDefCom.Repository.Repositories.StudentRepository;
+using AIDefCom.Repository.Repositories.StudentGroupRepository;
 using AIDefCom.Repository.Repositories.RecordingRepository;
 using AIDefCom.Repository.Repositories.TranscriptRepository;
 using System;
@@ -20,21 +21,33 @@ namespace AIDefCom.Repository.UnitOfWork
 {
     public interface IUnitOfWork : IDisposable
     {
+        // ------------------ Academic Data ------------------
         IMajorRepository Majors { get; }
-        IAppUserRepository AppUsers { get; }
+        ISemesterRepository Semesters { get; }
+        IGroupRepository Groups { get; }
+        IStudentRepository Students { get; }
+        IStudentGroupRepository StudentGroups { get; }
+
+        // ------------------ Rubrics & Evaluation ------------------
         IRubricRepository Rubrics { get; }
         IMajorRubricRepository MajorRubrics { get; }
         IReportRepository Reports { get; }
-        ISemesterRepository Semesters { get; }
-        IStudentRepository Students { get; }
-        IGroupRepository Groups { get; }
-        IDefenseSessionRepository DefenseSessions { get; }
         IMemberNoteRepository MemberNotes { get; }
+
+        // ------------------ Defense & Committee ------------------
+        IDefenseSessionRepository DefenseSessions { get; }
         ICouncilRepository Councils { get; }
         ICommitteeAssignmentRepository CommitteeAssignments { get; }
+
+        // ------------------ Users & Projects ------------------
+        IAppUserRepository AppUsers { get; }
         IProjectTaskRepository ProjectTasks { get; }
+
+        // ------------------ Media & Transcripts ------------------
         IRecordingRepository Recordings { get; }
         ITranscriptRepository Transcripts { get; }
+
+        // ------------------ Core ------------------
         Task<int> SaveChangesAsync();
         Task<int> CompleteAsync();
     }
