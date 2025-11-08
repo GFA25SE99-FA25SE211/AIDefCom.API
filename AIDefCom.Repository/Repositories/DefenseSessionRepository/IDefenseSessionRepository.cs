@@ -1,8 +1,6 @@
 ﻿using AIDefCom.Repository.Entities;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace AIDefCom.Repository.Repositories.DefenseSessionRepository
@@ -15,5 +13,7 @@ namespace AIDefCom.Repository.Repositories.DefenseSessionRepository
         Task AddAsync(DefenseSession session);
         Task UpdateAsync(DefenseSession session);
         Task DeleteAsync(int id);
+        IQueryable<DefenseSession> Query();
+        Task<DefenseSession?> GetWithCouncilAsync(int id);
     }
 }

@@ -1,0 +1,21 @@
+﻿using AIDefCom.Repository.Entities;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace AIDefCom.Repository.Repositories.StudentGroupRepository
+{
+    public interface IStudentGroupRepository
+    {
+        Task<IEnumerable<StudentGroup>> GetAllAsync();
+        Task<StudentGroup?> GetByIdAsync(int id);
+        Task<IEnumerable<StudentGroup>> GetByGroupIdAsync(string groupId);
+        Task<IEnumerable<StudentGroup>> GetByStudentIdAsync(string studentId);
+        Task AddAsync(StudentGroup entity);
+        Task UpdateAsync(StudentGroup entity);
+        Task DeleteAsync(int id);
+        IQueryable<StudentGroup> Query();
+    }
+}

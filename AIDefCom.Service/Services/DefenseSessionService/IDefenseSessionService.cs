@@ -15,5 +15,7 @@ namespace AIDefCom.Service.Services.DefenseSessionService
         Task<int> AddAsync(DefenseSessionCreateDto dto);
         Task<bool> UpdateAsync(int id, DefenseSessionUpdateDto dto);
         Task<bool> DeleteAsync(int id);
+        Task<IEnumerable<UserReadDto>> GetUsersByDefenseSessionIdAsync(int defenseSessionId);
+
     }
 }

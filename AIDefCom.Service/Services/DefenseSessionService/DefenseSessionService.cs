@@ -2,10 +2,10 @@
 using AIDefCom.Repository.UnitOfWork;
 using AIDefCom.Service.Dto.DefenseSession;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace AIDefCom.Service.Services.DefenseSessionService
@@ -20,6 +20,8 @@ namespace AIDefCom.Service.Services.DefenseSessionService
             _uow = uow;
             _mapper = mapper;
         }
+
+        // ------------------ CRUD ------------------
 
         public async Task<IEnumerable<DefenseSessionReadDto>> GetAllAsync()
         {
@@ -68,6 +70,58 @@ namespace AIDefCom.Service.Services.DefenseSessionService
             await _uow.DefenseSessions.DeleteAsync(id);
             await _uow.SaveChangesAsync();
             return true;
+        }
+
+        
+        public async Task<IEnumerable<UserReadDto>> GetUsersByDefenseSessionIdAsync(int defenseSessionId)
+        {
+            // 1️⃣ Lấy session
+            var session = await _uow.DefenseSessions.GetByIdAsync(defenseSessionId);
+            if (session == null)
+                return Enumerable.Empty<UserReadDto>();
+
+            var result = new List<UserReadDto>();
+
+            var lecturerAssignments = await _uow.CommitteeAssignments.Query()
+                .Include(ca => ca.Lecturer)
+                .Include(ca => ca.CouncilRole)
+                .Where(ca => ca.CouncilId == session.CouncilId)
+                .ToListAsync();
+
+            foreach (var ca in lecturerAssignments)
+            {
+                if (ca.Lecturer != null)
+                {
+                    result.Add(new UserReadDto
+                    {
+                        Id = ca.Lecturer.Id,
+                        FullName = ca.Lecturer.FullName,
+                        Email = ca.Lecturer.Email ?? string.Empty,
+                        Role = ca.CouncilRole?.RoleName ?? "Committee Member"
+                    });
+                }
+            }
+
+            var studentGroups = await _uow.StudentGroups.Query()
+                .Include(sg => sg.Student)
+                .Where(sg => sg.GroupId == session.GroupId)
+                .ToListAsync();
+
+            foreach (var sg in studentGroups)
+            {
+                if (sg.Student != null)
+                {
+                    result.Add(new UserReadDto
+                    {
+                        Id = sg.Student.Id,
+                        FullName = sg.Student.FullName,
+                        Email = sg.Student.Email ?? string.Empty,
+                        Role = sg.GroupRole ?? "Student"
+                    });
+                }
+            }
+
+            return result;
         }
     }
 }

@@ -89,6 +89,18 @@ namespace AIDefCom.API.Mapper
             CreateMap<Transcript, TranscriptReadDto>();
             CreateMap<TranscriptCreateDto, Transcript>();
             CreateMap<TranscriptUpdateDto, Transcript>();
+
+            CreateMap<Lecturer, UserReadDto>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+                .ForMember(dest => dest.Role, opt => opt.MapFrom(src => "Lecturer"));
+
+            CreateMap<Student, UserReadDto>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+                .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+                .ForMember(dest => dest.Role, opt => opt.MapFrom(src => "Student"));
         }
     }
 }

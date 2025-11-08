@@ -14,6 +14,7 @@ using AIDefCom.Repository.Repositories.SemesterRepository;
 using AIDefCom.Repository.Repositories.StudentRepository;
 using AIDefCom.Repository.Repositories.RecordingRepository;
 using AIDefCom.Repository.Repositories.TranscriptRepository;
+using AIDefCom.Repository.Repositories.StudentGroupRepository;
 using AIDefCom.Repository.UnitOfWork;
 using AIDefCom.Service.Services.AuthService;
 using AIDefCom.Service.Services.CommitteeAssignmentService;
@@ -30,6 +31,7 @@ using AIDefCom.Service.Services.RubricService;
 using AIDefCom.Service.Services.SemesterService;
 using AIDefCom.Service.Services.StudentService;
 using AIDefCom.Service.Services.TranscriptService;
+using AIDefCom.Service.Services.TranscriptAnalysisService;
 using Microsoft.Extensions.DependencyInjection;
 using AIDefCom.Service.Services.RecordingService;
 
@@ -51,6 +53,7 @@ namespace AIDefCom.API
             services.AddScoped<IDefenseSessionRepository, DefenseSessionRepository>();
             services.AddScoped<IMemberNoteRepository, MemberNoteRepository>();
             services.AddScoped<ICouncilRepository, CouncilRepository>();
+            services.AddScoped<IStudentGroupRepository, StudentGroupRepository>();
             services.AddScoped<ICommitteeAssignmentRepository, CommitteeAssignmentRepository>();
             services.AddScoped<IProjectTaskRepository, ProjectTaskRepository>();
             services.AddScoped<IRecordingRepository, RecordingRepository>();
@@ -58,6 +61,9 @@ namespace AIDefCom.API
 
             // Unit of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+            // HttpClient for AI Services
+            services.AddHttpClient<ITranscriptAnalysisService, TranscriptAnalysisService>();
 
             // Services
             services.AddScoped<IAuthService, AuthService>();
@@ -77,6 +83,7 @@ namespace AIDefCom.API
             services.AddScoped<RecordingStorageService>();
             services.AddScoped<IRecordingService, RecordingService>();
             services.AddScoped<ITranscriptService, TranscriptService>();
+            services.AddScoped<ITranscriptAnalysisService, TranscriptAnalysisService>();
 
             return services;
         }

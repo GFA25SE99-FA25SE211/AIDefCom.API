@@ -64,5 +64,30 @@ namespace AIDefCom.API.Controllers
                 return NotFound(new { message = "Defense session not found." });
             return Ok(new { message = "Defense session deleted successfully." });
         }
+        [HttpGet("{id}/users")]
+        public async Task<IActionResult> GetUsersByDefenseSessionId(int id)
+        {
+            try
+            {
+                var users = await service.GetUsersByDefenseSessionIdAsync(id);
+                if (!users.Any())
+                    return NotFound(new { message = "No users found for this defense session." });
+
+                return Ok(new
+                {
+                    message = "Users retrieved successfully for the defense session.",
+                    data = users
+                });
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, $"Error fetching users for DefenseSession ID {id}");
+                return StatusCode(500, new
+                {
+                    message = "Error retrieving users for the defense session.",
+                    error = ex.Message
+                });
+            }
+        }
     }
 }
