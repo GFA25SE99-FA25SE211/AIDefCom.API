@@ -1,117 +1,166 @@
-﻿using AIDefCom.Service.Dto.Report;
+﻿using AIDefCom.Service.Constants;
+using AIDefCom.Service.Dto.Common;
+using AIDefCom.Service.Dto.Report;
 using AIDefCom.Service.Services.ReportService;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
-    [Route("api/[controller]")]
+    /// <summary>
+    /// Controller for managing reports
+    /// </summary>
+    [Route("api/reports")]
     [ApiController]
-    public class ReportsController(IReportService service, ILogger<ReportsController> logger) : ControllerBase
+    public class ReportsController : ControllerBase
     {
+        private readonly IReportService _service;
+        private readonly ILogger<ReportsController> _logger;
+
+        public ReportsController(IReportService service, ILogger<ReportsController> logger)
+        {
+            _service = service;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Get all reports
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            try
+            _logger.LogInformation("Retrieving all reports");
+            var data = await _service.GetAllAsync();
+            return Ok(new ApiResponse<IEnumerable<ReportReadDto>>
             {
-                var data = await service.GetAllAsync();
-                return Ok(new { message = "Reports retrieved successfully.", data });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error fetching all reports");
-                return StatusCode(500, new { message = "Error retrieving reports.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.Report_Success0001,
+                Message = SystemMessages.Report_Success0001,
+                Data = data
+            });
         }
 
+        /// <summary>
+        /// Get report by ID
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            try
+            _logger.LogInformation("Retrieving report with ID: {Id}", id);
+            var report = await _service.GetByIdAsync(id);
+            if (report == null)
             {
-                var report = await service.GetByIdAsync(id);
-                if (report == null)
-                    return NotFound(new { message = "Report not found." });
+                _logger.LogWarning("Report with ID {Id} not found", id);
+                return NotFound(new ApiResponse<object>
+                {
+                    MessageCode = MessageCodes.Report_Fail0001,
+                    Message = SystemMessages.Report_Fail0001
+                });
+            }
 
-                return Ok(new { message = "Report retrieved successfully.", data = report });
-            }
-            catch (Exception ex)
+            return Ok(new ApiResponse<ReportReadDto>
             {
-                logger.LogError(ex, "Error fetching report {Id}", id);
-                return StatusCode(500, new { message = "Error retrieving report.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.Report_Success0002,
+                Message = SystemMessages.Report_Success0002,
+                Data = report
+            });
         }
 
+        /// <summary>
+        /// Get reports by session ID
+        /// </summary>
         [HttpGet("session/{sessionId}")]
         public async Task<IActionResult> GetBySessionId(int sessionId)
         {
-            try
+            _logger.LogInformation("Retrieving reports for session ID: {SessionId}", sessionId);
+            var data = await _service.GetBySessionIdAsync(sessionId);
+            return Ok(new ApiResponse<IEnumerable<ReportReadDto>>
             {
-                var data = await service.GetBySessionIdAsync(sessionId);
-                return Ok(new { message = "Reports for session retrieved successfully.", data });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error fetching reports for session {Id}", sessionId);
-                return StatusCode(500, new { message = "Error retrieving reports for session.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.Report_Success0006,
+                Message = SystemMessages.Report_Success0006,
+                Data = data
+            });
         }
 
+        /// <summary>
+        /// Create a new report
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] ReportCreateDto dto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(new { message = "Invalid input.", errors = ModelState });
+                return BadRequest(new ApiResponse<object>
+                {
+                    MessageCode = MessageCodes.General_Validation0001,
+                    Message = SystemMessages.General_Validation0001,
+                    Data = ModelState
+                });
 
-            try
+            _logger.LogInformation("Creating new report for session {SessionId}", dto.SessionId);
+            var id = await _service.AddAsync(dto);
+            var created = await _service.GetByIdAsync(id);
+            _logger.LogInformation("Report created with ID: {Id}", id);
+            
+            return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<ReportReadDto>
             {
-                var id = await service.AddAsync(dto);
-                var created = await service.GetByIdAsync(id);
-                return CreatedAtAction(nameof(GetById), new { id }, new { message = "Report created successfully.", data = created });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error adding report");
-                return StatusCode(500, new { message = "Error adding report.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.Report_Success0003,
+                Message = SystemMessages.Report_Success0003,
+                Data = created
+            });
         }
 
+        /// <summary>
+        /// Update an existing report
+        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] ReportUpdateDto dto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(new { message = "Invalid input.", errors = ModelState });
+                return BadRequest(new ApiResponse<object>
+                {
+                    MessageCode = MessageCodes.General_Validation0001,
+                    Message = SystemMessages.General_Validation0001,
+                    Data = ModelState
+                });
 
-            try
+            _logger.LogInformation("Updating report with ID: {Id}", id);
+            var success = await _service.UpdateAsync(id, dto);
+            if (!success)
             {
-                var success = await service.UpdateAsync(id, dto);
-                if (!success)
-                    return NotFound(new { message = "Report not found." });
+                _logger.LogWarning("Report with ID {Id} not found for update", id);
+                return NotFound(new ApiResponse<object>
+                {
+                    MessageCode = MessageCodes.Report_Fail0001,
+                    Message = SystemMessages.Report_Fail0001
+                });
+            }
 
-                return Ok(new { message = "Report updated successfully." });
-            }
-            catch (Exception ex)
+            _logger.LogInformation("Report {Id} updated successfully", id);
+            return Ok(new ApiResponse<object>
             {
-                logger.LogError(ex, "Error updating report {Id}", id);
-                return StatusCode(500, new { message = "Error updating report.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.Report_Success0004,
+                Message = SystemMessages.Report_Success0004
+            });
         }
 
+        /// <summary>
+        /// Delete a report
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            try
+            _logger.LogInformation("Deleting report with ID: {Id}", id);
+            var success = await _service.DeleteAsync(id);
+            if (!success)
             {
-                var success = await service.DeleteAsync(id);
-                if (!success)
-                    return NotFound(new { message = "Report not found." });
+                _logger.LogWarning("Report with ID {Id} not found for deletion", id);
+                return NotFound(new ApiResponse<object>
+                {
+                    MessageCode = MessageCodes.Report_Fail0001,
+                    Message = SystemMessages.Report_Fail0001
+                });
+            }
 
-                return Ok(new { message = "Report deleted successfully." });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error deleting report {Id}", id);
-                return StatusCode(500, new { message = "Error deleting report.", error = ex.Message });
-            }
+            _logger.LogInformation("Report {Id} deleted successfully", id);
+            return NoContent();
         }
     }
 }

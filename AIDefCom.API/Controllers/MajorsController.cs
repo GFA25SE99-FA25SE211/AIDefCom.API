@@ -1,108 +1,150 @@
-﻿using AIDefCom.Service.Dto.Major;
+﻿using AIDefCom.Service.Constants;
+using AIDefCom.Service.Dto.Common;
+using AIDefCom.Service.Dto.Major;
 using AIDefCom.Service.Services.MajorService;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
-    [Route("api/[controller]")]
+    /// <summary>
+    /// Controller for managing majors
+    /// </summary>
+    [Route("api/majors")]
     [ApiController]
-    public class MajorsController(IMajorService majorService, ILogger<MajorsController> logger) : ControllerBase
+    public class MajorsController : ControllerBase
     {
+        private readonly IMajorService _majorService;
+        private readonly ILogger<MajorsController> _logger;
+
+        public MajorsController(IMajorService majorService, ILogger<MajorsController> logger)
+        {
+            _majorService = majorService;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Get all majors
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            try
+            _logger.LogInformation("Retrieving all majors");
+            var majors = await _majorService.GetAllAsync();
+            return Ok(new ApiResponse<IEnumerable<MajorReadDto>>
             {
-                var majors = await majorService.GetAllAsync();
-                return Ok(new { message = "Majors retrieved successfully.", data = majors });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error fetching all majors");
-                return StatusCode(500, new { message = "An error occurred while retrieving majors.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.Major_Success0001,
+                Message = SystemMessages.Major_Success0001,
+                Data = majors
+            });
         }
 
+        /// <summary>
+        /// Get major by ID
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            try
+            _logger.LogInformation("Retrieving major with ID: {Id}", id);
+            var major = await _majorService.GetByIdAsync(id);
+            if (major == null)
             {
-                var major = await majorService.GetByIdAsync(id);
-                if (major == null)
-                    return NotFound(new { message = "Major not found." });
+                _logger.LogWarning("Major with ID {Id} not found", id);
+                return NotFound(new ApiResponse<object>
+                {
+                    MessageCode = MessageCodes.Major_Fail0001,
+                    Message = SystemMessages.Major_Fail0001
+                });
+            }
 
-                return Ok(new { message = "Major retrieved successfully.", data = major });
-            }
-            catch (Exception ex)
+            return Ok(new ApiResponse<MajorReadDto>
             {
-                logger.LogError(ex, "Error fetching major with ID {Id}", id);
-                return StatusCode(500, new { message = "An error occurred while retrieving the major.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.Major_Success0002,
+                Message = SystemMessages.Major_Success0002,
+                Data = major
+            });
         }
 
+        /// <summary>
+        /// Create a new major
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] MajorCreateDto request)
         {
             if (!ModelState.IsValid)
-                return BadRequest(new { message = "Invalid input.", errors = ModelState });
+                return BadRequest(new ApiResponse<object>
+                {
+                    MessageCode = MessageCodes.General_Validation0001,
+                    Message = SystemMessages.General_Validation0001,
+                    Data = ModelState
+                });
 
-            try
-            {
-                var id = await majorService.AddAsync(request);
-                var created = await majorService.GetByIdAsync(id);
+            _logger.LogInformation("Creating new major: {MajorName}", request.MajorName);
+            var id = await _majorService.AddAsync(request);
+            var created = await _majorService.GetByIdAsync(id);
+            _logger.LogInformation("Major created with ID: {Id}", id);
 
-                return CreatedAtAction(nameof(GetById), new { id }, new { message = "Major created successfully.", data = created });
-            }
-            catch (InvalidOperationException ex)
+            return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<MajorReadDto>
             {
-                logger.LogWarning(ex, "Major name already exists: {Name}", request.MajorName);
-                return Conflict(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error adding major");
-                return StatusCode(500, new { message = "An error occurred while adding the major.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.Major_Success0003,
+                Message = SystemMessages.Major_Success0003,
+                Data = created
+            });
         }
 
+        /// <summary>
+        /// Update an existing major
+        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] MajorUpdateDto request)
         {
             if (!ModelState.IsValid)
-                return BadRequest(new { message = "Invalid input.", errors = ModelState });
+                return BadRequest(new ApiResponse<object>
+                {
+                    MessageCode = MessageCodes.General_Validation0001,
+                    Message = SystemMessages.General_Validation0001,
+                    Data = ModelState
+                });
 
-            try
+            _logger.LogInformation("Updating major with ID: {Id}", id);
+            var success = await _majorService.UpdateAsync(id, request);
+            if (!success)
             {
-                var success = await majorService.UpdateAsync(id, request);
-                if (!success)
-                    return NotFound(new { message = "Major not found." });
+                _logger.LogWarning("Major with ID {Id} not found for update", id);
+                return NotFound(new ApiResponse<object>
+                {
+                    MessageCode = MessageCodes.Major_Fail0001,
+                    Message = SystemMessages.Major_Fail0001
+                });
+            }
 
-                return Ok(new { message = "Major updated successfully." });
-            }
-            catch (Exception ex)
+            _logger.LogInformation("Major {Id} updated successfully", id);
+            return Ok(new ApiResponse<object>
             {
-                logger.LogError(ex, "Error updating major with ID {Id}", id);
-                return StatusCode(500, new { message = "An error occurred while updating the major.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.Major_Success0004,
+                Message = SystemMessages.Major_Success0004
+            });
         }
 
+        /// <summary>
+        /// Delete a major
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            try
+            _logger.LogInformation("Deleting major with ID: {Id}", id);
+            var success = await _majorService.DeleteAsync(id);
+            if (!success)
             {
-                var success = await majorService.DeleteAsync(id);
-                if (!success)
-                    return NotFound(new { message = "Major not found." });
+                _logger.LogWarning("Major with ID {Id} not found for deletion", id);
+                return NotFound(new ApiResponse<object>
+                {
+                    MessageCode = MessageCodes.Major_Fail0001,
+                    Message = SystemMessages.Major_Fail0001
+                });
+            }
 
-                return Ok(new { message = "Major deleted successfully." });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error deleting major with ID {Id}", id);
-                return StatusCode(500, new { message = "An error occurred while deleting the major.", error = ex.Message });
-            }
+            _logger.LogInformation("Major {Id} deleted successfully", id);
+            return NoContent();
         }
     }
 }

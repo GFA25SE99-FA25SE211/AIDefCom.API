@@ -1,176 +1,153 @@
+using AIDefCom.Service.Constants;
+using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.Transcript;
 using AIDefCom.Service.Services.TranscriptService;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
-    [Route("api/[controller]")]
+    /// <summary>
+    /// Controller for managing transcripts
+    /// </summary>
+    [Route("api/transcripts")]
     [ApiController]
-    public class TranscriptsController(ITranscriptService transcriptService, ILogger<TranscriptsController> logger) : ControllerBase
+    public class TranscriptsController : ControllerBase
     {
+        private readonly ITranscriptService _transcriptService;
+        private readonly ILogger<TranscriptsController> _logger;
+
+        public TranscriptsController(ITranscriptService transcriptService, ILogger<TranscriptsController> logger)
+        {
+            _transcriptService = transcriptService;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Get all transcripts
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            try
+            _logger.LogInformation("Retrieving all transcripts");
+            var transcripts = await _transcriptService.GetAllAsync();
+            
+            return Ok(new ApiResponse<IEnumerable<TranscriptReadDto>>
             {
-                var transcripts = await transcriptService.GetAllAsync();
-                return Ok(new
-                {
-                    message = "Transcripts retrieved successfully.",
-                    data = transcripts
-                });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error fetching all transcripts");
-                return StatusCode(500, new
-                {
-                    message = "An error occurred while retrieving transcripts.",
-                    error = ex.Message
-                });
-            }
+                MessageCode = MessageCodes.Transcript_Success0001,
+                Message = SystemMessages.Transcript_Success0001,
+                Data = transcripts
+            });
         }
 
+        /// <summary>
+        /// Get transcript by ID
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            try
+            _logger.LogInformation("Retrieving transcript with ID: {Id}", id);
+            var transcript = await _transcriptService.GetByIdAsync(id);
+            
+            if (transcript == null)
             {
-                var transcript = await transcriptService.GetByIdAsync(id);
-                if (transcript == null)
-                {
-                    return NotFound(new { message = "Transcript not found." });
-                }
+                _logger.LogWarning("Transcript with ID {Id} not found", id);
+                throw new KeyNotFoundException($"Transcript with ID {id} not found");
+            }
 
-                return Ok(new
-                {
-                    message = "Transcript retrieved successfully.",
-                    data = transcript
-                });
-            }
-            catch (Exception ex)
+            return Ok(new ApiResponse<TranscriptReadDto>
             {
-                logger.LogError(ex, "Error fetching transcript with ID {Id}", id);
-                return StatusCode(500, new
-                {
-                    message = "An error occurred while retrieving the transcript.",
-                    error = ex.Message
-                });
-            }
+                MessageCode = MessageCodes.Transcript_Success0002,
+                Message = SystemMessages.Transcript_Success0002,
+                Data = transcript
+            });
         }
 
+        /// <summary>
+        /// Get transcripts by session ID
+        /// </summary>
         [HttpGet("session/{sessionId}")]
         public async Task<IActionResult> GetBySession(int sessionId)
         {
-            try
+            _logger.LogInformation("Retrieving transcripts for session ID: {SessionId}", sessionId);
+            var transcripts = await _transcriptService.GetBySessionIdAsync(sessionId);
+            
+            return Ok(new ApiResponse<IEnumerable<TranscriptReadDto>>
             {
-                var transcripts = await transcriptService.GetBySessionIdAsync(sessionId);
-                return Ok(new
-                {
-                    message = "Transcripts retrieved successfully.",
-                    data = transcripts
-                });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error fetching transcripts for session {SessionId}", sessionId);
-                return StatusCode(500, new
-                {
-                    message = "An error occurred while retrieving transcripts.",
-                    error = ex.Message
-                });
-            }
+                MessageCode = MessageCodes.Transcript_Success0001,
+                Message = SystemMessages.Transcript_Success0001,
+                Data = transcripts
+            });
         }
 
+        /// <summary>
+        /// Create a new transcript
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] TranscriptCreateDto request)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new
-                {
-                    message = "Invalid input.",
-                    errors = ModelState
-                });
+                throw new ArgumentException("Invalid transcript data");
             }
 
-            try
-            {
-                var id = await transcriptService.AddAsync(request);
-                var createdTranscript = await transcriptService.GetByIdAsync(id);
+            _logger.LogInformation("Creating new transcript for session {SessionId}", request.SessionId);
+            var id = await _transcriptService.AddAsync(request);
+            var createdTranscript = await _transcriptService.GetByIdAsync(id);
+            _logger.LogInformation("Transcript created with ID: {Id}", id);
 
-                return CreatedAtAction(nameof(GetById), new { id }, new
-                {
-                    message = "Transcript created successfully.",
-                    data = createdTranscript
-                });
-            }
-            catch (Exception ex)
+            return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<TranscriptReadDto>
             {
-                logger.LogError(ex, "Error adding transcript");
-                return StatusCode(500, new
-                {
-                    message = "An error occurred while adding the transcript.",
-                    error = ex.Message
-                });
-            }
+                MessageCode = MessageCodes.Transcript_Success0003,
+                Message = SystemMessages.Transcript_Success0003,
+                Data = createdTranscript
+            });
         }
 
+        /// <summary>
+        /// Update an existing transcript
+        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] TranscriptUpdateDto request)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new
-                {
-                    message = "Invalid input.",
-                    errors = ModelState
-                });
+                throw new ArgumentException("Invalid transcript data");
             }
 
-            try
+            _logger.LogInformation("Updating transcript with ID: {Id}", id);
+            var success = await _transcriptService.UpdateAsync(id, request);
+            
+            if (!success)
             {
-                var success = await transcriptService.UpdateAsync(id, request);
-                if (!success)
-                {
-                    return NotFound(new { message = "Transcript not found." });
-                }
+                _logger.LogWarning("Transcript with ID {Id} not found for update", id);
+                throw new KeyNotFoundException($"Transcript with ID {id} not found");
+            }
 
-                return Ok(new { message = "Transcript updated successfully." });
-            }
-            catch (Exception ex)
+            _logger.LogInformation("Transcript {Id} updated successfully", id);
+            return Ok(new ApiResponse<object>
             {
-                logger.LogError(ex, "Error updating transcript with ID {Id}", id);
-                return StatusCode(500, new
-                {
-                    message = "An error occurred while updating the transcript.",
-                    error = ex.Message
-                });
-            }
+                MessageCode = MessageCodes.Transcript_Success0004,
+                Message = SystemMessages.Transcript_Success0004
+            });
         }
 
+        /// <summary>
+        /// Delete a transcript
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            try
+            _logger.LogInformation("Deleting transcript with ID: {Id}", id);
+            var success = await _transcriptService.DeleteAsync(id);
+            
+            if (!success)
             {
-                var success = await transcriptService.DeleteAsync(id);
-                if (!success)
-                {
-                    return NotFound(new { message = "Transcript not found." });
-                }
+                _logger.LogWarning("Transcript with ID {Id} not found for deletion", id);
+                throw new KeyNotFoundException($"Transcript with ID {id} not found");
+            }
 
-                return Ok(new { message = "Transcript deleted successfully." });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error deleting transcript with ID {Id}", id);
-                return StatusCode(500, new
-                {
-                    message = "An error occurred while deleting the transcript.",
-                    error = ex.Message
-                });
-            }
+            _logger.LogInformation("Transcript {Id} deleted successfully", id);
+            return NoContent();
         }
     }
 }
