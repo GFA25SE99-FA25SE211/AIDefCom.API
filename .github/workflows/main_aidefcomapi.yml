@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     permissions:
       contents: read #This is required for actions/checkout
 
@@ -23,20 +23,23 @@ jobs:
         with:
           dotnet-version: '8.x'
 
-      - name: Build with dotnet
-        run: dotnet build --configuration Release
+      - name: Restore
+        run: dotnet restore AIDefCom.API/AIDefCom.API.csproj
 
       - name: dotnet publish
-        run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
+        run: dotnet publish AIDefCom.API/AIDefCom.API.csproj -c Release -o ${{ runner.temp }}/publish
 
+      - name: Show publish contents
+        run: ls -la ${{ runner.temp }}/publish
+    
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          name: api-publish
+          path: ${{ runner.temp }}/publish
 
   deploy:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     needs: build
     permissions:
       id-token: write #This is required for requesting the JWT
@@ -46,14 +49,18 @@ jobs:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: .net-app
+          name: api-publish
+          path: ./publish
+
+      - name: Show downloaded files
+        run: ls -la ./publish
       
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_11BF57A574FF41D38BA851897E64BA1D }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_ACB433EA8D054796968B718EF7BC7F6D }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_6932339D4B8749728E459E5B0D86A5E2 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_19A19C9948CA4DF0A0DE93F76101789A }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_BA26BE013F494F6EAC6FAA4FF37210FD }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A0930E35EC1E4FDEA578F43A4297D404 }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
@@ -61,5 +68,6 @@ jobs:
         with:
           app-name: 'aidefcomapi'
           slot-name: 'Production'
-          package: .
+          package: ./publish
           
+

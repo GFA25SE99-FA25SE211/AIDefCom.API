@@ -1,5 +1,4 @@
 using AIDefCom.API.Mapper;
-using AIDefCom.API.Middlewares;
 using AIDefCom.Repository;
 using AIDefCom.Repository.Entities;
 using AIDefCom.Repository.UnitOfWork;
@@ -10,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.Extensions.Logging; // <-- cần cho LoggerFactory
 using System.Collections.Concurrent;
 using System.Text;
 
@@ -21,11 +21,17 @@ namespace AIDefCom.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // 1?? Controller + Swagger
+            // ---------- Logging providers (cho app) ----------
+            builder.Logging.ClearProviders();
+            builder.Logging.AddConsole();
+
+            // ---------- Startup logger (dùng trước khi Build) ----------
+            using var startupLoggerFactory = LoggerFactory.Create(lb => lb.AddConsole());
+            var startupLogger = startupLoggerFactory.CreateLogger("Startup");
+
+            // 1) Controllers + Swagger
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
-
-            // ?? Swagger + JWT Config
             builder.Services.AddSwaggerGen(option =>
             {
                 option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -37,7 +43,6 @@ namespace AIDefCom.API
                     BearerFormat = "JWT",
                     Scheme = "Bearer"
                 });
-
                 option.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
                     {
@@ -54,11 +59,11 @@ namespace AIDefCom.API
                 });
             });
 
-            // 2?? Database
+            // 2) Database
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            // 3?? Identity
+            // 3) Identity
             builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
             {
                 options.Password.RequiredLength = 6;
@@ -70,11 +75,13 @@ namespace AIDefCom.API
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
-            // 4?? JWT Authentication
+            // 4) JWT Authentication (KHÔNG throw nếu thiếu – để app khởi động được)
             var secretKey = builder.Configuration["AppSettings:Token"];
-            if (string.IsNullOrEmpty(secretKey))
-                throw new InvalidOperationException("JWT Secret Key is missing in appsettings.json.");
-
+            if (string.IsNullOrWhiteSpace(secretKey))
+            {
+                startupLogger.LogWarning("Missing AppSettings:Token – using TEMP secret (debug only).");
+                secretKey = Guid.NewGuid().ToString(); // chỉ để khởi động; điền thật trên Azure
+            }
             var key = Encoding.UTF8.GetBytes(secretKey);
 
             builder.Services.AddAuthentication(options =>
@@ -101,13 +108,13 @@ namespace AIDefCom.API
                 options.Scope.Add("https://www.googleapis.com/auth/calendar.events");
             });
 
-            // 5?? Authorization
+            // 5) Authorization
             builder.Services.AddAuthorization();
 
-            // 6?? AutoMapper
+            // 6) AutoMapper
             builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 
-            // 7?? Cache & Session
+            // 7) Cache & Session
             builder.Services.AddDistributedMemoryCache();
             builder.Services.AddSession(options =>
             {
@@ -116,7 +123,7 @@ namespace AIDefCom.API
                 options.Cookie.IsEssential = true;
             });
 
-            // 8?? CORS
+            // 8) CORS
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowAll", policy =>
@@ -127,45 +134,60 @@ namespace AIDefCom.API
                 });
             });
 
-            // 9?? Email Service Config
-            var emailConfig = builder.Configuration
-                .GetSection("EmailConfiguration")
-                .Get<EmailConfiguration>()
-                ?? throw new InvalidOperationException("Missing Email Configuration in appsettings.json.");
-
-            builder.Services.Configure<EmailConfiguration>(
-                builder.Configuration.GetSection("EmailConfiguration"));
-
-            builder.Services.AddSingleton(emailConfig);
-            builder.Services.AddSingleton(new ConcurrentDictionary<string, OtpEntry>());
-            builder.Services.AddTransient<IEmailService, EmailService>();
-
-            // ?? Repository + UnitOfWork + Excel Import Service
-            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-            // ? (T�y ch?n) Th�m AddProjectServices n?u b?n ?� gom DI kh�c ? ?�
-            builder.Services.AddProjectServices();
-
-            // ??? Build app
-            var app = builder.Build();
-
-            // 11?? Middleware pipeline
-            if (app.Environment.IsDevelopment())
+            // 9) Email (optional — KHÔNG throw nếu thiếu)
+            var emailSection = builder.Configuration.GetSection("EmailConfiguration");
+            var emailConfig = emailSection.Get<EmailConfiguration>();
+            if (emailConfig is null)
             {
-                app.UseSwagger();
-                app.UseSwaggerUI();
+                startupLogger.LogWarning("EmailConfiguration missing – email features disabled.");
+            }
+            else
+            {
+                builder.Services.Configure<EmailConfiguration>(emailSection);
+                builder.Services.AddSingleton(emailConfig);
+                builder.Services.AddSingleton(new ConcurrentDictionary<string, OtpEntry>());
+                builder.Services.AddTransient<IEmailService, EmailService>();
             }
 
-            // ??? Global Exception Handling Middleware - must be first
-            app.UseMiddleware<ExceptionHandlingMiddleware>();
+            // Repo + UoW + Services
+            builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+            builder.Services.AddProjectServices();
 
-            app.UseSession();
-            app.UseCors("AllowAll");
+            // ---------- Build ----------
+            var app = builder.Build();
+
+            // ---------- Pipeline thứ tự chuẩn ----------
+            app.UseSwagger();
+            app.UseSwaggerUI();
+
             app.UseHttpsRedirection();
             app.UseStaticFiles();
+
+            app.UseRouting();
+
+            app.UseCors("AllowAll");
             app.UseAuthentication();
             app.UseAuthorization();
 
+            app.UseSession();
+
+            // ---------- Endpoints debug ----------
+            app.MapGet("/ping", () => "pong");
+            app.MapGet("/__routes", (IEnumerable<EndpointDataSource> s) =>
+            {
+                var routes = s.SelectMany(x => x.Endpoints)
+                              .OfType<RouteEndpoint>()
+                              .Select(e => new
+                              {
+                                  Pattern = e.RoutePattern.RawText,
+                                  Methods = string.Join(",", e.Metadata
+                                      .OfType<HttpMethodMetadata>()
+                                      .SelectMany(m => m.HttpMethods))
+                              });
+                return Results.Ok(routes);
+            });
+
+            // Controllers
             app.MapControllers();
 
             app.Run();
