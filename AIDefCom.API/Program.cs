@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Microsoft.Extensions.Logging; // <-- cần cho LoggerFactory
 using System.Collections.Concurrent;
 using System.Text;
 
@@ -20,11 +21,17 @@ namespace AIDefCom.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // 1?? Controller + Swagger
+            // ---------- Logging providers (cho app) ----------
+            builder.Logging.ClearProviders();
+            builder.Logging.AddConsole();
+
+            // ---------- Startup logger (dùng trước khi Build) ----------
+            using var startupLoggerFactory = LoggerFactory.Create(lb => lb.AddConsole());
+            var startupLogger = startupLoggerFactory.CreateLogger("Startup");
+
+            // 1) Controllers + Swagger
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
-
-            // ?? Swagger + JWT Config
             builder.Services.AddSwaggerGen(option =>
             {
                 option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -36,7 +43,6 @@ namespace AIDefCom.API
                     BearerFormat = "JWT",
                     Scheme = "Bearer"
                 });
-
                 option.AddSecurityRequirement(new OpenApiSecurityRequirement
                 {
                     {
@@ -53,11 +59,11 @@ namespace AIDefCom.API
                 });
             });
 
-            // 2?? Database
+            // 2) Database
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-            // 3?? Identity
+            // 3) Identity
             builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
             {
                 options.Password.RequiredLength = 6;
@@ -69,15 +75,13 @@ namespace AIDefCom.API
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
 
-            // 4?? JWT Authentication
+            // 4) JWT Authentication (KHÔNG throw nếu thiếu – để app khởi động được)
             var secretKey = builder.Configuration["AppSettings:Token"];
-            if (string.IsNullOrEmpty(secretKey))
+            if (string.IsNullOrWhiteSpace(secretKey))
             {
-                builder.Logging.AddConsole();
-                builder.Logging.CreateLogger("Startup").LogWarning("Missing AppSettings:Token – using TEMP secret");
-                secretKey = Guid.NewGuid().ToString(); // chỉ tạm để app KHỞI ĐỘNG
+                startupLogger.LogWarning("Missing AppSettings:Token – using TEMP secret (debug only).");
+                secretKey = Guid.NewGuid().ToString(); // chỉ để khởi động; điền thật trên Azure
             }
-
             var key = Encoding.UTF8.GetBytes(secretKey);
 
             builder.Services.AddAuthentication(options =>
@@ -104,13 +108,13 @@ namespace AIDefCom.API
                 options.Scope.Add("https://www.googleapis.com/auth/calendar.events");
             });
 
-            // 5?? Authorization
+            // 5) Authorization
             builder.Services.AddAuthorization();
 
-            // 6?? AutoMapper
+            // 6) AutoMapper
             builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 
-            // 7?? Cache & Session
+            // 7) Cache & Session
             builder.Services.AddDistributedMemoryCache();
             builder.Services.AddSession(options =>
             {
@@ -119,7 +123,7 @@ namespace AIDefCom.API
                 options.Cookie.IsEssential = true;
             });
 
-            // 8?? CORS
+            // 8) CORS
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowAll", policy =>
@@ -130,75 +134,61 @@ namespace AIDefCom.API
                 });
             });
 
-            // 9?? Email Service Config
-            var emailConfig = builder.Configuration
-                .GetSection("EmailConfiguration")
-                .Get<EmailConfiguration>();
+            // 9) Email (optional — KHÔNG throw nếu thiếu)
+            var emailSection = builder.Configuration.GetSection("EmailConfiguration");
+            var emailConfig = emailSection.Get<EmailConfiguration>();
             if (emailConfig is null)
             {
-                builder.Logging.CreateLogger("Startup").LogWarning("EmailConfiguration missing – email disabled");
+                startupLogger.LogWarning("EmailConfiguration missing – email features disabled.");
             }
             else
             {
-                builder.Services.Configure<EmailConfiguration>(
-                builder.Configuration.GetSection("EmailConfiguration"));
-
+                builder.Services.Configure<EmailConfiguration>(emailSection);
                 builder.Services.AddSingleton(emailConfig);
                 builder.Services.AddSingleton(new ConcurrentDictionary<string, OtpEntry>());
                 builder.Services.AddTransient<IEmailService, EmailService>();
             }
 
-            
-
-            // ?? Repository + UnitOfWork + Excel Import Service
+            // Repo + UoW + Services
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-            // ? (Tu? ch?n) Thêm AddProjectServices n?u b?n ?ã gom DI khác ? ?ó
             builder.Services.AddProjectServices();
 
-            // ?? Build app
+            // ---------- Build ----------
             var app = builder.Build();
 
-            // 11?? Middleware pipeline
+            // ---------- Pipeline thứ tự chuẩn ----------
             app.UseSwagger();
             app.UseSwaggerUI();
 
-            //Redirect/Static
             app.UseHttpsRedirection();
             app.UseStaticFiles();
 
-            //Routing
             app.UseRouting();
 
-            //CORS 
             app.UseCors("AllowAll");
             app.UseAuthentication();
             app.UseAuthorization();
 
-            // Session
             app.UseSession();
 
-
-            // test sống/chết rất nhẹ
+            // ---------- Endpoints debug ----------
             app.MapGet("/ping", () => "pong");
-
-            // liệt kê mọi route đã đăng ký
             app.MapGet("/__routes", (IEnumerable<EndpointDataSource> s) =>
             {
                 var routes = s.SelectMany(x => x.Endpoints)
                               .OfType<RouteEndpoint>()
-                              .Select(e => new {
+                              .Select(e => new
+                              {
                                   Pattern = e.RoutePattern.RawText,
-                                  Methods = string.Join(",", e.Metadata.OfType<HttpMethodMetadata>()
-                                                       .SelectMany(m => m.HttpMethods))
+                                  Methods = string.Join(",", e.Metadata
+                                      .OfType<HttpMethodMetadata>()
+                                      .SelectMany(m => m.HttpMethods))
                               });
                 return Results.Ok(routes);
             });
-            
+
+            // Controllers
             app.MapControllers();
-
-            
-
 
             app.Run();
         }
