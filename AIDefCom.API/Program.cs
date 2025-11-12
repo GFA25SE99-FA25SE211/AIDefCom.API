@@ -72,7 +72,11 @@ namespace AIDefCom.API
             // 4?? JWT Authentication
             var secretKey = builder.Configuration["AppSettings:Token"];
             if (string.IsNullOrEmpty(secretKey))
-                throw new InvalidOperationException("JWT Secret Key is missing in appsettings.json.");
+            {
+                builder.Logging.AddConsole();
+                builder.Logging.CreateLogger("Startup").LogWarning("Missing AppSettings:Token – using TEMP secret");
+                secretKey = Guid.NewGuid().ToString(); // chỉ tạm để app KHỞI ĐỘNG
+            }
 
             var key = Encoding.UTF8.GetBytes(secretKey);
 
@@ -129,15 +133,22 @@ namespace AIDefCom.API
             // 9?? Email Service Config
             var emailConfig = builder.Configuration
                 .GetSection("EmailConfiguration")
-                .Get<EmailConfiguration>()
-                ?? throw new InvalidOperationException("Missing Email Configuration in appsettings.json.");
-
-            builder.Services.Configure<EmailConfiguration>(
+                .Get<EmailConfiguration>();
+            if (emailConfig is null)
+            {
+                builder.Logging.CreateLogger("Startup").LogWarning("EmailConfiguration missing – email disabled");
+            }
+            else
+            {
+                builder.Services.Configure<EmailConfiguration>(
                 builder.Configuration.GetSection("EmailConfiguration"));
 
-            builder.Services.AddSingleton(emailConfig);
-            builder.Services.AddSingleton(new ConcurrentDictionary<string, OtpEntry>());
-            builder.Services.AddTransient<IEmailService, EmailService>();
+                builder.Services.AddSingleton(emailConfig);
+                builder.Services.AddSingleton(new ConcurrentDictionary<string, OtpEntry>());
+                builder.Services.AddTransient<IEmailService, EmailService>();
+            }
+
+            
 
             // ?? Repository + UnitOfWork + Excel Import Service
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -149,11 +160,8 @@ namespace AIDefCom.API
             var app = builder.Build();
 
             // 11?? Middleware pipeline
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
+            app.UseSwagger();
+            app.UseSwaggerUI();
 
             //Redirect/Static
             app.UseHttpsRedirection();
