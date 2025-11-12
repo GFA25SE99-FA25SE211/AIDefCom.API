@@ -23,17 +23,20 @@ jobs:
         with:
           dotnet-version: '8.x'
 
-      - name: Build with dotnet
-        run: dotnet build --configuration Release
+      - name: Restore
+        run: dotnet restore AIDefCom.API/AIDefCom.API.csproj
 
       - name: dotnet publish
-        run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/myapp
+        run: dotnet publish AIDefCom.API/AIDefCom.API.csproj -c Release -o ${{ runner.temp }}/publish
 
+      - name: Show publish contents
+        run: ls -la ${{ runner.temp }}/publish
+    
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          path: ${{ runner.temp }}/publish
 
   deploy:
     runs-on: ubuntu-latest
@@ -46,7 +49,11 @@ jobs:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: .net-app
+          name: api-publish
+          path: ./publish
+
+      - name: Show downloaded files
+        run: ls -la ./publish
       
       - name: Login to Azure
         uses: azure/login@v2
@@ -61,5 +68,5 @@ jobs:
         with:
           app-name: 'aidefcomapi'
           slot-name: 'Production'
-          package: .
+          package: ./publish
           
