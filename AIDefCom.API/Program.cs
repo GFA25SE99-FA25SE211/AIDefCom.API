@@ -171,7 +171,25 @@ namespace AIDefCom.API
             app.UseSession();
 
 
+            // test sống/chết rất nhẹ
+            app.MapGet("/ping", () => "pong");
+
+            // liệt kê mọi route đã đăng ký
+            app.MapGet("/__routes", (IEnumerable<EndpointDataSource> s) =>
+            {
+                var routes = s.SelectMany(x => x.Endpoints)
+                              .OfType<RouteEndpoint>()
+                              .Select(e => new {
+                                  Pattern = e.RoutePattern.RawText,
+                                  Methods = string.Join(",", e.Metadata.OfType<HttpMethodMetadata>()
+                                                       .SelectMany(m => m.HttpMethods))
+                              });
+                return Results.Ok(routes);
+            });
+            
             app.MapControllers();
+
+            
 
 
             app.Run();
