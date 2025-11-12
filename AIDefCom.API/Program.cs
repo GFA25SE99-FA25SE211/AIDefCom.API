@@ -142,7 +142,7 @@ namespace AIDefCom.API
             // ?? Repository + UnitOfWork + Excel Import Service
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-            // ? (Tu? ch?n) Thêm AddProjectServices n?u b?n ?ã gom DI khác ? ?ó
+            // ? (Tu? ch?n) ThÃªm AddProjectServices n?u b?n ?Ã£ gom DI khÃ¡c ? ?Ã³
             builder.Services.AddProjectServices();
 
             // ?? Build app
@@ -155,14 +155,24 @@ namespace AIDefCom.API
                 app.UseSwaggerUI();
             }
 
-            app.UseSession();
-            app.UseCors("AllowAll");
+            //Redirect/Static
             app.UseHttpsRedirection();
             app.UseStaticFiles();
+
+            //Routing
+            app.UseRouting();
+
+            //CORS 
+            app.UseCors("AllowAll");
             app.UseAuthentication();
             app.UseAuthorization();
 
+            // Session
+            app.UseSession();
+
+
             app.MapControllers();
+
 
             app.Run();
         }
