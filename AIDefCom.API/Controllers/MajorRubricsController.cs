@@ -1,120 +1,146 @@
-﻿using AIDefCom.Service.Dto.MajorRubric;
+﻿using AIDefCom.Service.Constants;
+using AIDefCom.Service.Dto.Common;
+using AIDefCom.Service.Dto.MajorRubric;
 using AIDefCom.Service.Services.MajorRubricService;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
-    [Route("api/[controller]")]
+    /// <summary>
+    /// Controller for managing major-rubric associations
+    /// </summary>
+    [Route("api/major-rubrics")]
     [ApiController]
-    public class MajorRubricsController(IMajorRubricService service, ILogger<MajorRubricsController> logger) : ControllerBase
+    public class MajorRubricsController : ControllerBase
     {
+        private readonly IMajorRubricService _service;
+        private readonly ILogger<MajorRubricsController> _logger;
+
+        public MajorRubricsController(IMajorRubricService service, ILogger<MajorRubricsController> logger)
+        {
+            _service = service;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Get all major-rubric links
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            try
+            _logger.LogInformation("Retrieving all major-rubric links");
+            var data = await _service.GetAllAsync();
+            
+            return Ok(new ApiResponse<IEnumerable<MajorRubricReadDto>>
             {
-                var data = await service.GetAllAsync();
-                return Ok(new { message = "Major–Rubric links retrieved successfully.", data });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error fetching all MajorRubric links");
-                return StatusCode(500, new { message = "Error retrieving data.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.MajorRubric_Success0001,
+                Message = SystemMessages.MajorRubric_Success0001,
+                Data = data
+            });
         }
 
+        /// <summary>
+        /// Get rubrics by major ID
+        /// </summary>
         [HttpGet("major/{majorId}")]
         public async Task<IActionResult> GetByMajorId(int majorId)
         {
-            try
+            _logger.LogInformation("Retrieving rubrics for major ID: {MajorId}", majorId);
+            var data = await _service.GetByMajorIdAsync(majorId);
+            
+            return Ok(new ApiResponse<IEnumerable<MajorRubricReadDto>>
             {
-                var data = await service.GetByMajorIdAsync(majorId);
-                return Ok(new { message = "Rubrics for Major retrieved successfully.", data });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error fetching rubrics for major {MajorId}", majorId);
-                return StatusCode(500, new { message = "Error retrieving rubrics for major.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.MajorRubric_Success0002,
+                Message = SystemMessages.MajorRubric_Success0002,
+                Data = data
+            });
         }
 
+        /// <summary>
+        /// Get majors by rubric ID
+        /// </summary>
         [HttpGet("rubric/{rubricId}")]
         public async Task<IActionResult> GetByRubricId(int rubricId)
         {
-            try
+            _logger.LogInformation("Retrieving majors for rubric ID: {RubricId}", rubricId);
+            var data = await _service.GetByRubricIdAsync(rubricId);
+            
+            return Ok(new ApiResponse<IEnumerable<MajorRubricReadDto>>
             {
-                var data = await service.GetByRubricIdAsync(rubricId);
-                return Ok(new { message = "Majors for Rubric retrieved successfully.", data });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error fetching majors for rubric {RubricId}", rubricId);
-                return StatusCode(500, new { message = "Error retrieving majors for rubric.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.MajorRubric_Success0003,
+                Message = SystemMessages.MajorRubric_Success0003,
+                Data = data
+            });
         }
 
+        /// <summary>
+        /// Create a new major-rubric link
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] MajorRubricCreateDto dto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(new { message = "Invalid input.", errors = ModelState });
+            {
+                throw new ArgumentException("Invalid major-rubric data");
+            }
 
-            try
+            _logger.LogInformation("Creating new major-rubric link for Major {MajorId} and Rubric {RubricId}", dto.MajorId, dto.RubricId);
+            var id = await _service.AddAsync(dto);
+            _logger.LogInformation("Major-rubric link created with ID: {Id}", id);
+            
+            return CreatedAtAction(nameof(GetAll), new { id }, new ApiResponse<object>
             {
-                var id = await service.AddAsync(dto);
-                return CreatedAtAction(nameof(GetAll), new { id }, new { message = "Major–Rubric link created successfully.", id });
-            }
-            catch (InvalidOperationException ex)
-            {
-                logger.LogWarning(ex, "MajorRubric pair already exists");
-                return Conflict(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error adding MajorRubric link");
-                return StatusCode(500, new { message = "Error adding MajorRubric link.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.MajorRubric_Success0004,
+                Message = SystemMessages.MajorRubric_Success0004,
+                Data = new { id }
+            });
         }
+
+        /// <summary>
+        /// Update an existing major-rubric link
+        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] MajorRubricUpdateDto dto)
         {
             if (!ModelState.IsValid)
-                return BadRequest(new { message = "Invalid input.", errors = ModelState });
+            {
+                throw new ArgumentException("Invalid major-rubric data");
+            }
 
-            try
+            _logger.LogInformation("Updating major-rubric link with ID: {Id}", id);
+            var ok = await _service.UpdateAsync(id, dto);
+            
+            if (!ok)
             {
-                var ok = await service.UpdateAsync(id, dto);
-                if (!ok) return NotFound(new { message = "Major–Rubric link not found." });
-                return Ok(new { message = "Major–Rubric link updated successfully." });
+                _logger.LogWarning("Major-rubric link with ID {Id} not found for update", id);
+                throw new KeyNotFoundException($"Major-rubric link with ID {id} not found");
             }
-            catch (InvalidOperationException ex)
+
+            _logger.LogInformation("Major-rubric link {Id} updated successfully", id);
+            return Ok(new ApiResponse<object>
             {
-                logger.LogWarning(ex, "Duplicate Major–Rubric pair on update (Id={Id})", id);
-                return Conflict(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error updating MajorRubric link {Id}", id);
-                return StatusCode(500, new { message = "Error updating link.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.MajorRubric_Success0005,
+                Message = SystemMessages.MajorRubric_Success0005
+            });
         }
 
+        /// <summary>
+        /// Delete a major-rubric link
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            try
+            _logger.LogInformation("Deleting major-rubric link with ID: {Id}", id);
+            var success = await _service.DeleteAsync(id);
+            
+            if (!success)
             {
-                var success = await service.DeleteAsync(id);
-                if (!success)
-                    return NotFound(new { message = "Major–Rubric link not found." });
+                _logger.LogWarning("Major-rubric link with ID {Id} not found for deletion", id);
+                throw new KeyNotFoundException($"Major-rubric link with ID {id} not found");
+            }
 
-                return Ok(new { message = "Major–Rubric link deleted successfully." });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error deleting MajorRubric link {Id}", id);
-                return StatusCode(500, new { message = "Error deleting link.", error = ex.Message });
-            }
+            _logger.LogInformation("Major-rubric link {Id} deleted successfully", id);
+            return NoContent();
         }
     }
 }

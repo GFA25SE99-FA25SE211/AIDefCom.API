@@ -1,4 +1,5 @@
 using AIDefCom.API.Mapper;
+using AIDefCom.API.Middlewares;
 using AIDefCom.Repository;
 using AIDefCom.Repository.Entities;
 using AIDefCom.Repository.UnitOfWork;
@@ -142,10 +143,10 @@ namespace AIDefCom.API
             // ?? Repository + UnitOfWork + Excel Import Service
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-            // ? (Tu? ch?n) Thêm AddProjectServices n?u b?n ?ã gom DI khác ? ?ó
+            // ? (Tùy ch?n) Thêm AddProjectServices n?u b?n ?ã gom DI khác ? ?ó
             builder.Services.AddProjectServices();
 
-            // ?? Build app
+            // ??? Build app
             var app = builder.Build();
 
             // 11?? Middleware pipeline
@@ -154,6 +155,9 @@ namespace AIDefCom.API
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+
+            // ??? Global Exception Handling Middleware - must be first
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
 
             app.UseSession();
             app.UseCors("AllowAll");

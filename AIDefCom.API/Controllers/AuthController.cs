@@ -1,5 +1,6 @@
 ﻿using AIDefCom.Service.Dto.Account;
 using AIDefCom.Service.Dto.AppUser;
+using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Services.AuthService;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,11 +8,25 @@ using System.Security.Claims;
 
 namespace AIDefCom.API.Controllers
 {
-    [Route("auth")]
+    /// <summary>
+    /// Controller for authentication and user management
+    /// </summary>
+    [Route("api/auth")]
     [ApiController]
-    public class AuthController(IAuthService authService) : ControllerBase
+    public class AuthController : ControllerBase
     {
+        private readonly IAuthService _authService;
+
+        public AuthController(IAuthService authService)
+        {
+            _authService = authService;
+        }
+
         // ------------------ REGISTER ------------------
+        
+        /// <summary>
+        /// Register a new user
+        /// </summary>
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] AppUserDto request)
         {
@@ -20,31 +35,36 @@ namespace AIDefCom.API.Controllers
                 string.IsNullOrWhiteSpace(request.FullName) ||
                 string.IsNullOrWhiteSpace(request.PhoneNumber))
             {
-                return BadRequest(new { message = "All fields (Email, Password, FullName, PhoneNumber) are required." });
+                return BadRequest(new ApiResponse<object>
+                {
+                    Message = "All fields (Email, Password, FullName, PhoneNumber) are required."
+                });
             }
 
-            try
-            {
-                var user = await authService.RegisterAsync(request);
-                if (user == null)
-                    return Conflict(new { message = "Registration failed. User may already exist." });
+            var user = await _authService.RegisterAsync(request);
+            if (user == null)
+                return Conflict(new ApiResponse<object>
+                {
+                    Message = "Registration failed. User may already exist."
+                });
 
-                return Ok(new
+            return Ok(new ApiResponse<object>
+            {
+                Message = "Register successfully!",
+                Data = new
                 {
                     user.Id,
                     user.Email,
                     user.EmailConfirmed,
                     user.FullName,
-                    user.PhoneNumber,
-                    message = "Register successfully!"
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = "An unexpected error occurred.", details = ex.Message });
-            }
+                    user.PhoneNumber
+                }
+            });
         }
 
+        /// <summary>
+        /// Register a new student user
+        /// </summary>
         [HttpPost("register/student")]
         public async Task<IActionResult> RegisterWithRole([FromBody] AppUserDto request)
         {
@@ -53,181 +73,212 @@ namespace AIDefCom.API.Controllers
                 string.IsNullOrWhiteSpace(request.FullName) ||
                 string.IsNullOrWhiteSpace(request.PhoneNumber))
             {
-                return BadRequest(new { message = "All fields (Email, Password, FullName, PhoneNumber) are required." });
+                return BadRequest(new ApiResponse<object>
+                {
+                    Message = "All fields (Email, Password, FullName, PhoneNumber) are required."
+                });
             }
 
-            try
-            {
-                var user = await authService.RegisterWithRoleAsync(request);
-                if (user == null)
-                    return Conflict(new { message = "Registration failed. User may already exist." });
+            var user = await _authService.RegisterWithRoleAsync(request);
+            if (user == null)
+                return Conflict(new ApiResponse<object>
+                {
+                    Message = "Registration failed. User may already exist."
+                });
 
-                return Ok(new
+            return Ok(new ApiResponse<object>
+            {
+                Message = "User registered successfully with role 'Student'.",
+                Data = new
                 {
                     user.Id,
                     user.Email,
                     user.EmailConfirmed,
                     user.FullName,
                     user.PhoneNumber,
-                    Role = "Student",
-                    message = "User registered successfully with role 'Student'."
-                });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = "An unexpected error occurred.", details = ex.Message });
-            }
+                    Role = "Student"
+                }
+            });
         }
 
         // ------------------ LOGIN ------------------
+        
+        /// <summary>
+        /// User login
+        /// </summary>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
-                return BadRequest(new { message = "Email and password cannot be empty." });
+                return BadRequest(new ApiResponse<object>
+                {
+                    Message = "Email and password cannot be empty."
+                });
 
-            try
-            {
-                var result = await authService.LoginAsync(request);
-                if (result == null)
-                    return Unauthorized(new { message = "Invalid email or password." });
+            var result = await _authService.LoginAsync(request);
+            if (result == null)
+                return Unauthorized(new ApiResponse<object>
+                {
+                    Message = "Invalid email or password."
+                });
 
-                return Ok(result);
-            }
-            catch (Exception ex)
+            return Ok(new ApiResponse<object>
             {
-                return BadRequest(new { message = "Login failed.", details = ex.Message });
-            }
+                Message = "Login successful.",
+                Data = result
+            });
         }
 
+        /// <summary>
+        /// Google login
+        /// </summary>
         [HttpPost("login/google")]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleUserLoginDTO googleLoginDTO)
         {
-            try
-            {
-                var response = await authService.GoogleLoginAsync(googleLoginDTO);
+            var response = await _authService.GoogleLoginAsync(googleLoginDTO);
 
-                if (!string.IsNullOrEmpty(response.TemporaryPassword))
+            if (!string.IsNullOrEmpty(response.TemporaryPassword))
+            {
+                return Ok(new ApiResponse<object>
                 {
-                    return Ok(new
+                    Message = "Account created successfully with Google login.",
+                    Data = new
                     {
-                        message = "Account created successfully with Google login.",
                         note = "Below is your one-time password for normal login. Save it securely.",
                         temporaryPassword = response.TemporaryPassword,
                         tokenData = response
-                    });
-                }
+                    }
+                });
+            }
 
-                return Ok(response);
-            }
-            catch (Exception ex)
+            return Ok(new ApiResponse<object>
             {
-                return BadRequest(new { message = "Google login failed.", details = ex.Message });
-            }
+                Message = "Google login successful.",
+                Data = response
+            });
         }
 
+        /// <summary>
+        /// Google login as member
+        /// </summary>
         [HttpPost("login/google/member")]
         public async Task<IActionResult> GoogleLoginAsMember([FromBody] GoogleUserLoginDTO googleLoginDTO)
         {
-            try
-            {
-                var response = await authService.GoogleLoginAsMemberAsync(googleLoginDTO);
+            var response = await _authService.GoogleLoginAsMemberAsync(googleLoginDTO);
 
-                if (!string.IsNullOrEmpty(response.TemporaryPassword))
+            if (!string.IsNullOrEmpty(response.TemporaryPassword))
+            {
+                return Ok(new ApiResponse<object>
                 {
-                    return Ok(new
+                    Message = "Account created successfully with Google login.",
+                    Data = new
                     {
-                        message = "Account created successfully with Google login.",
                         note = "Below is your one-time password for normal login. Save it securely.",
                         temporaryPassword = response.TemporaryPassword,
                         tokenData = response
-                    });
-                }
+                    }
+                });
+            }
 
-                return Ok(response);
-            }
-            catch (Exception ex)
+            return Ok(new ApiResponse<object>
             {
-                return BadRequest(new { message = "Google Member login failed.", details = ex.Message });
-            }
+                Message = "Google Member login successful.",
+                Data = response
+            });
         }
 
         // ------------------ ROLE MANAGEMENT ------------------
+        
+        /// <summary>
+        /// Assign a role to a user
+        /// </summary>
         [HttpPut("roles/assign")]
         public async Task<IActionResult> AssignRole([FromBody] SetRoleRequestDto request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Role))
-                return BadRequest(new { Error = "Email and role cannot be empty." });
+                return BadRequest(new ApiResponse<object>
+                {
+                    Message = "Email and role cannot be empty."
+                });
 
-            try
+            var result = await _authService.AssignRoleToUserAsync(request.Email, request.Role);
+            return Ok(new ApiResponse<object>
             {
-                var result = await authService.AssignRoleToUserAsync(request.Email, request.Role);
-                return Ok(new { Message = result });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Error = "An unexpected error occurred.", Details = ex.Message });
-            }
+                Message = result
+            });
         }
 
+        /// <summary>
+        /// Create a new role
+        /// </summary>
         [HttpPost("roles")]
         public async Task<IActionResult> AddRole([FromBody] string roleName)
         {
             if (string.IsNullOrWhiteSpace(roleName))
-                return BadRequest(new { Error = "Role name cannot be empty." });
+                return BadRequest(new ApiResponse<object>
+                {
+                    Message = "Role name cannot be empty."
+                });
 
-            try
+            var result = await _authService.AddRoleAsync(roleName);
+            return Ok(new ApiResponse<object>
             {
-                var result = await authService.AddRoleAsync(roleName);
-                return Ok(new { Message = result });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { Error = "An unexpected error occurred.", Details = ex.Message });
-            }
+                Message = result
+            });
         }
 
         // ------------------ GOOGLE SET PASSWORD ------------------
+        
+        /// <summary>
+        /// Set password for Google account
+        /// </summary>
         [HttpPost("google/set-password")]
         public async Task<IActionResult> GoogleSetPassword([FromBody] SetPasswordDTO setPasswordDTO, [FromHeader(Name = "Authorization")] string authorizationHeader)
         {
-            try
-            {
-                if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
-                    return BadRequest(new { message = "Invalid authorization header." });
+            if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
+                return BadRequest(new ApiResponse<object>
+                {
+                    Message = "Invalid authorization header."
+                });
 
-                var token = authorizationHeader.Substring("Bearer ".Length).Trim();
-                var response = await authService.GoogleSetPasswordAsync(setPasswordDTO, token);
+            var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+            var response = await _authService.GoogleSetPasswordAsync(setPasswordDTO, token);
 
-                return Ok(response);
-            }
-            catch (Exception ex)
+            return Ok(new ApiResponse<object>
             {
-                return BadRequest(new { message = "An unexpected error occurred.", details = ex.Message });
-            }
+                Message = "Password set successfully.",
+                Data = response
+            });
         }
 
         // ------------------ LOGOUT ------------------
+        
+        /// <summary>
+        /// User logout
+        /// </summary>
         [Authorize]
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
             if (string.IsNullOrEmpty(email))
-                return Unauthorized(new { message = "Email claim not found in token." });
+                return Unauthorized(new ApiResponse<object>
+                {
+                    Message = "Email claim not found in token."
+                });
 
-            try
+            var result = await _authService.LogoutAsync(email);
+            return Ok(new ApiResponse<object>
             {
-                var result = await authService.LogoutAsync(email);
-                return Ok(new { message = result });
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new { message = "An unexpected error occurred.", details = ex.Message });
-            }
+                Message = result
+            });
         }
 
         // ------------------ CHANGE PASSWORD ------------------
+        
+        /// <summary>
+        /// Change user password
+        /// </summary>
         [Authorize]
         [HttpPut("password")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto request)
@@ -236,119 +287,144 @@ namespace AIDefCom.API.Controllers
                 string.IsNullOrEmpty(request.NewPassword) ||
                 string.IsNullOrEmpty(request.ConfirmNewPassword))
             {
-                return BadRequest(new { message = "All fields are required." });
+                return BadRequest(new ApiResponse<object>
+                {
+                    Message = "All fields are required."
+                });
             }
 
-            try
-            {
-                var email = User.FindFirst(ClaimTypes.Email)?.Value;
-                if (string.IsNullOrEmpty(email))
-                    return Unauthorized(new { message = "Email claim not found." });
+            var email = User.FindFirst(ClaimTypes.Email)?.Value;
+            if (string.IsNullOrEmpty(email))
+                return Unauthorized(new ApiResponse<object>
+                {
+                    Message = "Email claim not found."
+                });
 
-                var result = await authService.ChangePasswordAsync(email, request);
-                return Ok(new { message = result });
-            }
-            catch (Exception ex)
+            var result = await _authService.ChangePasswordAsync(email, request);
+            return Ok(new ApiResponse<object>
             {
-                return BadRequest(new { message = "An unexpected error occurred.", details = ex.Message });
-            }
+                Message = result
+            });
         }
 
         // ------------------ REFRESH TOKEN ------------------
+        
+        /// <summary>
+        /// Refresh access token
+        /// </summary>
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshTokens([FromBody] RefreshTokenRequestDto request)
         {
             if (string.IsNullOrEmpty(request.UserId.ToString()) || string.IsNullOrEmpty(request.RefreshToken))
-                return BadRequest(new { message = "UserId and RefreshToken cannot be empty." });
+                return BadRequest(new ApiResponse<object>
+                {
+                    Message = "UserId and RefreshToken cannot be empty."
+                });
 
-            try
-            {
-                var result = await authService.RefreshTokensAsync(request);
-                if (result == null)
-                    return Unauthorized(new { message = "Invalid refresh token." });
+            var result = await _authService.RefreshTokensAsync(request);
+            if (result == null)
+                return Unauthorized(new ApiResponse<object>
+                {
+                    Message = "Invalid refresh token."
+                });
 
-                return Ok(result);
-            }
-            catch (Exception ex)
+            return Ok(new ApiResponse<object>
             {
-                return BadRequest(new { message = "An unexpected error occurred.", details = ex.Message });
-            }
+                Message = "Token refreshed successfully.",
+                Data = result
+            });
         }
 
         // ------------------ ACCOUNT MANAGEMENT ------------------
+        
+        /// <summary>
+        /// Soft delete a user account
+        /// </summary>
         [HttpDelete("accounts/{email}")]
         public async Task<IActionResult> SoftDeleteAccount(string email)
         {
-            try
+            var result = await _authService.SoftDeleteAccountAsync(email);
+            return Ok(new ApiResponse<object>
             {
-                var result = await authService.SoftDeleteAccountAsync(email);
-                return Ok(new { message = result });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error while soft deleting account.", details = ex.Message });
-            }
+                Message = result
+            });
         }
 
+        /// <summary>
+        /// Restore a soft-deleted account
+        /// </summary>
         [HttpPut("accounts/{email}/restore")]
         public async Task<IActionResult> RestoreAccount(string email)
         {
-            try
+            var result = await _authService.RestoreAccountAsync(email);
+            return Ok(new ApiResponse<object>
             {
-                var result = await authService.RestoreAccountAsync(email);
-                return Ok(new { message = result });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error while restoring account.", details = ex.Message });
-            }
+                Message = result
+            });
         }
 
         // ------------------ PASSWORD RECOVERY ------------------
+        
+        /// <summary>
+        /// Request password reset
+        /// </summary>
         [HttpPost("password/forgot")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto request)
         {
-            var result = await authService.ForgotPassword(request);
-            return Ok(new { message = result });
+            var result = await _authService.ForgotPassword(request);
+            return Ok(new ApiResponse<object>
+            {
+                Message = result
+            });
         }
 
+        /// <summary>
+        /// Reset password
+        /// </summary>
         [HttpPost("password/reset")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto request)
         {
-            var result = await authService.ResetPassword(request);
-            return Ok(new { message = result });
+            var result = await _authService.ResetPassword(request);
+            return Ok(new ApiResponse<object>
+            {
+                Message = result
+            });
         }
+
+        // ------------------ USER QUERIES ------------------
         
+        /// <summary>
+        /// Get all users
+        /// </summary>
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {
-            try
+            var users = await _authService.GetAllUsersAsync();
+            return Ok(new ApiResponse<IEnumerable<object>>
             {
-                var users = await authService.GetAllUsersAsync();
-                return Ok(users);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Error while retrieving users.", details = ex.Message });
-            }
+                Message = "Users retrieved successfully.",
+                Data = users
+            });
         }
 
-        
+        /// <summary>
+        /// Get user by ID
+        /// </summary>
         [HttpGet("users/{id}")]
         public async Task<IActionResult> GetUserById(string id)
         {
-            try
-            {
-                var user = await authService.GetUserByIdAsync(id);
-                if (user == null)
-                    return NotFound(new { message = "User not found." });
+            var user = await _authService.GetUserByIdAsync(id);
+            if (user == null)
+                return NotFound(new ApiResponse<object>
+                {
+                    Message = "User not found."
+                });
 
-                return Ok(user);
-            }
-            catch (Exception ex)
+            return Ok(new ApiResponse<object>
             {
-                return StatusCode(500, new { message = "Error while retrieving user details.", details = ex.Message });
-            }
+                Message = "User retrieved successfully.",
+                Data = user
+            });
         }
     }
 }

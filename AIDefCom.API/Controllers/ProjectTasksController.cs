@@ -1,75 +1,166 @@
-﻿using AIDefCom.Service.Dto.ProjectTask;
+﻿using AIDefCom.Service.Constants;
+using AIDefCom.Service.Dto.Common;
+using AIDefCom.Service.Dto.ProjectTask;
 using AIDefCom.Service.Services.ProjectTaskService;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
-    [Route("api/[controller]")]
+    /// <summary>
+    /// Controller for managing project tasks
+    /// </summary>
+    [Route("api/project-tasks")]
     [ApiController]
-    public class ProjectTasksController(IProjectTaskService service, ILogger<ProjectTasksController> logger) : ControllerBase
+    public class ProjectTasksController : ControllerBase
     {
+        private readonly IProjectTaskService _service;
+        private readonly ILogger<ProjectTasksController> _logger;
+
+        public ProjectTasksController(IProjectTaskService service, ILogger<ProjectTasksController> logger)
+        {
+            _service = service;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Get all project tasks
+        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            try
+            _logger.LogInformation("Retrieving all project tasks");
+            var data = await _service.GetAllAsync();
+            return Ok(new ApiResponse<IEnumerable<ProjectTaskReadDto>>
             {
-                var data = await service.GetAllAsync();
-                return Ok(new { message = "Project tasks retrieved successfully.", data });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Error fetching project tasks");
-                return StatusCode(500, new { message = "Error retrieving project tasks.", error = ex.Message });
-            }
+                MessageCode = MessageCodes.ProjectTask_Success0001,
+                Message = SystemMessages.ProjectTask_Success0001,
+                Data = data
+            });
         }
 
+        /// <summary>
+        /// Get project task by ID
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var task = await service.GetByIdAsync(id);
+            _logger.LogInformation("Retrieving project task with ID: {Id}", id);
+            var task = await _service.GetByIdAsync(id);
             if (task == null)
-                return NotFound(new { message = "Project task not found." });
-            return Ok(new { message = "Project task retrieved successfully.", data = task });
+            {
+                _logger.LogWarning("Project task with ID {Id} not found", id);
+                return NotFound(new ApiResponse<object>
+                {
+                    MessageCode = MessageCodes.ProjectTask_Fail0001,
+                    Message = SystemMessages.ProjectTask_Fail0001
+                });
+            }
+
+            return Ok(new ApiResponse<ProjectTaskReadDto>
+            {
+                MessageCode = MessageCodes.ProjectTask_Success0002,
+                Message = SystemMessages.ProjectTask_Success0002,
+                Data = task
+            });
         }
 
+        /// <summary>
+        /// Get tasks by assigner ID
+        /// </summary>
         [HttpGet("assigner/{assignedById}")]
         public async Task<IActionResult> GetByAssigner(string assignedById)
         {
-            var data = await service.GetByAssignerAsync(assignedById);
-            return Ok(new { message = "Tasks assigned by user retrieved successfully.", data });
+            _logger.LogInformation("Retrieving tasks assigned by user: {AssignedById}", assignedById);
+            var data = await _service.GetByAssignerAsync(assignedById);
+            return Ok(new ApiResponse<IEnumerable<ProjectTaskReadDto>>
+            {
+                MessageCode = MessageCodes.ProjectTask_Success0006,
+                Message = SystemMessages.ProjectTask_Success0006,
+                Data = data
+            });
         }
 
+        /// <summary>
+        /// Get tasks by assignee ID
+        /// </summary>
         [HttpGet("assignee/{assignedToId}")]
         public async Task<IActionResult> GetByAssignee(string assignedToId)
         {
-            var data = await service.GetByAssigneeAsync(assignedToId);
-            return Ok(new { message = "Tasks assigned to user retrieved successfully.", data });
+            _logger.LogInformation("Retrieving tasks assigned to user: {AssignedToId}", assignedToId);
+            var data = await _service.GetByAssigneeAsync(assignedToId);
+            return Ok(new ApiResponse<IEnumerable<ProjectTaskReadDto>>
+            {
+                MessageCode = MessageCodes.ProjectTask_Success0007,
+                Message = SystemMessages.ProjectTask_Success0007,
+                Data = data
+            });
         }
 
+        /// <summary>
+        /// Create a new project task
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] ProjectTaskCreateDto dto)
         {
-            var id = await service.AddAsync(dto);
-            var created = await service.GetByIdAsync(id);
-            return CreatedAtAction(nameof(GetById), new { id }, new { message = "Project task created successfully.", data = created });
+            _logger.LogInformation("Creating new project task");
+            var id = await _service.AddAsync(dto);
+            var created = await _service.GetByIdAsync(id);
+            _logger.LogInformation("Project task created with ID: {Id}", id);
+            
+            return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<ProjectTaskReadDto>
+            {
+                MessageCode = MessageCodes.ProjectTask_Success0003,
+                Message = SystemMessages.ProjectTask_Success0003,
+                Data = created
+            });
         }
 
+        /// <summary>
+        /// Update an existing project task
+        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] ProjectTaskUpdateDto dto)
         {
-            var ok = await service.UpdateAsync(id, dto);
+            _logger.LogInformation("Updating project task with ID: {Id}", id);
+            var ok = await _service.UpdateAsync(id, dto);
             if (!ok)
-                return NotFound(new { message = "Project task not found." });
-            return Ok(new { message = "Project task updated successfully." });
+            {
+                _logger.LogWarning("Project task with ID {Id} not found for update", id);
+                return NotFound(new ApiResponse<object>
+                {
+                    MessageCode = MessageCodes.ProjectTask_Fail0001,
+                    Message = SystemMessages.ProjectTask_Fail0001
+                });
+            }
+
+            _logger.LogInformation("Project task {Id} updated successfully", id);
+            return Ok(new ApiResponse<object>
+            {
+                MessageCode = MessageCodes.ProjectTask_Success0004,
+                Message = SystemMessages.ProjectTask_Success0004
+            });
         }
 
+        /// <summary>
+        /// Delete a project task
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var ok = await service.DeleteAsync(id);
+            _logger.LogInformation("Deleting project task with ID: {Id}", id);
+            var ok = await _service.DeleteAsync(id);
             if (!ok)
-                return NotFound(new { message = "Project task not found." });
-            return Ok(new { message = "Project task deleted successfully." });
+            {
+                _logger.LogWarning("Project task with ID {Id} not found for deletion", id);
+                return NotFound(new ApiResponse<object>
+                {
+                    MessageCode = MessageCodes.ProjectTask_Fail0001,
+                    Message = SystemMessages.ProjectTask_Fail0001
+                });
+            }
+
+            _logger.LogInformation("Project task {Id} deleted successfully", id);
+            return NoContent();
         }
     }
 }

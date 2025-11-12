@@ -1,66 +1,48 @@
+using AIDefCom.Service.Constants;
+using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.TranscriptAnalysis;
 using AIDefCom.Service.Services.TranscriptAnalysisService;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
-    [Route("api/transcript")]
+    /// <summary>
+    /// Controller for analyzing transcripts using AI
+    /// </summary>
+    [Route("api/transcript-analysis")]
     [ApiController]
-    public class TranscriptAnalysisController(
-        ITranscriptAnalysisService analysisService,
-        ILogger<TranscriptAnalysisController> logger) : ControllerBase
+    public class TranscriptAnalysisController : ControllerBase
     {
-        [HttpPost("analyze")]
+        private readonly ITranscriptAnalysisService _analysisService;
+        private readonly ILogger<TranscriptAnalysisController> _logger;
+
+        public TranscriptAnalysisController(ITranscriptAnalysisService analysisService, ILogger<TranscriptAnalysisController> logger)
+        {
+            _analysisService = analysisService;
+            _logger = logger;
+        }
+
+        /// <summary>
+        /// Analyze a transcript using AI
+        /// </summary>
+        [HttpPost]
         public async Task<IActionResult> AnalyzeTranscript([FromBody] TranscriptAnalysisRequestDto request)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(new
-                {
-                    message = "Invalid input.",
-                    errors = ModelState
-                });
+                throw new ArgumentException("Invalid transcript analysis request");
             }
 
-            try
-            {
-                logger.LogInformation("Starting transcript analysis for SessionId: {SessionId}", request.DefenseSessionId);
+            _logger.LogInformation("Starting transcript analysis for SessionId: {SessionId}", request.DefenseSessionId);
+            var result = await _analysisService.AnalyzeTranscriptAsync(request);
+            _logger.LogInformation("Transcript analysis completed for SessionId: {SessionId}", request.DefenseSessionId);
 
-                var result = await analysisService.AnalyzeTranscriptAsync(request);
-
-                return Ok(new
-                {
-                    message = "Transcript analyzed successfully.",
-                    data = result
-                });
-            }
-            catch (InvalidOperationException ex)
+            return Ok(new ApiResponse<TranscriptAnalysisResponseDto>
             {
-                logger.LogError(ex, "Configuration error during transcript analysis");
-                return StatusCode(500, new
-                {
-                    message = "AI service is not properly configured.",
-                    error = ex.Message
-                });
-            }
-            catch (HttpRequestException ex)
-            {
-                logger.LogError(ex, "HTTP error calling AI API");
-                return StatusCode(502, new
-                {
-                    message = "Failed to communicate with AI service.",
-                    error = ex.Message
-                });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Unexpected error during transcript analysis");
-                return StatusCode(500, new
-                {
-                    message = "An error occurred while analyzing the transcript.",
-                    error = ex.Message
-                });
-            }
+                MessageCode = MessageCodes.TranscriptAnalysis_Success0001,
+                Message = SystemMessages.TranscriptAnalysis_Success0001,
+                Data = result
+            });
         }
     }
 }
