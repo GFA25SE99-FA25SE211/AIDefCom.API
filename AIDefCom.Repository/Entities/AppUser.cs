@@ -12,5 +12,6 @@ namespace AIDefCom.Repository.Entities
         public bool HasGeneratedPassword { get; set; } = false;
         public string? LastGeneratedPassword { get; set; }
         public DateTime? PasswordGeneratedAt { get; set; }
+        public string? VoiceSamplePath { get; set; }
     }
 }

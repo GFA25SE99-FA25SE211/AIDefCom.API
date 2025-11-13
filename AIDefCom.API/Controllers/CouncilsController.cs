@@ -33,8 +33,8 @@ namespace AIDefCom.API.Controllers
             
             return Ok(new ApiResponse<IEnumerable<CouncilReadDto>>
             {
-                MessageCode = MessageCodes.Council_Success0001,
-                Message = SystemMessages.Council_Success0001,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Councils"),
                 Data = data
             });
         }
@@ -56,8 +56,8 @@ namespace AIDefCom.API.Controllers
 
             return Ok(new ApiResponse<CouncilReadDto>
             {
-                MessageCode = MessageCodes.Council_Success0002,
-                Message = SystemMessages.Council_Success0002,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Retrieved, "Council"),
                 Data = entity
             });
         }
@@ -75,8 +75,8 @@ namespace AIDefCom.API.Controllers
             
             return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<CouncilReadDto>
             {
-                MessageCode = MessageCodes.Council_Success0003,
-                Message = SystemMessages.Council_Success0003,
+                Code = ResponseCodes.Created,
+                Message = ResponseMessages.Created,
                 Data = created
             });
         }
@@ -99,8 +99,8 @@ namespace AIDefCom.API.Controllers
             _logger.LogInformation("Council {Id} updated successfully", id);
             return Ok(new ApiResponse<object>
             {
-                MessageCode = MessageCodes.Council_Success0004,
-                Message = SystemMessages.Council_Success0004
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Updated, "Council")
             });
         }
 
@@ -141,8 +141,8 @@ namespace AIDefCom.API.Controllers
             _logger.LogInformation("Council {Id} restored successfully", id);
             return Ok(new ApiResponse<object>
             {
-                MessageCode = MessageCodes.Council_Success0006,
-                Message = SystemMessages.Council_Success0006
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Updated, "Council")
             });
         }
     }

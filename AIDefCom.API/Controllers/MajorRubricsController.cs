@@ -33,8 +33,8 @@ namespace AIDefCom.API.Controllers
             
             return Ok(new ApiResponse<IEnumerable<MajorRubricReadDto>>
             {
-                MessageCode = MessageCodes.MajorRubric_Success0001,
-                Message = SystemMessages.MajorRubric_Success0001,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Major-rubric links"),
                 Data = data
             });
         }
@@ -50,8 +50,8 @@ namespace AIDefCom.API.Controllers
             
             return Ok(new ApiResponse<IEnumerable<MajorRubricReadDto>>
             {
-                MessageCode = MessageCodes.MajorRubric_Success0002,
-                Message = SystemMessages.MajorRubric_Success0002,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Rubrics for major"),
                 Data = data
             });
         }
@@ -67,8 +67,8 @@ namespace AIDefCom.API.Controllers
             
             return Ok(new ApiResponse<IEnumerable<MajorRubricReadDto>>
             {
-                MessageCode = MessageCodes.MajorRubric_Success0003,
-                Message = SystemMessages.MajorRubric_Success0003,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Majors for rubric"),
                 Data = data
             });
         }
@@ -79,19 +79,14 @@ namespace AIDefCom.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] MajorRubricCreateDto dto)
         {
-            if (!ModelState.IsValid)
-            {
-                throw new ArgumentException("Invalid major-rubric data");
-            }
-
             _logger.LogInformation("Creating new major-rubric link for Major {MajorId} and Rubric {RubricId}", dto.MajorId, dto.RubricId);
             var id = await _service.AddAsync(dto);
             _logger.LogInformation("Major-rubric link created with ID: {Id}", id);
             
             return CreatedAtAction(nameof(GetAll), new { id }, new ApiResponse<object>
             {
-                MessageCode = MessageCodes.MajorRubric_Success0004,
-                Message = SystemMessages.MajorRubric_Success0004,
+                Code = ResponseCodes.Created,
+                Message = ResponseMessages.Created,
                 Data = new { id }
             });
         }
@@ -102,11 +97,6 @@ namespace AIDefCom.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] MajorRubricUpdateDto dto)
         {
-            if (!ModelState.IsValid)
-            {
-                throw new ArgumentException("Invalid major-rubric data");
-            }
-
             _logger.LogInformation("Updating major-rubric link with ID: {Id}", id);
             var ok = await _service.UpdateAsync(id, dto);
             
@@ -119,8 +109,8 @@ namespace AIDefCom.API.Controllers
             _logger.LogInformation("Major-rubric link {Id} updated successfully", id);
             return Ok(new ApiResponse<object>
             {
-                MessageCode = MessageCodes.MajorRubric_Success0005,
-                Message = SystemMessages.MajorRubric_Success0005
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Updated, "Major-rubric link")
             });
         }
 

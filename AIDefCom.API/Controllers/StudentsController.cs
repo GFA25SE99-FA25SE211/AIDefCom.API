@@ -6,9 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
-    /// <summary>
-    /// Controller for managing students
-    /// </summary>
     [Route("api/students")]
     [ApiController]
     public class StudentsController : ControllerBase
@@ -22,67 +19,54 @@ namespace AIDefCom.API.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// Get all students
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
             _logger.LogInformation("Retrieving all students");
             var data = await _service.GetAllAsync();
+            
             return Ok(new ApiResponse<IEnumerable<StudentReadDto>>
             {
-                MessageCode = MessageCodes.Student_Success0001,
-                Message = SystemMessages.Student_Success0001,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Students"),
                 Data = data
             });
         }
 
-        /// <summary>
-        /// Get student by ID
-        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
             _logger.LogInformation("Retrieving student with ID: {Id}", id);
             var item = await _service.GetByIdAsync(id);
+            
             if (item == null)
             {
                 _logger.LogWarning("Student with ID {Id} not found", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.Student_Fail0001,
-                    Message = SystemMessages.Student_Fail0001
-                });
+                throw new KeyNotFoundException($"Student with ID {id} not found");
             }
 
             return Ok(new ApiResponse<StudentReadDto>
             {
-                MessageCode = MessageCodes.Student_Success0002,
-                Message = SystemMessages.Student_Success0002,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Retrieved, "Student"),
                 Data = item
             });
         }
 
-        /// <summary>
-        /// Get students by group ID
-        /// </summary>
         [HttpGet("group/{groupId}")]
         public async Task<IActionResult> GetByGroupId(string groupId)
         {
             _logger.LogInformation("Retrieving students for group ID: {GroupId}", groupId);
             var data = await _service.GetByGroupIdAsync(groupId);
+            
             return Ok(new ApiResponse<IEnumerable<StudentReadDto>>
             {
-                MessageCode = MessageCodes.Student_Success0006,
-                Message = SystemMessages.Student_Success0006,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Students by group"),
                 Data = data
             });
         }
 
-        /// <summary>
-        /// Create a new student
-        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] StudentCreateDto dto)
         {
@@ -93,54 +77,42 @@ namespace AIDefCom.API.Controllers
             
             return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<StudentReadDto>
             {
-                MessageCode = MessageCodes.Student_Success0003,
-                Message = SystemMessages.Student_Success0003,
+                Code = ResponseCodes.Created,
+                Message = ResponseMessages.Created,
                 Data = created
             });
         }
 
-        /// <summary>
-        /// Update an existing student
-        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] StudentUpdateDto dto)
         {
             _logger.LogInformation("Updating student with ID: {Id}", id);
             var ok = await _service.UpdateAsync(id, dto);
+            
             if (!ok)
             {
                 _logger.LogWarning("Student with ID {Id} not found for update", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.Student_Fail0001,
-                    Message = SystemMessages.Student_Fail0001
-                });
+                throw new KeyNotFoundException($"Student with ID {id} not found");
             }
 
             _logger.LogInformation("Student {Id} updated successfully", id);
             return Ok(new ApiResponse<object>
             {
-                MessageCode = MessageCodes.Student_Success0004,
-                Message = SystemMessages.Student_Success0004
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Updated, "Student")
             });
         }
 
-        /// <summary>
-        /// Delete a student
-        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
             _logger.LogInformation("Deleting student with ID: {Id}", id);
             var ok = await _service.DeleteAsync(id);
+            
             if (!ok)
             {
                 _logger.LogWarning("Student with ID {Id} not found for deletion", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.Student_Fail0001,
-                    Message = SystemMessages.Student_Fail0001
-                });
+                throw new KeyNotFoundException($"Student with ID {id} not found");
             }
 
             _logger.LogInformation("Student {Id} deleted successfully", id);

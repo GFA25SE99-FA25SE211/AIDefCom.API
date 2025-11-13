@@ -6,9 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
-    /// <summary>
-    /// Controller for managing transcripts
-    /// </summary>
     [Route("api/transcripts")]
     [ApiController]
     public class TranscriptsController : ControllerBase
@@ -22,9 +19,6 @@ namespace AIDefCom.API.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// Get all transcripts
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -33,15 +27,12 @@ namespace AIDefCom.API.Controllers
             
             return Ok(new ApiResponse<IEnumerable<TranscriptReadDto>>
             {
-                MessageCode = MessageCodes.Transcript_Success0001,
-                Message = SystemMessages.Transcript_Success0001,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Transcripts"),
                 Data = transcripts
             });
         }
 
-        /// <summary>
-        /// Get transcript by ID
-        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -56,15 +47,12 @@ namespace AIDefCom.API.Controllers
 
             return Ok(new ApiResponse<TranscriptReadDto>
             {
-                MessageCode = MessageCodes.Transcript_Success0002,
-                Message = SystemMessages.Transcript_Success0002,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Retrieved, "Transcript"),
                 Data = transcript
             });
         }
 
-        /// <summary>
-        /// Get transcripts by session ID
-        /// </summary>
         [HttpGet("session/{sessionId}")]
         public async Task<IActionResult> GetBySession(int sessionId)
         {
@@ -73,23 +61,15 @@ namespace AIDefCom.API.Controllers
             
             return Ok(new ApiResponse<IEnumerable<TranscriptReadDto>>
             {
-                MessageCode = MessageCodes.Transcript_Success0001,
-                Message = SystemMessages.Transcript_Success0001,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Transcripts"),
                 Data = transcripts
             });
         }
 
-        /// <summary>
-        /// Create a new transcript
-        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] TranscriptCreateDto request)
         {
-            if (!ModelState.IsValid)
-            {
-                throw new ArgumentException("Invalid transcript data");
-            }
-
             _logger.LogInformation("Creating new transcript for session {SessionId}", request.SessionId);
             var id = await _transcriptService.AddAsync(request);
             var createdTranscript = await _transcriptService.GetByIdAsync(id);
@@ -97,23 +77,15 @@ namespace AIDefCom.API.Controllers
 
             return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<TranscriptReadDto>
             {
-                MessageCode = MessageCodes.Transcript_Success0003,
-                Message = SystemMessages.Transcript_Success0003,
+                Code = ResponseCodes.Created,
+                Message = ResponseMessages.Created,
                 Data = createdTranscript
             });
         }
 
-        /// <summary>
-        /// Update an existing transcript
-        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] TranscriptUpdateDto request)
         {
-            if (!ModelState.IsValid)
-            {
-                throw new ArgumentException("Invalid transcript data");
-            }
-
             _logger.LogInformation("Updating transcript with ID: {Id}", id);
             var success = await _transcriptService.UpdateAsync(id, request);
             
@@ -126,14 +98,11 @@ namespace AIDefCom.API.Controllers
             _logger.LogInformation("Transcript {Id} updated successfully", id);
             return Ok(new ApiResponse<object>
             {
-                MessageCode = MessageCodes.Transcript_Success0004,
-                Message = SystemMessages.Transcript_Success0004
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Updated, "Transcript")
             });
         }
 
-        /// <summary>
-        /// Delete a transcript
-        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

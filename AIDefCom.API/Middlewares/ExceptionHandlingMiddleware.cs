@@ -7,7 +7,7 @@ using AIDefCom.Service.Dto.Common;
 namespace AIDefCom.API.Middlewares
 {
     /// <summary>
-    /// Global exception handling middleware with standardized DEF error codes
+    /// Global exception handling middleware with unified DEF response codes
     /// </summary>
     public class ExceptionHandlingMiddleware
     {
@@ -35,181 +35,183 @@ namespace AIDefCom.API.Middlewares
         private async Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
             // Determine error details based on exception type
-            var (errorCode, message, statusCode, logLevel) = MapExceptionToError(exception);
+            var (code, message, statusCode, logLevel) = MapExceptionToResponse(exception);
 
             // Log the exception with appropriate level
-            LogException(exception, logLevel, errorCode);
+            LogException(exception, logLevel, code);
 
-            // Build error response
-            var errorResponse = new ErrorResponse
+            // Build unified response for errors
+            var response = new ApiResponse<object>
             {
-                ErrorCode = errorCode,
-                Message = message
+                Code = code,
+                Message = message,
+                Data = null,
+                Details = exception.Message
             };
 
-            // Add details only in Development environment
-            var environment = context.RequestServices.GetRequiredService<IWebHostEnvironment>();
-            if (environment.IsDevelopment())
-            {
-                errorResponse.Details = exception.Message;
-                errorResponse.Metadata = new
-                {
-                    ExceptionType = exception.GetType().Name,
-                    StackTrace = exception.StackTrace?.Split('\n').Take(5).ToArray(), // First 5 lines
-                    InnerException = exception.InnerException?.Message
-                };
-            }
-
-            // Set response
+            // Set HTTP response
             context.Response.StatusCode = (int)statusCode;
             context.Response.ContentType = "application/json";
 
             var jsonOptions = new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                WriteIndented = environment.IsDevelopment()
+                WriteIndented = true
             };
 
-            await context.Response.WriteAsync(JsonSerializer.Serialize(errorResponse, jsonOptions));
+            await context.Response.WriteAsync(JsonSerializer.Serialize(response, jsonOptions));
         }
 
-        private (string errorCode, string message, HttpStatusCode statusCode, LogLevel logLevel) MapExceptionToError(Exception exception)
+        private (string code, string message, HttpStatusCode statusCode, LogLevel logLevel) MapExceptionToResponse(Exception exception)
         {
             return exception switch
             {
-                // Validation Exceptions
-                ArgumentNullException _ => (
-                    ErrorCodes.RequiredFieldMissing,
-                    ErrorMessages.RequiredFieldMissing,
+                // Validation Exceptions ? DEF400
+                ArgumentNullException ex => (
+                    ResponseCodes.BadRequest,
+                    string.Format(ResponseMessages.RequiredField, ex.ParamName ?? "field"),
                     HttpStatusCode.BadRequest,
                     LogLevel.Warning
                 ),
                 ArgumentException _ => (
-                    ErrorCodes.ValidationError,
-                    ErrorMessages.ValidationError,
+                    ResponseCodes.BadRequest,
+                    ResponseMessages.ValidationFailed,
                     HttpStatusCode.BadRequest,
                     LogLevel.Warning
                 ),
 
-                // Authorization Exceptions
+                // Authorization Exceptions ? DEF401
                 UnauthorizedAccessException _ => (
-                    ErrorCodes.Unauthorized,
-                    ErrorMessages.Unauthorized,
+                    ResponseCodes.Unauthorized,
+                    ResponseMessages.Unauthorized,
                     HttpStatusCode.Unauthorized,
                     LogLevel.Warning
                 ),
 
-                // Resource Exceptions
+                // Resource Not Found ? DEF404
                 KeyNotFoundException _ => (
-                    ErrorCodes.NotFound,
-                    ErrorMessages.NotFound,
+                    ResponseCodes.NotFound,
+                    ResponseMessages.NotFound,
                     HttpStatusCode.NotFound,
                     LogLevel.Information
                 ),
 
-                // Database Exceptions - SQL Server specific
-                SqlException ex when ex.Number == -2 => ( // Timeout
-                    ErrorCodes.DatabaseTimeout,
-                    ErrorMessages.DatabaseTimeout,
+                // Database Timeout ? DEF408
+                SqlException ex when ex.Number == -2 => (
+                    ResponseCodes.RequestTimeout,
+                    ResponseMessages.DatabaseTimeout,
                     HttpStatusCode.RequestTimeout,
                     LogLevel.Error
                 ),
-                SqlException ex when ex.Number == 2627 || ex.Number == 2601 => ( // Unique constraint
-                    ErrorCodes.DatabaseConstraintViolation,
-                    ErrorMessages.DatabaseConstraintViolation,
+
+                // Database Constraint ? DEF409
+                SqlException ex when ex.Number == 2627 || ex.Number == 2601 => (
+                    ResponseCodes.Conflict,
+                    ResponseMessages.DatabaseConstraint,
                     HttpStatusCode.Conflict,
                     LogLevel.Warning
                 ),
+
+                // General Database Error ? DEF500
                 SqlException _ => (
-                    ErrorCodes.DatabaseError,
-                    ErrorMessages.DatabaseError,
+                    ResponseCodes.InternalError,
+                    ResponseMessages.DatabaseError,
                     HttpStatusCode.InternalServerError,
                     LogLevel.Error
                 ),
 
-                // Business Logic Exceptions
-                InvalidOperationException ex when ex.Message.Contains("already exists") || ex.Message.Contains("duplicate", StringComparison.OrdinalIgnoreCase) => (
-                    ErrorCodes.DuplicateEntry,
-                    ErrorMessages.DuplicateEntry,
-                    HttpStatusCode.Conflict,
-                    LogLevel.Warning
-                ),
-                InvalidOperationException _ => (
-                    ErrorCodes.InvalidOperation,
-                    ErrorMessages.InvalidOperation,
+                // Business Logic - Duplicate ? DEF409
+                InvalidOperationException ex when ex.Message.Contains("already exists", StringComparison.OrdinalIgnoreCase) ||
+                                                   ex.Message.Contains("duplicate", StringComparison.OrdinalIgnoreCase) => (
+                    ResponseCodes.Conflict,
+                    ResponseMessages.DuplicateEntry,
                     HttpStatusCode.Conflict,
                     LogLevel.Warning
                 ),
 
-                // External Service Exceptions
+                // Business Logic - General ? DEF409
+                InvalidOperationException _ => (
+                    ResponseCodes.Conflict,
+                    ResponseMessages.Conflict,
+                    HttpStatusCode.Conflict,
+                    LogLevel.Warning
+                ),
+
+                // External Service Timeout ? DEF504
                 HttpRequestException ex when ex.StatusCode == HttpStatusCode.RequestTimeout => (
-                    ErrorCodes.ExternalServiceTimeout,
-                    ErrorMessages.ExternalServiceTimeout,
+                    ResponseCodes.GatewayTimeout,
+                    ResponseMessages.GatewayTimeout,
                     HttpStatusCode.GatewayTimeout,
                     LogLevel.Error
                 ),
+
+                // External Service Unavailable ? DEF503
                 HttpRequestException ex when ex.StatusCode == HttpStatusCode.ServiceUnavailable => (
-                    ErrorCodes.ExternalServiceUnavailable,
-                    ErrorMessages.ExternalServiceUnavailable,
-                    HttpStatusCode.BadGateway,
+                    ResponseCodes.ServiceUnavailable,
+                    ResponseMessages.ServiceUnavailable,
+                    HttpStatusCode.ServiceUnavailable,
                     LogLevel.Error
                 ),
+
+                // External Service Error ? DEF502
                 HttpRequestException _ => (
-                    ErrorCodes.ExternalServiceError,
-                    ErrorMessages.ExternalServiceError,
+                    ResponseCodes.BadGateway,
+                    ResponseMessages.BadGateway,
                     HttpStatusCode.BadGateway,
                     LogLevel.Error
                 ),
 
-                // File/IO Exceptions
+                // File Not Found ? DEF404
                 FileNotFoundException _ => (
-                    ErrorCodes.FileNotFound,
-                    ErrorMessages.FileNotFound,
+                    ResponseCodes.NotFound,
+                    ResponseMessages.FileNotFound,
                     HttpStatusCode.NotFound,
                     LogLevel.Warning
                 ),
+
+                // Storage Error ? DEF500
                 IOException _ => (
-                    ErrorCodes.StorageError,
-                    ErrorMessages.StorageError,
+                    ResponseCodes.InternalError,
+                    ResponseMessages.StorageError,
                     HttpStatusCode.InternalServerError,
                     LogLevel.Error
                 ),
 
-                // Not Implemented
+                // Not Implemented ? DEF501
                 NotImplementedException _ => (
-                    ErrorCodes.NotImplemented,
-                    ErrorMessages.NotImplemented,
+                    ResponseCodes.NotImplemented,
+                    ResponseMessages.NotImplemented,
                     HttpStatusCode.NotImplemented,
                     LogLevel.Warning
                 ),
 
-                // Default - Internal Server Error
+                // Default - Internal Server Error ? DEF500
                 _ => (
-                    ErrorCodes.InternalError,
-                    ErrorMessages.InternalError,
+                    ResponseCodes.InternalError,
+                    ResponseMessages.InternalError,
                     HttpStatusCode.InternalServerError,
                     LogLevel.Error
                 )
             };
         }
 
-        private void LogException(Exception exception, LogLevel logLevel, string errorCode)
+        private void LogException(Exception exception, LogLevel logLevel, string code)
         {
-            var logMessage = "Error {ErrorCode}: {ExceptionType} - {Message}";
+            var logMessage = "Response {Code}: {ExceptionType} - {Message}";
 
             switch (logLevel)
             {
                 case LogLevel.Warning:
-                    _logger.LogWarning(exception, logMessage, errorCode, exception.GetType().Name, exception.Message);
+                    _logger.LogWarning(exception, logMessage, code, exception.GetType().Name, exception.Message);
                     break;
                 case LogLevel.Error:
-                    _logger.LogError(exception, logMessage, errorCode, exception.GetType().Name, exception.Message);
+                    _logger.LogError(exception, logMessage, code, exception.GetType().Name, exception.Message);
                     break;
                 case LogLevel.Information:
-                    _logger.LogInformation(exception, logMessage, errorCode, exception.GetType().Name, exception.Message);
+                    _logger.LogInformation(exception, logMessage, code, exception.GetType().Name, exception.Message);
                     break;
                 default:
-                    _logger.LogError(exception, logMessage, errorCode, exception.GetType().Name, exception.Message);
+                    _logger.LogError(exception, logMessage, code, exception.GetType().Name, exception.Message);
                     break;
             }
         }

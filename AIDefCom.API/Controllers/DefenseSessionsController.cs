@@ -6,9 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
-    /// <summary>
-    /// Controller for managing defense sessions
-    /// </summary>
     [Route("api/defense-sessions")]
     [ApiController]
     public class DefenseSessionsController : ControllerBase
@@ -30,10 +27,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving all defense sessions");
             var data = await _service.GetAllAsync();
+            
             return Ok(new ApiResponse<IEnumerable<DefenseSessionReadDto>>
             {
-                MessageCode = MessageCodes.DefenseSession_Success0001,
-                Message = SystemMessages.DefenseSession_Success0001,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Defense sessions"),
                 Data = data
             });
         }
@@ -46,20 +44,17 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving defense session with ID: {Id}", id);
             var item = await _service.GetByIdAsync(id);
+            
             if (item == null)
             {
                 _logger.LogWarning("Defense session with ID {Id} not found", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.DefenseSession_Fail0001,
-                    Message = SystemMessages.DefenseSession_Fail0001
-                });
+                throw new KeyNotFoundException($"Defense session with ID {id} not found");
             }
 
             return Ok(new ApiResponse<DefenseSessionReadDto>
             {
-                MessageCode = MessageCodes.DefenseSession_Success0002,
-                Message = SystemMessages.DefenseSession_Success0002,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Retrieved, "Defense session"),
                 Data = item
             });
         }
@@ -72,10 +67,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving defense sessions for group ID: {GroupId}", groupId);
             var data = await _service.GetByGroupIdAsync(groupId);
+            
             return Ok(new ApiResponse<IEnumerable<DefenseSessionReadDto>>
             {
-                MessageCode = MessageCodes.DefenseSession_Success0006,
-                Message = SystemMessages.DefenseSession_Success0006,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Defense sessions by group"),
                 Data = data
             });
         }
@@ -88,20 +84,17 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving users for defense session ID: {Id}", id);
             var users = await _service.GetUsersByDefenseSessionIdAsync(id);
+            
             if (!users.Any())
             {
                 _logger.LogWarning("No users found for defense session ID {Id}", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.DefenseSession_Fail0002,
-                    Message = SystemMessages.DefenseSession_Fail0002
-                });
+                throw new KeyNotFoundException($"No users found for defense session {id}");
             }
 
             return Ok(new ApiResponse<IEnumerable<object>>
             {
-                MessageCode = MessageCodes.DefenseSession_Success0007,
-                Message = SystemMessages.DefenseSession_Success0007,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Users for defense session"),
                 Data = users
             });
         }
@@ -119,8 +112,8 @@ namespace AIDefCom.API.Controllers
             
             return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<DefenseSessionReadDto>
             {
-                MessageCode = MessageCodes.DefenseSession_Success0003,
-                Message = SystemMessages.DefenseSession_Success0003,
+                Code = ResponseCodes.Created,
+                Message = ResponseMessages.Created,
                 Data = created
             });
         }
@@ -133,21 +126,18 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Updating defense session with ID: {Id}", id);
             var ok = await _service.UpdateAsync(id, dto);
+            
             if (!ok)
             {
                 _logger.LogWarning("Defense session with ID {Id} not found for update", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.DefenseSession_Fail0001,
-                    Message = SystemMessages.DefenseSession_Fail0001
-                });
+                throw new KeyNotFoundException($"Defense session with ID {id} not found");
             }
 
             _logger.LogInformation("Defense session {Id} updated successfully", id);
             return Ok(new ApiResponse<object>
             {
-                MessageCode = MessageCodes.DefenseSession_Success0004,
-                Message = SystemMessages.DefenseSession_Success0004
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Updated, "Defense session")
             });
         }
 
@@ -159,14 +149,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Deleting defense session with ID: {Id}", id);
             var ok = await _service.DeleteAsync(id);
+            
             if (!ok)
             {
                 _logger.LogWarning("Defense session with ID {Id} not found for deletion", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.DefenseSession_Fail0001,
-                    Message = SystemMessages.DefenseSession_Fail0001
-                });
+                throw new KeyNotFoundException($"Defense session with ID {id} not found");
             }
 
             _logger.LogInformation("Defense session {Id} deleted successfully", id);

@@ -3,6 +3,7 @@ using AIDefCom.Repository.Repositories.CommitteeAssignmentRepository;
 using AIDefCom.Repository.Repositories.CouncilRepository;
 using AIDefCom.Repository.Repositories.DefenseSessionRepository;
 using AIDefCom.Repository.Repositories.GroupRepository;
+using AIDefCom.Repository.Repositories.LecturerRepository;
 using AIDefCom.Repository.Repositories.MajorRepository;
 using AIDefCom.Repository.Repositories.MajorRubricRepository;
 using AIDefCom.Repository.Repositories.MemberNoteRepository;
@@ -41,6 +42,7 @@ namespace AIDefCom.Repository.UnitOfWork
 
         // ------------------ Users & Projects ------------------
         IAppUserRepository AppUsers { get; }
+        ILecturerRepository Lecturers { get; }
         IProjectTaskRepository ProjectTasks { get; }
 
         // ------------------ Media & Transcripts ------------------

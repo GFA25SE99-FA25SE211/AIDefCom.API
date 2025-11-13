@@ -6,9 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
-    /// <summary>
-    /// Controller for managing reports
-    /// </summary>
     [Route("api/reports")]
     [ApiController]
     public class ReportsController : ControllerBase
@@ -22,78 +19,57 @@ namespace AIDefCom.API.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// Get all reports
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
             _logger.LogInformation("Retrieving all reports");
             var data = await _service.GetAllAsync();
+            
             return Ok(new ApiResponse<IEnumerable<ReportReadDto>>
             {
-                MessageCode = MessageCodes.Report_Success0001,
-                Message = SystemMessages.Report_Success0001,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Reports"),
                 Data = data
             });
         }
 
-        /// <summary>
-        /// Get report by ID
-        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
             _logger.LogInformation("Retrieving report with ID: {Id}", id);
             var report = await _service.GetByIdAsync(id);
+            
             if (report == null)
             {
                 _logger.LogWarning("Report with ID {Id} not found", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.Report_Fail0001,
-                    Message = SystemMessages.Report_Fail0001
-                });
+                throw new KeyNotFoundException($"Report with ID {id} not found");
             }
 
             return Ok(new ApiResponse<ReportReadDto>
             {
-                MessageCode = MessageCodes.Report_Success0002,
-                Message = SystemMessages.Report_Success0002,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Retrieved, "Report"),
                 Data = report
             });
         }
 
-        /// <summary>
-        /// Get reports by session ID
-        /// </summary>
         [HttpGet("session/{sessionId}")]
         public async Task<IActionResult> GetBySessionId(int sessionId)
         {
             _logger.LogInformation("Retrieving reports for session ID: {SessionId}", sessionId);
             var data = await _service.GetBySessionIdAsync(sessionId);
+            
             return Ok(new ApiResponse<IEnumerable<ReportReadDto>>
             {
-                MessageCode = MessageCodes.Report_Success0006,
-                Message = SystemMessages.Report_Success0006,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Reports for session"),
                 Data = data
             });
         }
 
-        /// <summary>
-        /// Create a new report
-        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] ReportCreateDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.General_Validation0001,
-                    Message = SystemMessages.General_Validation0001,
-                    Data = ModelState
-                });
-
             _logger.LogInformation("Creating new report for session {SessionId}", dto.SessionId);
             var id = await _service.AddAsync(dto);
             var created = await _service.GetByIdAsync(id);
@@ -101,62 +77,42 @@ namespace AIDefCom.API.Controllers
             
             return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<ReportReadDto>
             {
-                MessageCode = MessageCodes.Report_Success0003,
-                Message = SystemMessages.Report_Success0003,
+                Code = ResponseCodes.Created,
+                Message = ResponseMessages.Created,
                 Data = created
             });
         }
 
-        /// <summary>
-        /// Update an existing report
-        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] ReportUpdateDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.General_Validation0001,
-                    Message = SystemMessages.General_Validation0001,
-                    Data = ModelState
-                });
-
             _logger.LogInformation("Updating report with ID: {Id}", id);
             var success = await _service.UpdateAsync(id, dto);
+            
             if (!success)
             {
                 _logger.LogWarning("Report with ID {Id} not found for update", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.Report_Fail0001,
-                    Message = SystemMessages.Report_Fail0001
-                });
+                throw new KeyNotFoundException($"Report with ID {id} not found");
             }
 
             _logger.LogInformation("Report {Id} updated successfully", id);
             return Ok(new ApiResponse<object>
             {
-                MessageCode = MessageCodes.Report_Success0004,
-                Message = SystemMessages.Report_Success0004
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Updated, "Report")
             });
         }
 
-        /// <summary>
-        /// Delete a report
-        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             _logger.LogInformation("Deleting report with ID: {Id}", id);
             var success = await _service.DeleteAsync(id);
+            
             if (!success)
             {
                 _logger.LogWarning("Report with ID {Id} not found for deletion", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.Report_Fail0001,
-                    Message = SystemMessages.Report_Fail0001
-                });
+                throw new KeyNotFoundException($"Report with ID {id} not found");
             }
 
             _logger.LogInformation("Report {Id} deleted successfully", id);

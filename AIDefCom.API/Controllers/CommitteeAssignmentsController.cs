@@ -30,10 +30,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving all committee assignments");
             var data = await _service.GetAllAsync();
+            
             return Ok(new ApiResponse<IEnumerable<CommitteeAssignmentReadDto>>
             {
-                MessageCode = MessageCodes.CommitteeAssignment_Success0001,
-                Message = SystemMessages.CommitteeAssignment_Success0001,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Committee assignments"),
                 Data = data
             });
         }
@@ -46,20 +47,17 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving committee assignment with ID: {Id}", id);
             var item = await _service.GetByIdAsync(id);
+            
             if (item == null)
             {
                 _logger.LogWarning("Committee assignment with ID {Id} not found", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.CommitteeAssignment_Fail0001,
-                    Message = SystemMessages.CommitteeAssignment_Fail0001
-                });
+                throw new KeyNotFoundException($"Committee assignment with ID {id} not found");
             }
 
             return Ok(new ApiResponse<CommitteeAssignmentReadDto>
             {
-                MessageCode = MessageCodes.CommitteeAssignment_Success0002,
-                Message = SystemMessages.CommitteeAssignment_Success0002,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Retrieved, "Committee assignment"),
                 Data = item
             });
         }
@@ -72,10 +70,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving committee assignments for council ID: {CouncilId}", councilId);
             var data = await _service.GetByCouncilIdAsync(councilId);
+            
             return Ok(new ApiResponse<IEnumerable<CommitteeAssignmentReadDto>>
             {
-                MessageCode = MessageCodes.CommitteeAssignment_Success0006,
-                Message = SystemMessages.CommitteeAssignment_Success0006,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Committee assignments by council"),
                 Data = data
             });
         }
@@ -88,10 +87,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving committee assignments for session ID: {SessionId}", sessionId);
             var data = await _service.GetBySessionIdAsync(sessionId);
+            
             return Ok(new ApiResponse<IEnumerable<CommitteeAssignmentReadDto>>
             {
-                MessageCode = MessageCodes.CommitteeAssignment_Success0007,
-                Message = SystemMessages.CommitteeAssignment_Success0007,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Committee assignments by session"),
                 Data = data
             });
         }
@@ -104,10 +104,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving committee assignments for lecturer ID: {LecturerId}", lecturerId);
             var data = await _service.GetByLecturerIdAsync(lecturerId);
+            
             return Ok(new ApiResponse<IEnumerable<CommitteeAssignmentReadDto>>
             {
-                MessageCode = MessageCodes.CommitteeAssignment_Success0008,
-                Message = SystemMessages.CommitteeAssignment_Success0008,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Committee assignments by lecturer"),
                 Data = data
             });
         }
@@ -124,8 +125,8 @@ namespace AIDefCom.API.Controllers
             
             return CreatedAtAction(nameof(GetAll), new { id }, new ApiResponse<object>
             {
-                MessageCode = MessageCodes.CommitteeAssignment_Success0003,
-                Message = SystemMessages.CommitteeAssignment_Success0003,
+                Code = ResponseCodes.Created,
+                Message = string.Format(ResponseMessages.Created),
                 Data = new { id }
             });
         }
@@ -138,21 +139,18 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Updating committee assignment with ID: {Id}", id);
             var ok = await _service.UpdateAsync(id, dto);
+            
             if (!ok)
             {
                 _logger.LogWarning("Committee assignment with ID {Id} not found for update", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.CommitteeAssignment_Fail0001,
-                    Message = SystemMessages.CommitteeAssignment_Fail0001
-                });
+                throw new KeyNotFoundException($"Committee assignment with ID {id} not found");
             }
 
             _logger.LogInformation("Committee assignment {Id} updated successfully", id);
             return Ok(new ApiResponse<object>
             {
-                MessageCode = MessageCodes.CommitteeAssignment_Success0004,
-                Message = SystemMessages.CommitteeAssignment_Success0004
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Updated, "Committee assignment")
             });
         }
 
@@ -164,14 +162,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Deleting committee assignment with ID: {Id}", id);
             var ok = await _service.DeleteAsync(id);
+            
             if (!ok)
             {
                 _logger.LogWarning("Committee assignment with ID {Id} not found for deletion", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.CommitteeAssignment_Fail0001,
-                    Message = SystemMessages.CommitteeAssignment_Fail0001
-                });
+                throw new KeyNotFoundException($"Committee assignment with ID {id} not found");
             }
 
             _logger.LogInformation("Committee assignment {Id} deleted successfully", id);

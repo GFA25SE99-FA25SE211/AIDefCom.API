@@ -3,6 +3,7 @@ using AIDefCom.Service.Dto.CommitteeAssignment;
 using AIDefCom.Service.Dto.Council;
 using AIDefCom.Service.Dto.DefenseSession;
 using AIDefCom.Service.Dto.Group;
+using AIDefCom.Service.Dto.Lecturer;
 using AIDefCom.Service.Dto.Major;
 using AIDefCom.Service.Dto.MajorRubric;
 using AIDefCom.Service.Dto.MemberNote;
@@ -50,6 +51,15 @@ namespace AIDefCom.API.Mapper
                 .ForMember(d => d.Email, opt => opt.MapFrom(s => s.Email));
             CreateMap<StudentCreateDto, Student>();
             CreateMap<StudentUpdateDto, Student>();
+
+            // Lecturer - kế thừa AppUser
+            CreateMap<Lecturer, LecturerReadDto>()
+                .ForMember(d => d.FullName, opt => opt.MapFrom(s => s.FullName))
+                .ForMember(d => d.Email, opt => opt.MapFrom(s => s.Email))
+                .ForMember(d => d.PhoneNumber, opt => opt.MapFrom(s => s.PhoneNumber));
+            CreateMap<LecturerCreateDto, Lecturer>();
+            CreateMap<LecturerUpdateDto, Lecturer>()
+                .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
             CreateMap<Group, GroupReadDto>()
                 .ForMember(dest => dest.SemesterName, opt => opt.MapFrom(src => src.Semester!.SemesterName));

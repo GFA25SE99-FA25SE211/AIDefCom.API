@@ -30,10 +30,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving all semesters");
             var data = await _service.GetAllAsync();
+            
             return Ok(new ApiResponse<IEnumerable<SemesterReadDto>>
             {
-                MessageCode = MessageCodes.Semester_Success0001,
-                Message = SystemMessages.Semester_Success0001,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Semesters"),
                 Data = data
             });
         }
@@ -46,20 +47,17 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving semester with ID: {Id}", id);
             var item = await _service.GetByIdAsync(id);
+            
             if (item == null)
             {
                 _logger.LogWarning("Semester with ID {Id} not found", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.Semester_Fail0001,
-                    Message = SystemMessages.Semester_Fail0001
-                });
+                throw new KeyNotFoundException($"Semester with ID {id} not found");
             }
 
             return Ok(new ApiResponse<SemesterReadDto>
             {
-                MessageCode = MessageCodes.Semester_Success0002,
-                Message = SystemMessages.Semester_Success0002,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Retrieved, "Semester"),
                 Data = item
             });
         }
@@ -72,10 +70,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving semesters for major ID: {MajorId}", majorId);
             var data = await _service.GetByMajorIdAsync(majorId);
+            
             return Ok(new ApiResponse<IEnumerable<SemesterReadDto>>
             {
-                MessageCode = MessageCodes.Semester_Success0006,
-                Message = SystemMessages.Semester_Success0006,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Semesters by major"),
                 Data = data
             });
         }
@@ -86,14 +85,6 @@ namespace AIDefCom.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] SemesterCreateDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.General_Validation0001,
-                    Message = SystemMessages.General_Validation0001,
-                    Data = ModelState
-                });
-
             _logger.LogInformation("Creating new semester: {SemesterName}", dto.SemesterName);
             var id = await _service.AddAsync(dto);
             var created = await _service.GetByIdAsync(id);
@@ -101,8 +92,8 @@ namespace AIDefCom.API.Controllers
             
             return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<SemesterReadDto>
             {
-                MessageCode = MessageCodes.Semester_Success0003,
-                Message = SystemMessages.Semester_Success0003,
+                Code = ResponseCodes.Created,
+                Message = ResponseMessages.Created,
                 Data = created
             });
         }
@@ -113,31 +104,20 @@ namespace AIDefCom.API.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] SemesterUpdateDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.General_Validation0001,
-                    Message = SystemMessages.General_Validation0001,
-                    Data = ModelState
-                });
-
             _logger.LogInformation("Updating semester with ID: {Id}", id);
             var ok = await _service.UpdateAsync(id, dto);
+            
             if (!ok)
             {
                 _logger.LogWarning("Semester with ID {Id} not found for update", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.Semester_Fail0001,
-                    Message = SystemMessages.Semester_Fail0001
-                });
+                throw new KeyNotFoundException($"Semester with ID {id} not found");
             }
 
             _logger.LogInformation("Semester {Id} updated successfully", id);
             return Ok(new ApiResponse<object>
             {
-                MessageCode = MessageCodes.Semester_Success0004,
-                Message = SystemMessages.Semester_Success0004
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Updated, "Semester")
             });
         }
 
@@ -149,14 +129,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Deleting semester with ID: {Id}", id);
             var ok = await _service.DeleteAsync(id);
+            
             if (!ok)
             {
                 _logger.LogWarning("Semester with ID {Id} not found for deletion", id);
-                return NotFound(new ApiResponse<object>
-                {
-                    MessageCode = MessageCodes.Semester_Fail0001,
-                    Message = SystemMessages.Semester_Fail0001
-                });
+                throw new KeyNotFoundException($"Semester with ID {id} not found");
             }
 
             _logger.LogInformation("Semester {Id} deleted successfully", id);
