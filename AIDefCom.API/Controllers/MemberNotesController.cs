@@ -6,9 +6,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
-    /// <summary>
-    /// Controller for managing member notes
-    /// </summary>
     [Route("api/member-notes")]
     [ApiController]
     public class MemberNotesController : ControllerBase
@@ -22,9 +19,6 @@ namespace AIDefCom.API.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// Get all member notes
-        /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -33,15 +27,12 @@ namespace AIDefCom.API.Controllers
             
             return Ok(new ApiResponse<IEnumerable<MemberNoteReadDto>>
             {
-                MessageCode = MessageCodes.MemberNote_Success0001,
-                Message = SystemMessages.MemberNote_Success0001,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Member notes"),
                 Data = data
             });
         }
 
-        /// <summary>
-        /// Get member note by ID
-        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -56,15 +47,12 @@ namespace AIDefCom.API.Controllers
 
             return Ok(new ApiResponse<MemberNoteReadDto>
             {
-                MessageCode = MessageCodes.MemberNote_Success0002,
-                Message = SystemMessages.MemberNote_Success0002,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Retrieved, "Member note"),
                 Data = note
             });
         }
 
-        /// <summary>
-        /// Get member notes by group ID
-        /// </summary>
         [HttpGet("group/{groupId}")]
         public async Task<IActionResult> GetByGroupId(string groupId)
         {
@@ -73,15 +61,12 @@ namespace AIDefCom.API.Controllers
             
             return Ok(new ApiResponse<IEnumerable<MemberNoteReadDto>>
             {
-                MessageCode = MessageCodes.MemberNote_Success0006,
-                Message = SystemMessages.MemberNote_Success0006,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Member notes by group"),
                 Data = data
             });
         }
 
-        /// <summary>
-        /// Get member notes by user ID
-        /// </summary>
         [HttpGet("user/{userId}")]
         public async Task<IActionResult> GetByUserId(string userId)
         {
@@ -90,15 +75,12 @@ namespace AIDefCom.API.Controllers
             
             return Ok(new ApiResponse<IEnumerable<MemberNoteReadDto>>
             {
-                MessageCode = MessageCodes.MemberNote_Success0007,
-                Message = SystemMessages.MemberNote_Success0007,
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Member notes by user"),
                 Data = data
             });
         }
 
-        /// <summary>
-        /// Create a new member note
-        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] MemberNoteCreateDto dto)
         {
@@ -109,15 +91,12 @@ namespace AIDefCom.API.Controllers
             
             return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<MemberNoteReadDto>
             {
-                MessageCode = MessageCodes.MemberNote_Success0003,
-                Message = SystemMessages.MemberNote_Success0003,
+                Code = ResponseCodes.Created,
+                Message = ResponseMessages.Created,
                 Data = created
             });
         }
 
-        /// <summary>
-        /// Update an existing member note
-        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] MemberNoteUpdateDto dto)
         {
@@ -133,14 +112,11 @@ namespace AIDefCom.API.Controllers
             _logger.LogInformation("Member note {Id} updated successfully", id);
             return Ok(new ApiResponse<object>
             {
-                MessageCode = MessageCodes.MemberNote_Success0004,
-                Message = SystemMessages.MemberNote_Success0004
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Updated, "Member note")
             });
         }
 
-        /// <summary>
-        /// Delete a member note
-        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

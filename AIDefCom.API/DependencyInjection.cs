@@ -4,6 +4,7 @@ using AIDefCom.Repository.Repositories.CommitteeAssignmentRepository;
 using AIDefCom.Repository.Repositories.CouncilRepository;
 using AIDefCom.Repository.Repositories.DefenseSessionRepository;
 using AIDefCom.Repository.Repositories.GroupRepository;
+using AIDefCom.Repository.Repositories.LecturerRepository;
 using AIDefCom.Repository.Repositories.MajorRepository;
 using AIDefCom.Repository.Repositories.MajorRubricRepository;
 using AIDefCom.Repository.Repositories.MemberNoteRepository;
@@ -22,6 +23,7 @@ using AIDefCom.Service.Services.CouncilService;
 using AIDefCom.Service.Services.DefenseSessionService;
 using AIDefCom.Service.Services.EmailService;
 using AIDefCom.Service.Services.GroupService;
+using AIDefCom.Service.Services.LecturerService;
 using AIDefCom.Service.Services.MajorRubricService;
 using AIDefCom.Service.Services.MajorService;
 using AIDefCom.Service.Services.MemberNoteService;
@@ -43,6 +45,7 @@ namespace AIDefCom.API
         {
             // Repositories
             services.AddScoped<IAppUserRepository, AppUserRepository>();
+            services.AddScoped<ILecturerRepository, LecturerRepository>();
             services.AddScoped<IRubricRepository, RubricRepository>();
             services.AddScoped<IMajorRepository, MajorRepository>();
             services.AddScoped<IMajorRubricRepository, MajorRubricRepository>();
@@ -74,6 +77,7 @@ namespace AIDefCom.API
             services.AddScoped<IReportService, ReportService>();
             services.AddScoped<ISemesterService, SemesterService>();
             services.AddScoped<IStudentService, StudentService>();
+            services.AddScoped<ILecturerService, LecturerService>();
             services.AddScoped<IGroupService, GroupService>();
             services.AddScoped<IDefenseSessionService, DefenseSessionService>();
             services.AddScoped<IMemberNoteService, MemberNoteService>();

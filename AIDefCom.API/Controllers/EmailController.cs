@@ -33,8 +33,8 @@ namespace AIDefCom.API.Controllers
             
             return Ok(new ApiResponse<object>
             {
-                MessageCode = MessageCodes.Email_Success0001,
-                Message = SystemMessages.Email_Success0001,
+                Code = ResponseCodes.Success,
+                Message = ResponseMessages.Success,
                 Data = result
             });
         }
@@ -55,8 +55,8 @@ namespace AIDefCom.API.Controllers
             
             return Ok(new ApiResponse<object>
             {
-                MessageCode = MessageCodes.Email_Success0002,
-                Message = SystemMessages.Email_Success0002
+                Code = ResponseCodes.Success,
+                Message = ResponseMessages.Success
             });
         }
 
@@ -76,8 +76,8 @@ namespace AIDefCom.API.Controllers
             
             return Ok(new ApiResponse<object>
             {
-                MessageCode = MessageCodes.Email_Success0003,
-                Message = SystemMessages.Email_Success0003,
+                Code = ResponseCodes.Success,
+                Message = ResponseMessages.Success,
                 Data = result
             });
         }

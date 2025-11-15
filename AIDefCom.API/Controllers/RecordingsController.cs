@@ -43,8 +43,8 @@ namespace AIDefCom.API.Controllers
             
             return Ok(new ApiResponse<BeginUploadResponse>
             {
-                MessageCode = MessageCodes.Recording_Success0001,
-                Message = SystemMessages.Recording_Success0001,
+                Code = ResponseCodes.Success,
+                Message = ResponseMessages.Success,
                 Data = new BeginUploadResponse(recordingId, uploadUri.ToString(), blobUrl, blobPath, request.MimeType)
             });
         }
@@ -86,8 +86,8 @@ namespace AIDefCom.API.Controllers
             
             return Ok(new ApiResponse<string>
             {
-                MessageCode = MessageCodes.Recording_Success0003,
-                Message = SystemMessages.Recording_Success0003,
+                Code = ResponseCodes.Success,
+                Message = ResponseMessages.Success,
                 Data = uri.ToString()
             });
         }

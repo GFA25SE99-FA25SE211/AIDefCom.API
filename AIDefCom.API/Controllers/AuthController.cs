@@ -1,4 +1,5 @@
-﻿using AIDefCom.Service.Dto.Account;
+﻿using AIDefCom.Service.Constants;
+using AIDefCom.Service.Dto.Account;
 using AIDefCom.Service.Dto.AppUser;
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Services.AuthService;
@@ -16,10 +17,12 @@ namespace AIDefCom.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;
+        private readonly ILogger<AuthController> _logger;
 
-        public AuthController(IAuthService authService)
+        public AuthController(IAuthService authService, ILogger<AuthController> logger)
         {
             _authService = authService;
+            _logger = logger;
         }
 
         // ------------------ REGISTER ------------------
@@ -35,22 +38,23 @@ namespace AIDefCom.API.Controllers
                 string.IsNullOrWhiteSpace(request.FullName) ||
                 string.IsNullOrWhiteSpace(request.PhoneNumber))
             {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Message = "All fields (Email, Password, FullName, PhoneNumber) are required."
-                });
+                throw new ArgumentNullException(nameof(request), "All fields (Email, Password, FullName, PhoneNumber) are required");
             }
 
+            _logger.LogInformation("Registering new user: {Email}", request.Email);
             var user = await _authService.RegisterAsync(request);
+            
             if (user == null)
-                return Conflict(new ApiResponse<object>
-                {
-                    Message = "Registration failed. User may already exist."
-                });
+            {
+                _logger.LogWarning("Registration failed for email: {Email}", request.Email);
+                throw new InvalidOperationException("User with this email already exists");
+            }
 
+            _logger.LogInformation("User registered successfully: {Email}", request.Email);
             return Ok(new ApiResponse<object>
             {
-                Message = "Register successfully!",
+                Code = ResponseCodes.Created,
+                Message = ResponseMessages.Created,
                 Data = new
                 {
                     user.Id,
@@ -73,22 +77,23 @@ namespace AIDefCom.API.Controllers
                 string.IsNullOrWhiteSpace(request.FullName) ||
                 string.IsNullOrWhiteSpace(request.PhoneNumber))
             {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Message = "All fields (Email, Password, FullName, PhoneNumber) are required."
-                });
+                throw new ArgumentNullException(nameof(request), "All fields (Email, Password, FullName, PhoneNumber) are required");
             }
 
+            _logger.LogInformation("Registering new student user: {Email}", request.Email);
             var user = await _authService.RegisterWithRoleAsync(request);
+            
             if (user == null)
-                return Conflict(new ApiResponse<object>
-                {
-                    Message = "Registration failed. User may already exist."
-                });
+            {
+                _logger.LogWarning("Student registration failed for email: {Email}", request.Email);
+                throw new InvalidOperationException("User with this email already exists");
+            }
 
+            _logger.LogInformation("Student registered successfully: {Email}", request.Email);
             return Ok(new ApiResponse<object>
             {
-                Message = "User registered successfully with role 'Student'.",
+                Code = ResponseCodes.Created,
+                Message = "User registered successfully with role 'Student'",
                 Data = new
                 {
                     user.Id,
@@ -110,21 +115,24 @@ namespace AIDefCom.API.Controllers
         public async Task<IActionResult> Login([FromBody] LoginDto request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
-                return BadRequest(new ApiResponse<object>
-                {
-                    Message = "Email and password cannot be empty."
-                });
+            {
+                throw new ArgumentNullException(nameof(request), "Email and password cannot be empty");
+            }
 
+            _logger.LogInformation("Login attempt for user: {Email}", request.Email);
             var result = await _authService.LoginAsync(request);
+            
             if (result == null)
-                return Unauthorized(new ApiResponse<object>
-                {
-                    Message = "Invalid email or password."
-                });
+            {
+                _logger.LogWarning("Login failed for user: {Email}", request.Email);
+                throw new UnauthorizedAccessException("Invalid email or password");
+            }
 
+            _logger.LogInformation("User logged in successfully: {Email}", request.Email);
             return Ok(new ApiResponse<object>
             {
-                Message = "Login successful.",
+                Code = ResponseCodes.Success,
+                Message = "Login successful",
                 Data = result
             });
         }
@@ -135,13 +143,16 @@ namespace AIDefCom.API.Controllers
         [HttpPost("login/google")]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleUserLoginDTO googleLoginDTO)
         {
+            _logger.LogInformation("Google login attempt");
             var response = await _authService.GoogleLoginAsync(googleLoginDTO);
 
             if (!string.IsNullOrEmpty(response.TemporaryPassword))
             {
+                _logger.LogInformation("New Google account created with temporary password");
                 return Ok(new ApiResponse<object>
                 {
-                    Message = "Account created successfully with Google login.",
+                    Code = ResponseCodes.Created,
+                    Message = "Account created successfully with Google login",
                     Data = new
                     {
                         note = "Below is your one-time password for normal login. Save it securely.",
@@ -151,9 +162,11 @@ namespace AIDefCom.API.Controllers
                 });
             }
 
+            _logger.LogInformation("Google login successful");
             return Ok(new ApiResponse<object>
             {
-                Message = "Google login successful.",
+                Code = ResponseCodes.Success,
+                Message = "Google login successful",
                 Data = response
             });
         }
@@ -164,13 +177,16 @@ namespace AIDefCom.API.Controllers
         [HttpPost("login/google/member")]
         public async Task<IActionResult> GoogleLoginAsMember([FromBody] GoogleUserLoginDTO googleLoginDTO)
         {
+            _logger.LogInformation("Google member login attempt");
             var response = await _authService.GoogleLoginAsMemberAsync(googleLoginDTO);
 
             if (!string.IsNullOrEmpty(response.TemporaryPassword))
             {
+                _logger.LogInformation("New Google member account created with temporary password");
                 return Ok(new ApiResponse<object>
                 {
-                    Message = "Account created successfully with Google login.",
+                    Code = ResponseCodes.Created,
+                    Message = "Account created successfully with Google login",
                     Data = new
                     {
                         note = "Below is your one-time password for normal login. Save it securely.",
@@ -180,9 +196,11 @@ namespace AIDefCom.API.Controllers
                 });
             }
 
+            _logger.LogInformation("Google member login successful");
             return Ok(new ApiResponse<object>
             {
-                Message = "Google Member login successful.",
+                Code = ResponseCodes.Success,
+                Message = "Google member login successful",
                 Data = response
             });
         }
@@ -196,14 +214,16 @@ namespace AIDefCom.API.Controllers
         public async Task<IActionResult> AssignRole([FromBody] SetRoleRequestDto request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Role))
-                return BadRequest(new ApiResponse<object>
-                {
-                    Message = "Email and role cannot be empty."
-                });
+            {
+                throw new ArgumentNullException(nameof(request), "Email and role cannot be empty");
+            }
 
+            _logger.LogInformation("Assigning role {Role} to user {Email}", request.Role, request.Email);
             var result = await _authService.AssignRoleToUserAsync(request.Email, request.Role);
+            
             return Ok(new ApiResponse<object>
             {
+                Code = ResponseCodes.Success,
                 Message = result
             });
         }
@@ -215,14 +235,16 @@ namespace AIDefCom.API.Controllers
         public async Task<IActionResult> AddRole([FromBody] string roleName)
         {
             if (string.IsNullOrWhiteSpace(roleName))
-                return BadRequest(new ApiResponse<object>
-                {
-                    Message = "Role name cannot be empty."
-                });
+            {
+                throw new ArgumentNullException(nameof(roleName), "Role name cannot be empty");
+            }
 
+            _logger.LogInformation("Creating new role: {RoleName}", roleName);
             var result = await _authService.AddRoleAsync(roleName);
+            
             return Ok(new ApiResponse<object>
             {
+                Code = ResponseCodes.Created,
                 Message = result
             });
         }
@@ -236,17 +258,18 @@ namespace AIDefCom.API.Controllers
         public async Task<IActionResult> GoogleSetPassword([FromBody] SetPasswordDTO setPasswordDTO, [FromHeader(Name = "Authorization")] string authorizationHeader)
         {
             if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
-                return BadRequest(new ApiResponse<object>
-                {
-                    Message = "Invalid authorization header."
-                });
+            {
+                throw new ArgumentException("Invalid authorization header");
+            }
 
             var token = authorizationHeader.Substring("Bearer ".Length).Trim();
+            _logger.LogInformation("Setting password for Google account");
             var response = await _authService.GoogleSetPasswordAsync(setPasswordDTO, token);
 
             return Ok(new ApiResponse<object>
             {
-                Message = "Password set successfully.",
+                Code = ResponseCodes.Success,
+                Message = "Password set successfully",
                 Data = response
             });
         }
@@ -262,14 +285,16 @@ namespace AIDefCom.API.Controllers
         {
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
             if (string.IsNullOrEmpty(email))
-                return Unauthorized(new ApiResponse<object>
-                {
-                    Message = "Email claim not found in token."
-                });
+            {
+                throw new UnauthorizedAccessException("Email claim not found in token");
+            }
 
+            _logger.LogInformation("User logging out: {Email}", email);
             var result = await _authService.LogoutAsync(email);
+            
             return Ok(new ApiResponse<object>
             {
+                Code = ResponseCodes.Success,
                 Message = result
             });
         }
@@ -287,22 +312,21 @@ namespace AIDefCom.API.Controllers
                 string.IsNullOrEmpty(request.NewPassword) ||
                 string.IsNullOrEmpty(request.ConfirmNewPassword))
             {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Message = "All fields are required."
-                });
+                throw new ArgumentNullException(nameof(request), "All password fields are required");
             }
 
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
             if (string.IsNullOrEmpty(email))
-                return Unauthorized(new ApiResponse<object>
-                {
-                    Message = "Email claim not found."
-                });
+            {
+                throw new UnauthorizedAccessException("Email claim not found");
+            }
 
+            _logger.LogInformation("Changing password for user: {Email}", email);
             var result = await _authService.ChangePasswordAsync(email, request);
+            
             return Ok(new ApiResponse<object>
             {
+                Code = ResponseCodes.Success,
                 Message = result
             });
         }
@@ -316,21 +340,23 @@ namespace AIDefCom.API.Controllers
         public async Task<IActionResult> RefreshTokens([FromBody] RefreshTokenRequestDto request)
         {
             if (string.IsNullOrEmpty(request.UserId.ToString()) || string.IsNullOrEmpty(request.RefreshToken))
-                return BadRequest(new ApiResponse<object>
-                {
-                    Message = "UserId and RefreshToken cannot be empty."
-                });
+            {
+                throw new ArgumentNullException(nameof(request), "UserId and RefreshToken cannot be empty");
+            }
 
+            _logger.LogInformation("Refreshing token for user: {UserId}", request.UserId);
             var result = await _authService.RefreshTokensAsync(request);
+            
             if (result == null)
-                return Unauthorized(new ApiResponse<object>
-                {
-                    Message = "Invalid refresh token."
-                });
+            {
+                _logger.LogWarning("Invalid refresh token for user: {UserId}", request.UserId);
+                throw new UnauthorizedAccessException("Invalid refresh token");
+            }
 
             return Ok(new ApiResponse<object>
             {
-                Message = "Token refreshed successfully.",
+                Code = ResponseCodes.Success,
+                Message = "Token refreshed successfully",
                 Data = result
             });
         }
@@ -343,9 +369,12 @@ namespace AIDefCom.API.Controllers
         [HttpDelete("accounts/{email}")]
         public async Task<IActionResult> SoftDeleteAccount(string email)
         {
+            _logger.LogInformation("Soft deleting account: {Email}", email);
             var result = await _authService.SoftDeleteAccountAsync(email);
+            
             return Ok(new ApiResponse<object>
             {
+                Code = ResponseCodes.Success,
                 Message = result
             });
         }
@@ -356,9 +385,12 @@ namespace AIDefCom.API.Controllers
         [HttpPut("accounts/{email}/restore")]
         public async Task<IActionResult> RestoreAccount(string email)
         {
+            _logger.LogInformation("Restoring account: {Email}", email);
             var result = await _authService.RestoreAccountAsync(email);
+            
             return Ok(new ApiResponse<object>
             {
+                Code = ResponseCodes.Success,
                 Message = result
             });
         }
@@ -371,9 +403,12 @@ namespace AIDefCom.API.Controllers
         [HttpPost("password/forgot")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto request)
         {
+            _logger.LogInformation("Password reset requested for: {Email}", request.Email);
             var result = await _authService.ForgotPassword(request);
+            
             return Ok(new ApiResponse<object>
             {
+                Code = ResponseCodes.Success,
                 Message = result
             });
         }
@@ -384,9 +419,12 @@ namespace AIDefCom.API.Controllers
         [HttpPost("password/reset")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto request)
         {
+            _logger.LogInformation("Resetting password for: {Email}", request.Email);
             var result = await _authService.ResetPassword(request);
+            
             return Ok(new ApiResponse<object>
             {
+                Code = ResponseCodes.Success,
                 Message = result
             });
         }
@@ -399,10 +437,13 @@ namespace AIDefCom.API.Controllers
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {
+            _logger.LogInformation("Retrieving all users");
             var users = await _authService.GetAllUsersAsync();
+            
             return Ok(new ApiResponse<IEnumerable<object>>
             {
-                Message = "Users retrieved successfully.",
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Users"),
                 Data = users
             });
         }
@@ -413,16 +454,19 @@ namespace AIDefCom.API.Controllers
         [HttpGet("users/{id}")]
         public async Task<IActionResult> GetUserById(string id)
         {
+            _logger.LogInformation("Retrieving user with ID: {Id}", id);
             var user = await _authService.GetUserByIdAsync(id);
+            
             if (user == null)
-                return NotFound(new ApiResponse<object>
-                {
-                    Message = "User not found."
-                });
+            {
+                _logger.LogWarning("User with ID {Id} not found", id);
+                throw new KeyNotFoundException($"User with ID {id} not found");
+            }
 
             return Ok(new ApiResponse<object>
             {
-                Message = "User retrieved successfully.",
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Retrieved, "User"),
                 Data = user
             });
         }

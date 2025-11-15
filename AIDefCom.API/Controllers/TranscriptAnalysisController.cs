@@ -28,19 +28,14 @@ namespace AIDefCom.API.Controllers
         [HttpPost]
         public async Task<IActionResult> AnalyzeTranscript([FromBody] TranscriptAnalysisRequestDto request)
         {
-            if (!ModelState.IsValid)
-            {
-                throw new ArgumentException("Invalid transcript analysis request");
-            }
-
             _logger.LogInformation("Starting transcript analysis for SessionId: {SessionId}", request.DefenseSessionId);
             var result = await _analysisService.AnalyzeTranscriptAsync(request);
             _logger.LogInformation("Transcript analysis completed for SessionId: {SessionId}", request.DefenseSessionId);
 
             return Ok(new ApiResponse<TranscriptAnalysisResponseDto>
             {
-                MessageCode = MessageCodes.TranscriptAnalysis_Success0001,
-                Message = SystemMessages.TranscriptAnalysis_Success0001,
+                Code = ResponseCodes.Success,
+                Message = ResponseMessages.Success,
                 Data = result
             });
         }

@@ -3,6 +3,7 @@ using AIDefCom.Repository.Repositories.CommitteeAssignmentRepository;
 using AIDefCom.Repository.Repositories.CouncilRepository;
 using AIDefCom.Repository.Repositories.DefenseSessionRepository;
 using AIDefCom.Repository.Repositories.GroupRepository;
+using AIDefCom.Repository.Repositories.LecturerRepository;
 using AIDefCom.Repository.Repositories.MajorRepository;
 using AIDefCom.Repository.Repositories.MajorRubricRepository;
 using AIDefCom.Repository.Repositories.MemberNoteRepository;
@@ -43,6 +44,7 @@ namespace AIDefCom.Repository.UnitOfWork
 
         // ------------------ Users & Projects ------------------
         public IAppUserRepository AppUsers { get; }
+        public ILecturerRepository Lecturers { get; }
         public IProjectTaskRepository ProjectTasks { get; }
 
         // ------------------ Media & Transcripts ------------------
@@ -52,6 +54,7 @@ namespace AIDefCom.Repository.UnitOfWork
         public UnitOfWork(
             ApplicationDbContext context,
             IAppUserRepository appUserRepository,
+            ILecturerRepository lecturerRepository,
             IRubricRepository rubricRepository,
             IMajorRepository majorRepository,
             IMajorRubricRepository majorRubricRepository,
@@ -90,6 +93,7 @@ namespace AIDefCom.Repository.UnitOfWork
 
             // Users & Projects
             AppUsers = appUserRepository;
+            Lecturers = lecturerRepository;
             ProjectTasks = projectTaskRepository;
 
             // Media & Transcripts
