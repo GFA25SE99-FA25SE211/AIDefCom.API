@@ -53,7 +53,6 @@ namespace AIDefCom.Repository.Repositories.TranscriptRepository
             existing.SessionId = entity.SessionId;
             existing.TranscriptText = entity.TranscriptText;
             existing.IsApproved = entity.IsApproved;
-            existing.Audio = entity.Audio;
             existing.Status = entity.Status;
         }
 

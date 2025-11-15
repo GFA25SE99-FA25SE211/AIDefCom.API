@@ -16,7 +16,6 @@ namespace AIDefCom.Repository.Entities
 
         public string TranscriptText { get; set; } = string.Empty;
         public bool IsApproved { get; set; } = false;
-        public string Audio { get; set; } = string.Empty; // Stores audio file path
         public string Status { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
     }

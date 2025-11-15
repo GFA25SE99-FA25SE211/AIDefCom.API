@@ -1,7 +1,9 @@
 using AIDefCom.Service.Constants;
 using AIDefCom.Service.Dto.Common;
+using AIDefCom.Service.Dto.Import;
 using AIDefCom.Service.Dto.Lecturer;
 using AIDefCom.Service.Services.LecturerService;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
@@ -155,6 +157,51 @@ namespace AIDefCom.API.Controllers
 
             _logger.LogInformation("Lecturer {Id} deleted successfully", id);
             return NoContent();
+        }
+
+        /// <summary>
+        /// Import lecturers from Excel file
+        /// </summary>
+        [HttpPost("import")]
+        public async Task<IActionResult> ImportLecturers(IFormFile file)
+        {
+            _logger.LogInformation("Starting lecturer import from Excel");
+
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = "File is required",
+                    Data = null
+                });
+            }
+
+            var result = await _service.ImportFromExcelAsync(file);
+
+            _logger.LogInformation("Lecturer import completed. Success: {Success}, Failures: {Failures}", 
+                result.SuccessCount, result.FailureCount);
+
+            return Ok(new ApiResponse<ImportResultDto>
+            {
+                Code = ResponseCodes.Success,
+                Message = $"Import completed. {result.SuccessCount} lecturers created successfully, {result.FailureCount} failed.",
+                Data = result
+            });
+        }
+
+        /// <summary>
+        /// Download Excel template for lecturer import
+        /// </summary>
+        [HttpGet("import/template")]
+        public IActionResult DownloadTemplate()
+        {
+            _logger.LogInformation("Generating lecturer import template");
+
+            var fileBytes = _service.GenerateExcelTemplate();
+            var fileName = $"Lecturer_Import_Template_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+
+            return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
     }
 }

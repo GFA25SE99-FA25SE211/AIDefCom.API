@@ -9,8 +9,6 @@ namespace AIDefCom.Service.Dto.Transcript
 
         public bool IsApproved { get; set; }
 
-        public string Audio { get; set; } = string.Empty;
-
         [Required(ErrorMessage = "Status is required.")]
         public string Status { get; set; } = string.Empty;
     }
