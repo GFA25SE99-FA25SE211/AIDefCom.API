@@ -1,4 +1,6 @@
-﻿using AIDefCom.Service.Dto.Student;
+﻿using AIDefCom.Service.Dto.Import;
+using AIDefCom.Service.Dto.Student;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,5 +18,9 @@ namespace AIDefCom.Service.Services.StudentService
         Task<string> AddAsync(StudentCreateDto dto);
         Task<bool> UpdateAsync(string id, StudentUpdateDto dto);
         Task<bool> DeleteAsync(string id);
+        
+        // Import methods
+        Task<ImportResultDto> ImportFromExcelAsync(IFormFile file);
+        byte[] GenerateExcelTemplate();
     }
 }

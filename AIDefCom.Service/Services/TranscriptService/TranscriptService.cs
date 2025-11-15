@@ -42,6 +42,7 @@ namespace AIDefCom.Service.Services.TranscriptService
         {
             var entity = _mapper.Map<Transcript>(dto);
             entity.CreatedAt = DateTime.UtcNow;
+            entity.Status = "Pending";
             
             await _uow.Transcripts.AddAsync(entity);
             await _uow.SaveChangesAsync();
