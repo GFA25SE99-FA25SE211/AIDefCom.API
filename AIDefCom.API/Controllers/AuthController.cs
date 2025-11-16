@@ -4,6 +4,7 @@ using AIDefCom.Service.Dto.AppUser;
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Services.AuthService;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -26,44 +27,41 @@ namespace AIDefCom.API.Controllers
         }
 
         // ------------------ REGISTER ------------------
-        
+
         /// <summary>
         /// Register a new user
         /// </summary>
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] AppUserDto request)
+        [HttpPost("create-account")]
+        public async Task<IActionResult> CreateAccount([FromBody] CreateAccountDto request)
         {
             if (string.IsNullOrWhiteSpace(request.Email) ||
                 string.IsNullOrWhiteSpace(request.Password) ||
                 string.IsNullOrWhiteSpace(request.FullName) ||
                 string.IsNullOrWhiteSpace(request.PhoneNumber))
             {
-                throw new ArgumentNullException(nameof(request), "All fields (Email, Password, FullName, PhoneNumber) are required");
+                return BadRequest(new { Message = "All fields (Email, Password, FullName, PhoneNumber) are required" });
             }
 
-            _logger.LogInformation("Registering new user: {Email}", request.Email);
-            var user = await _authService.RegisterAsync(request);
-            
-            if (user == null)
-            {
-                _logger.LogWarning("Registration failed for email: {Email}", request.Email);
-                throw new InvalidOperationException("User with this email already exists");
-            }
+            _logger.LogInformation("Creating new account: {Email}", request.Email);
 
-            _logger.LogInformation("User registered successfully: {Email}", request.Email);
-            return Ok(new ApiResponse<object>
+            try
             {
-                Code = ResponseCodes.Created,
-                Message = ResponseMessages.Created,
-                Data = new
+                var user = await _authService.CreateAccountAsync(request);
+
+                return Ok(new
                 {
                     user.Id,
                     user.Email,
                     user.EmailConfirmed,
                     user.FullName,
                     user.PhoneNumber
-                }
-            });
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Account creation failed for email: {Email}", request.Email);
+                return BadRequest(new { Message = ex.Message });
+            }
         }
 
         /// <summary>
