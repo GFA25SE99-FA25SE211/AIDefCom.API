@@ -26,7 +26,7 @@ namespace AIDefCom.Service.Services.AuthService
     ) : IAuthService
     {
         // ------------------ REGISTER ------------------
-        public async Task<AppUser?> RegisterAsync(AppUserDto request)
+        public async Task<AppUser?> CreateAccountAsync(CreateAccountDto request)
         {
             if (await _userManager.FindByEmailAsync(request.Email) != null)
                 throw new Exception("Email already exists.");
@@ -35,14 +35,15 @@ namespace AIDefCom.Service.Services.AuthService
             {
                 UserName = request.Email,
                 Email = request.Email,
-                EmailConfirmed = false,
                 FullName = request.FullName,
-                PhoneNumber = request.PhoneNumber
+                PhoneNumber = request.PhoneNumber,
+                EmailConfirmed = true,
+                IsDelete = false
             };
 
             var result = await _userManager.CreateAsync(user, request.Password);
             if (!result.Succeeded)
-                throw new Exception($"Registration failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                throw new Exception($"Create account failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
 
             return user;
         }
@@ -101,9 +102,22 @@ namespace AIDefCom.Service.Services.AuthService
             if (!await _roleManager.RoleExistsAsync(role))
                 throw new Exception("Role does not exist.");
 
-            await _userManager.AddToRoleAsync(user, role);
+            var currentRoles = await _userManager.GetRolesAsync(user);
+
+            if (currentRoles.Any())
+            {
+                var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                if (!removeResult.Succeeded)
+                    throw new Exception("Failed to remove existing roles.");
+            }
+
+            var addResult = await _userManager.AddToRoleAsync(user, role);
+            if (!addResult.Succeeded)
+                throw new Exception("Failed to assign the new role.");
+
             return "Role assigned successfully.";
         }
+
 
         // ------------------ LOGIN / LOGOUT ------------------
         public async Task<TokenResponseDto?> LoginAsync(LoginDto request)
@@ -162,22 +176,23 @@ namespace AIDefCom.Service.Services.AuthService
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
 
-            var resetLink = $"{_configuration["AppSettings:ClientUrl"]}/reset.html?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(request.Email)}";
+            var resetLink = $"{_configuration["AppSettings:ClientUrl"]}?token={Uri.EscapeDataString(token)}&email={Uri.EscapeDataString(request.Email)}";
 
             var message = new MessageOTP(
                 new string[] { request.Email },
                 "Password Reset Request",
                 $@"
-                <h1>Password Reset</h1>
-                <p>Dear {request.Email},</p>
-                <p>Click the link below to reset your password:</p>
-                <p><a href='{resetLink}'>Reset Password</a></p>
-                <p>The link is valid for a limited time.</p>"
+        <h1>Password Reset</h1>
+        <p>Click the link below to reset your password:</p>
+        <a href='{resetLink}'>Reset Password</a>
+        <p>This link will expire in 1 hour.</p>"
             );
 
             _emailService.SendEmail(message);
-            return "Password reset email sent.";
+            return $"Password reset email sent to {request.Email}.";
         }
+
+
 
         public async Task<string> ResetPassword(ResetPasswordDto request)
         {
@@ -187,13 +202,11 @@ namespace AIDefCom.Service.Services.AuthService
 
             var result = await _userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
             if (!result.Succeeded)
-            {
-                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-                throw new Exception($"Password reset failed: {errors}");
-            }
+                throw new Exception($"Password reset failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
 
             return "Password has been reset successfully.";
         }
+
 
         // ------------------ ACCOUNT STATUS ------------------
         public async Task<string> SoftDeleteAccountAsync(string email)

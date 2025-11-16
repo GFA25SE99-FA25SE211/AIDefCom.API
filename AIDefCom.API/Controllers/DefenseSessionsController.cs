@@ -93,7 +93,7 @@ namespace AIDefCom.API.Controllers
 
             return Ok(new ApiResponse<IEnumerable<object>>
             {
-                Code = ResponseCodes.Success,
+                Code = ResponseCodes.Success,   
                 Message = string.Format(ResponseMessages.ListRetrieved, "Users for defense session"),
                 Data = users
             });

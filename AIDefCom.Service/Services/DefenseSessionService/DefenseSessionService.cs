@@ -43,6 +43,14 @@ namespace AIDefCom.Service.Services.DefenseSessionService
 
         public async Task<int> AddAsync(DefenseSessionCreateDto dto)
         {
+            var council = await _uow.Councils.GetByIdAsync(dto.CouncilId);
+            if (council == null)
+                throw new ArgumentException($"Council with id {dto.CouncilId} not found.");
+
+            var group = await _uow.Groups.GetByIdAsync(dto.GroupId);
+            if (group == null)
+                throw new ArgumentException($"Group with id {dto.GroupId} not found.");
+
             var entity = _mapper.Map<DefenseSession>(dto);
             entity.CreatedAt = DateTime.UtcNow;
 
@@ -55,6 +63,9 @@ namespace AIDefCom.Service.Services.DefenseSessionService
         {
             var existing = await _uow.DefenseSessions.GetByIdAsync(id);
             if (existing == null) return false;
+
+            var council = await _uow.Councils.GetByIdAsync(dto.CouncilId);
+            if (council == null) return false;
 
             _mapper.Map(dto, existing);
             await _uow.DefenseSessions.UpdateAsync(existing);

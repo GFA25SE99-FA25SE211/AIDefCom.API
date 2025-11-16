@@ -11,7 +11,7 @@ namespace AIDefCom.Service.Services.AuthService
 {
     public interface IAuthService
     {
-        Task<AppUser?> RegisterAsync(AppUserDto request);
+        Task<AppUser?> CreateAccountAsync(CreateAccountDto dto);
 
         Task<TokenResponseDto?> LoginAsync(LoginDto request);
 

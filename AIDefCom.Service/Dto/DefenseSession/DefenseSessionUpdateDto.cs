@@ -14,5 +14,7 @@ namespace AIDefCom.Service.Dto.DefenseSession
         public TimeSpan StartTime { get; set; }
         public TimeSpan EndTime { get; set; }
         public string Status { get; set; } = string.Empty;
+        public int CouncilId { get; set; }
+
     }
 }
