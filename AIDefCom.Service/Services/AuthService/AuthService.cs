@@ -31,8 +31,13 @@ namespace AIDefCom.Service.Services.AuthService
             if (await _userManager.FindByEmailAsync(request.Email) != null)
                 throw new Exception("Email already exists.");
 
+            // Kiểm tra xem ID đã tồn tại chưa
+            if (await _userManager.FindByIdAsync(request.Id) != null)
+                throw new Exception("ID already exists.");
+
             var user = new AppUser
             {
+                Id = request.Id,
                 UserName = request.Email,
                 Email = request.Email,
                 FullName = request.FullName,
@@ -327,50 +332,60 @@ namespace AIDefCom.Service.Services.AuthService
             if (payload == null)
                 throw new Exception("Invalid Google ID token.");
 
+            // Tìm user theo email
             var user = await _userManager.FindByEmailAsync(payload.Email);
-            bool isNewUser = false;
             string? firstGeneratedPassword = null;
 
+            // Nếu user không tồn tại trong hệ thống, không cho phép login
             if (user == null)
             {
-                isNewUser = true;
-                string randomPassword = GenerateSecurePassword();
-
-                user = new AppUser
-                {
-                    Email = payload.Email,
-                    UserName = payload.Email,
-                    FullName = payload.Name ?? string.Empty,
-                    EmailConfirmed = true,
-                    IsDelete = false,
-                    HasGeneratedPassword = true,
-                    LastGeneratedPassword = randomPassword,
-                    PasswordGeneratedAt = DateTime.UtcNow
-                };
-
-                var createResult = await _userManager.CreateAsync(user, randomPassword);
-                if (!createResult.Succeeded)
-                    throw new Exception($"Failed to create user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
-
-                firstGeneratedPassword = randomPassword;
+                throw new Exception("Email is not registered in the system. Please contact administrator to create an account.");
             }
 
+            // Kiểm tra nếu tài khoản bị soft delete
+            if (user.IsDelete)
+            {
+                throw new Exception("This account has been deactivated. Please contact administrator.");
+            }
+
+            // Cập nhật FullName từ Google nếu chưa có
+            if (string.IsNullOrWhiteSpace(user.FullName) && !string.IsNullOrWhiteSpace(payload.Name))
+            {
+                user.FullName = payload.Name;
+                await _userManager.UpdateAsync(user);
+            }
+
+            // Nếu user chưa có password, tạo password tự động cho việc login thông thường
+            bool hasPassword = await _userManager.HasPasswordAsync(user);
+            if (!hasPassword)
+            {
+                string randomPassword = GenerateSecurePassword();
+                var addPasswordResult = await _userManager.AddPasswordAsync(user, randomPassword);
+                
+                if (addPasswordResult.Succeeded)
+                {
+                    user.HasGeneratedPassword = true;
+                    user.LastGeneratedPassword = randomPassword;
+                    user.PasswordGeneratedAt = DateTime.UtcNow;
+                    await _userManager.UpdateAsync(user);
+                    
+                    firstGeneratedPassword = randomPassword;
+                }
+            }
+
+            // Đảm bảo user có role Student
             var defaultRole = "Student";
             if (!await _roleManager.RoleExistsAsync(defaultRole))
                 await _roleManager.CreateAsync(new IdentityRole(defaultRole));
             if (!await _userManager.IsInRoleAsync(user, defaultRole))
                 await _userManager.AddToRoleAsync(user, defaultRole);
 
+            // Thêm external login nếu chưa có
             var info = new UserLoginInfo("Google", payload.Subject, "Google");
             if (await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey) == null)
                 await _userManager.AddLoginAsync(user, info);
 
-            if (user.IsDelete)
-            {
-                user.IsDelete = false;
-                await _userManager.UpdateAsync(user);
-            }
-
+            // Tạo token và refresh token
             var refreshToken = await GenerateAndSaveRefreshToken(user);
             var accessToken = CreateToken(user);
 
@@ -380,10 +395,11 @@ namespace AIDefCom.Service.Services.AuthService
                 RefreshToken = refreshToken,
                 EmailConfirmed = user.EmailConfirmed,
                 HasPassword = true,
-                IsNewUser = isNewUser,
+                IsNewUser = false,
                 TemporaryPassword = firstGeneratedPassword
             };
 
+            // Xóa temporary password sau khi trả về cho user
             if (firstGeneratedPassword != null)
             {
                 user.LastGeneratedPassword = null;
@@ -403,50 +419,60 @@ namespace AIDefCom.Service.Services.AuthService
             if (payload == null)
                 throw new Exception("Invalid Google ID token.");
 
+            // Tìm user theo email
             var user = await _userManager.FindByEmailAsync(payload.Email);
-            bool isNewUser = false;
             string? firstGeneratedPassword = null;
 
+            // Nếu user không tồn tại trong hệ thống, không cho phép login
             if (user == null)
             {
-                isNewUser = true;
-                string randomPassword = GenerateSecurePassword();
-
-                user = new AppUser
-                {
-                    Email = payload.Email,
-                    UserName = payload.Email,
-                    FullName = payload.Name ?? string.Empty,
-                    EmailConfirmed = true,
-                    IsDelete = false,
-                    HasGeneratedPassword = true,
-                    LastGeneratedPassword = randomPassword,
-                    PasswordGeneratedAt = DateTime.UtcNow
-                };
-
-                var createResult = await _userManager.CreateAsync(user, randomPassword);
-                if (!createResult.Succeeded)
-                    throw new Exception($"Failed to create user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
-
-                firstGeneratedPassword = randomPassword;
+                throw new Exception("Email is not registered in the system. Please contact administrator to create an account.");
             }
 
+            // Kiểm tra nếu tài khoản bị soft delete
+            if (user.IsDelete)
+            {
+                throw new Exception("This account has been deactivated. Please contact administrator.");
+            }
+
+            // Cập nhật FullName từ Google nếu chưa có
+            if (string.IsNullOrWhiteSpace(user.FullName) && !string.IsNullOrWhiteSpace(payload.Name))
+            {
+                user.FullName = payload.Name;
+                await _userManager.UpdateAsync(user);
+            }
+
+            // Nếu user chưa có password, tạo password tự động cho việc login thông thường
+            bool hasPassword = await _userManager.HasPasswordAsync(user);
+            if (!hasPassword)
+            {
+                string randomPassword = GenerateSecurePassword();
+                var addPasswordResult = await _userManager.AddPasswordAsync(user, randomPassword);
+                
+                if (addPasswordResult.Succeeded)
+                {
+                    user.HasGeneratedPassword = true;
+                    user.LastGeneratedPassword = randomPassword;
+                    user.PasswordGeneratedAt = DateTime.UtcNow;
+                    await _userManager.UpdateAsync(user);
+                    
+                    firstGeneratedPassword = randomPassword;
+                }
+            }
+
+            // Đảm bảo user có role Member
             var defaultRole = "Member";
             if (!await _roleManager.RoleExistsAsync(defaultRole))
                 await _roleManager.CreateAsync(new IdentityRole(defaultRole));
             if (!await _userManager.IsInRoleAsync(user, defaultRole))
                 await _userManager.AddToRoleAsync(user, defaultRole);
 
+            // Thêm external login nếu chưa có
             var info = new UserLoginInfo("Google", payload.Subject, "Google");
             if (await _userManager.FindByLoginAsync(info.LoginProvider, info.ProviderKey) == null)
                 await _userManager.AddLoginAsync(user, info);
 
-            if (user.IsDelete)
-            {
-                user.IsDelete = false;
-                await _userManager.UpdateAsync(user);
-            }
-
+            // Tạo token và refresh token
             var refreshToken = await GenerateAndSaveRefreshToken(user);
             var accessToken = CreateToken(user);
 
@@ -456,10 +482,11 @@ namespace AIDefCom.Service.Services.AuthService
                 RefreshToken = refreshToken,
                 EmailConfirmed = user.EmailConfirmed,
                 HasPassword = true,
-                IsNewUser = isNewUser,
+                IsNewUser = false,
                 TemporaryPassword = firstGeneratedPassword
             };
 
+            // Xóa temporary password sau khi trả về cho user
             if (firstGeneratedPassword != null)
             {
                 user.LastGeneratedPassword = null;
