@@ -43,7 +43,7 @@ namespace AIDefCom.API.Controllers
         /// Get committee assignment by ID
         /// </summary>
         [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<IActionResult> GetById(string id)
         {
             _logger.LogInformation("Retrieving committee assignment with ID: {Id}", id);
             var item = await _service.GetByIdAsync(id);
@@ -135,7 +135,7 @@ namespace AIDefCom.API.Controllers
         /// Update an existing committee assignment
         /// </summary>
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] CommitteeAssignmentUpdateDto dto)
+        public async Task<IActionResult> Update(string id, [FromBody] CommitteeAssignmentUpdateDto dto)
         {
             _logger.LogInformation("Updating committee assignment with ID: {Id}", id);
             var ok = await _service.UpdateAsync(id, dto);
@@ -158,7 +158,7 @@ namespace AIDefCom.API.Controllers
         /// Delete a committee assignment
         /// </summary>
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(string id)
         {
             _logger.LogInformation("Deleting committee assignment with ID: {Id}", id);
             var ok = await _service.DeleteAsync(id);

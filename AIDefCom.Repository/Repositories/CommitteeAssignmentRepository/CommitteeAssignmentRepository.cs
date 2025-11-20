@@ -29,13 +29,13 @@ namespace AIDefCom.Repository.Repositories.CommitteeAssignmentRepository
                              .ToListAsync();
         }
 
-        public async Task<CommitteeAssignment?> GetByIdAsync(int id)
+        public async Task<CommitteeAssignment?> GetByIdAsync(string id)
         {
             return await _set.AsNoTracking()
                              .Include(x => x.Lecturer)
                              .Include(x => x.Council)
                              .Include(x => x.CouncilRole)
-                             .FirstOrDefaultAsync(x => x.Id == id.ToString());
+                             .FirstOrDefaultAsync(x => x.Id == id);
         }
 
         public async Task<IEnumerable<CommitteeAssignment>> GetByCouncilIdAsync(int councilId)
@@ -88,11 +88,36 @@ namespace AIDefCom.Repository.Repositories.CommitteeAssignmentRepository
             existing.CouncilRoleId = entity.CouncilRoleId;
         }
 
-        public async Task DeleteAsync(int id)
+        public async Task DeleteAsync(string id)
         {
-            var existing = await _set.FindAsync(id.ToString());
-            if (existing != null)
-                _set.Remove(existing);
+            var existing = await _set.FindAsync(id);
+            if (existing == null) return;
+
+            // Kiểm tra xem có ProjectTask nào tham chiếu không
+            var hasProjectTasksAsAssignedBy = await _context.Tasks
+                .AnyAsync(t => t.AssignedById == id);
+            var hasProjectTasksAsAssignedTo = await _context.Tasks
+                .AnyAsync(t => t.AssignedToId == id);
+
+            if (hasProjectTasksAsAssignedBy || hasProjectTasksAsAssignedTo)
+            {
+                throw new InvalidOperationException(
+                    "Cannot delete this committee assignment because it has related project tasks. " +
+                    "Please delete the project tasks first.");
+            }
+
+            // Kiểm tra xem có MemberNote nào tham chiếu không
+            var hasMemberNotes = await _context.MemberNotes
+                .AnyAsync(mn => mn.CommitteeAssignmentId == id);
+
+            if (hasMemberNotes)
+            {
+                throw new InvalidOperationException(
+                    "Cannot delete this committee assignment because it has related member notes. " +
+                    "Please delete the member notes first.");
+            }
+
+            _set.Remove(existing);
         }
         public IQueryable<CommitteeAssignment> Query()
         {

@@ -35,7 +35,7 @@ namespace AIDefCom.Service.Services.CommitteeAssignmentService
             });
         }
 
-        public async Task<CommitteeAssignmentReadDto?> GetByIdAsync(int id)
+        public async Task<CommitteeAssignmentReadDto?> GetByIdAsync(string id)
         {
             var entity = await _uow.CommitteeAssignments.GetByIdAsync(id);
             return entity == null ? null : _mapper.Map<CommitteeAssignmentReadDto>(entity);
@@ -68,7 +68,7 @@ namespace AIDefCom.Service.Services.CommitteeAssignmentService
             return entity.Id;
         }
 
-        public async Task<bool> UpdateAsync(int id, CommitteeAssignmentUpdateDto dto)
+        public async Task<bool> UpdateAsync(string id, CommitteeAssignmentUpdateDto dto)
         {
             var existing = await _uow.CommitteeAssignments.GetByIdAsync(id);
             if (existing == null) return false;
@@ -79,7 +79,7 @@ namespace AIDefCom.Service.Services.CommitteeAssignmentService
             return true;
         }
 
-        public async Task<bool> DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(string id)
         {
             var existing = await _uow.CommitteeAssignments.GetByIdAsync(id);
             if (existing == null) return false;
