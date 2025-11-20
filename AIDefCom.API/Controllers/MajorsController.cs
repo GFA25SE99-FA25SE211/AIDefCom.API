@@ -19,11 +19,14 @@ namespace AIDefCom.API.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Get all majors
+        /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] bool includeDeleted = false)
         {
-            _logger.LogInformation("Retrieving all majors");
-            var majors = await _majorService.GetAllAsync();
+            _logger.LogInformation("Retrieving all majors (includeDeleted: {IncludeDeleted})", includeDeleted);
+            var majors = await _majorService.GetAllAsync(includeDeleted);
             
             return Ok(new ApiResponse<IEnumerable<MajorReadDto>>
             {
@@ -33,6 +36,9 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Get major by ID
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -53,6 +59,9 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Create a new major
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] MajorCreateDto request)
         {
@@ -69,6 +78,9 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Update an existing major
+        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] MajorUpdateDto request)
         {
@@ -89,11 +101,14 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Soft delete a major (sets IsDeleted = true)
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            _logger.LogInformation("Deleting major with ID: {Id}", id);
-            var success = await _majorService.DeleteAsync(id);
+            _logger.LogInformation("Soft deleting major with ID: {Id}", id);
+            var success = await _majorService.SoftDeleteAsync(id);
             
             if (!success)
             {
@@ -101,8 +116,31 @@ namespace AIDefCom.API.Controllers
                 throw new KeyNotFoundException($"Major with ID {id} not found");
             }
 
-            _logger.LogInformation("Major {Id} deleted successfully", id);
+            _logger.LogInformation("Major {Id} soft deleted successfully", id);
             return NoContent();
+        }
+
+        /// <summary>
+        /// Restore a soft-deleted major
+        /// </summary>
+        [HttpPut("{id}/restore")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            _logger.LogInformation("Restoring major with ID: {Id}", id);
+            var success = await _majorService.RestoreAsync(id);
+            
+            if (!success)
+            {
+                _logger.LogWarning("Major with ID {Id} not found for restoration", id);
+                throw new KeyNotFoundException($"Major with ID {id} not found");
+            }
+
+            _logger.LogInformation("Major {Id} restored successfully", id);
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.Success,
+                Message = "Major restored successfully"
+            });
         }
     }
 }

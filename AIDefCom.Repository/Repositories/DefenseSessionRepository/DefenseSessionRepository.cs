@@ -18,26 +18,37 @@ namespace AIDefCom.Repository.Repositories.DefenseSessionRepository
             _context = context;
             _set = _context.Set<DefenseSession>();
         }
-        public async Task<IEnumerable<DefenseSession>> GetAllAsync()
+
+        public async Task<IEnumerable<DefenseSession>> GetAllAsync(bool includeDeleted = false)
         {
-            return await _set.AsNoTracking()
+            IQueryable<DefenseSession> query = _set.AsNoTracking()
                              .Include(x => x.Group)
-                             .OrderByDescending(x => x.DefenseDate)
-                             .ToListAsync();
+                             .Include(x => x.Council);
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.OrderByDescending(x => x.DefenseDate).ToListAsync();
         }
 
-        public async Task<DefenseSession?> GetByIdAsync(int id)
+        public async Task<DefenseSession?> GetByIdAsync(int id, bool includeDeleted = false)
         {
-            return await _set.AsNoTracking()
+            IQueryable<DefenseSession> query = _set.AsNoTracking()
                              .Include(x => x.Group)
-                             .FirstOrDefaultAsync(x => x.Id == id);
+                             .Include(x => x.Council);
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.FirstOrDefaultAsync(x => x.Id == id);
         }
 
         public async Task<IEnumerable<DefenseSession>> GetByGroupIdAsync(string groupId)
         {
             return await _set.AsNoTracking()
                              .Include(x => x.Group)
-                             .Where(x => x.GroupId == groupId)
+                             .Include(x => x.Council)
+                             .Where(x => x.GroupId == groupId && !x.IsDeleted)
                              .ToListAsync();
         }
 
@@ -67,18 +78,35 @@ namespace AIDefCom.Repository.Repositories.DefenseSessionRepository
                 _set.Remove(entity);
         }
 
-        
+        public async Task SoftDeleteAsync(int id)
+        {
+            var entity = await _set.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity != null)
+            {
+                entity.IsDeleted = true;
+            }
+        }
+
+        public async Task RestoreAsync(int id)
+        {
+            var entity = await _set.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity != null)
+            {
+                entity.IsDeleted = false;
+            }
+        }
+
         public IQueryable<DefenseSession> Query()
         {
             return _set.AsQueryable();
         }
 
-        
         public async Task<DefenseSession?> GetWithCouncilAsync(int id)
         {
             return await _set.AsNoTracking()
                              .Include(x => x.Group)
                              .Include(x => x.Council)
+                             .Where(x => !x.IsDeleted)
                              .FirstOrDefaultAsync(x => x.Id == id);
         }
     }

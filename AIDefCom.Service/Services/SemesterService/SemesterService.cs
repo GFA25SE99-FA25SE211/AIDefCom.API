@@ -21,9 +21,9 @@ namespace AIDefCom.Service.Services.SemesterService
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<SemesterReadDto>> GetAllAsync()
+        public async Task<IEnumerable<SemesterReadDto>> GetAllAsync(bool includeDeleted = false)
         {
-            var list = await _uow.Semesters.GetAllAsync();
+            var list = await _uow.Semesters.GetAllAsync(includeDeleted);
             return list.Select(s => new SemesterReadDto
             {
                 Id = s.Id,
@@ -77,10 +77,25 @@ namespace AIDefCom.Service.Services.SemesterService
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var entity = await _uow.Semesters.GetByIdAsync(id);
-            if (entity == null) return false;
+            return await SoftDeleteAsync(id);
+        }
 
-            await _uow.Semesters.DeleteAsync(id);
+        public async Task<bool> SoftDeleteAsync(int id)
+        {
+            var existing = await _uow.Semesters.GetByIdAsync(id);
+            if (existing == null) return false;
+
+            await _uow.Semesters.SoftDeleteAsync(id);
+            await _uow.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RestoreAsync(int id)
+        {
+            var existing = await _uow.Semesters.GetByIdAsync(id, includeDeleted: true);
+            if (existing == null) return false;
+
+            await _uow.Semesters.RestoreAsync(id);
             await _uow.SaveChangesAsync();
             return true;
         }

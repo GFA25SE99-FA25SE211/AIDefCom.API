@@ -19,16 +19,24 @@ namespace AIDefCom.Repository.Repositories.RubricRepository
             _set = _context.Set<Rubric>();
         }
 
-        public async Task<IEnumerable<Rubric>> GetAllAsync()
+        public async Task<IEnumerable<Rubric>> GetAllAsync(bool includeDeleted = false)
         {
-            return await _set.AsNoTracking()
-                             .OrderByDescending(x => x.CreatedAt)
-                             .ToListAsync();
+            var query = _set.AsNoTracking();
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.OrderByDescending(x => x.CreatedAt).ToListAsync();
         }
 
-        public async Task<Rubric?> GetByIdAsync(int id)
+        public async Task<Rubric?> GetByIdAsync(int id, bool includeDeleted = false)
         {
-            return await _set.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+            var query = _set.AsNoTracking();
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.FirstOrDefaultAsync(x => x.Id == id);
         }
 
         public async Task AddAsync(Rubric rubric)
@@ -52,9 +60,27 @@ namespace AIDefCom.Repository.Repositories.RubricRepository
             if (entity != null) _set.Remove(entity);
         }
 
+        public async Task SoftDeleteAsync(int id)
+        {
+            var entity = await _set.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity != null)
+            {
+                entity.IsDeleted = true;
+            }
+        }
+
+        public async Task RestoreAsync(int id)
+        {
+            var entity = await _set.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity != null)
+            {
+                entity.IsDeleted = false;
+            }
+        }
+
         public async Task<bool> ExistsByNameAsync(string rubricName)
         {
-            return await _set.AnyAsync(x => x.RubricName == rubricName);
+            return await _set.Where(x => !x.IsDeleted).AnyAsync(x => x.RubricName == rubricName);
         }
     }
 }

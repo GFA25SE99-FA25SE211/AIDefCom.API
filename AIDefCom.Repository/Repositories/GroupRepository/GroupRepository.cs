@@ -19,30 +19,40 @@ namespace AIDefCom.Repository.Repositories.GroupRepository
             _set = _context.Set<Group>();
         }
 
-        public async Task<IEnumerable<Group>> GetAllAsync()
+        public async Task<IEnumerable<Group>> GetAllAsync(bool includeDeleted = false)
         {
-            return await _set.AsNoTracking()
+            IQueryable<Group> query = _set.AsNoTracking()
                              .Include(g => g.Semester)
-                             .Include(g => g.Major)
-                             .OrderBy(g => g.ProjectCode)
-                             .ToListAsync();
+                             .Include(g => g.Major);
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.OrderBy(g => g.ProjectCode).ToListAsync();
         }
 
-        public async Task<Group?> GetByIdAsync(string id)
+        public async Task<Group?> GetByIdAsync(string id, bool includeDeleted = false)
         {
-            return await _set.AsNoTracking()
+            IQueryable<Group> query = _set.AsNoTracking()
                              .Include(g => g.Semester)
-                             .Include(g => g.Major)
-                             .FirstOrDefaultAsync(g => g.Id == id);
+                             .Include(g => g.Major);
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.FirstOrDefaultAsync(g => g.Id == id);
         }
 
-        public async Task<IEnumerable<Group>> GetBySemesterIdAsync(int semesterId)
+        public async Task<IEnumerable<Group>> GetBySemesterIdAsync(int semesterId, bool includeDeleted = false)
         {
-            return await _set.AsNoTracking()
+            IQueryable<Group> query = _set.AsNoTracking()
                              .Include(g => g.Semester)
-                             .Include(g => g.Major)
-                             .Where(g => g.SemesterId == semesterId)
-                             .ToListAsync();
+                             .Include(g => g.Major);
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.Where(g => g.SemesterId == semesterId).ToListAsync();
         }
 
         public async Task AddAsync(Group group)
@@ -70,10 +80,29 @@ namespace AIDefCom.Repository.Repositories.GroupRepository
                 _set.Remove(entity);
         }
 
+        public async Task SoftDeleteAsync(string id)
+        {
+            var entity = await _set.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity != null)
+            {
+                entity.IsDeleted = true;
+            }
+        }
+
+        public async Task RestoreAsync(string id)
+        {
+            var entity = await _set.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity != null)
+            {
+                entity.IsDeleted = false;
+            }
+        }
+
         public async Task<bool> ExistsByProjectCodeAsync(string code)
         {
-            return await _set.AnyAsync(g => g.ProjectCode == code);
+            return await _set.Where(x => !x.IsDeleted).AnyAsync(g => g.ProjectCode == code);
         }
+
         public IQueryable<Group> Query()
         {
             return _set.AsQueryable();

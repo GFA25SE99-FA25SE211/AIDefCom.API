@@ -21,5 +21,8 @@ namespace AIDefCom.Repository.Entities
         // Foreign Key to CouncilRole
         public int CouncilRoleId { get; set; }
         public CouncilRole? CouncilRole { get; set; }
+        
+        // Soft Delete
+        public bool IsDeleted { get; set; } = false;
     }
 }

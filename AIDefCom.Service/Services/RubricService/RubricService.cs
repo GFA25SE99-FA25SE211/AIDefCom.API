@@ -21,9 +21,9 @@ namespace AIDefCom.Service.Services.RubricService
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<RubricReadDto>> GetAllAsync()
+        public async Task<IEnumerable<RubricReadDto>> GetAllAsync(bool includeDeleted = false)
         {
-            var rubrics = await _uow.Rubrics.GetAllAsync();
+            var rubrics = await _uow.Rubrics.GetAllAsync(includeDeleted);
             return _mapper.Map<IEnumerable<RubricReadDto>>(rubrics);
         }
 
@@ -61,10 +61,25 @@ namespace AIDefCom.Service.Services.RubricService
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var rubric = await _uow.Rubrics.GetByIdAsync(id);
-            if (rubric == null) return false;
+            return await SoftDeleteAsync(id);
+        }
 
-            await _uow.Rubrics.DeleteAsync(id);
+        public async Task<bool> SoftDeleteAsync(int id)
+        {
+            var existing = await _uow.Rubrics.GetByIdAsync(id);
+            if (existing == null) return false;
+
+            await _uow.Rubrics.SoftDeleteAsync(id);
+            await _uow.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RestoreAsync(int id)
+        {
+            var existing = await _uow.Rubrics.GetByIdAsync(id, includeDeleted: true);
+            if (existing == null) return false;
+
+            await _uow.Rubrics.RestoreAsync(id);
             await _uow.SaveChangesAsync();
             return true;
         }

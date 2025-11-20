@@ -12,5 +12,8 @@ namespace AIDefCom.Repository.Entities
         public string RubricName { get; set; } = string.Empty;
         public string? Description { get; set; }
         public DateTime CreatedAt { get; set; }
+        
+        // Soft Delete
+        public bool IsDeleted { get; set; } = false;
     }
 }
