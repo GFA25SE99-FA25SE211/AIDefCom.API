@@ -34,15 +34,16 @@ namespace AIDefCom.API.Controllers
         [HttpPost("create-account")]
         public async Task<IActionResult> CreateAccount([FromBody] CreateAccountDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.Email) ||
+            if (string.IsNullOrWhiteSpace(request.Id) ||
+                string.IsNullOrWhiteSpace(request.Email) ||
                 string.IsNullOrWhiteSpace(request.Password) ||
                 string.IsNullOrWhiteSpace(request.FullName) ||
                 string.IsNullOrWhiteSpace(request.PhoneNumber))
             {
-                return BadRequest(new { Message = "All fields (Email, Password, FullName, PhoneNumber) are required" });
+                return BadRequest(new { Message = "All fields (Id, Email, Password, FullName, PhoneNumber) are required" });
             }
 
-            _logger.LogInformation("Creating new account: {Email}", request.Email);
+            _logger.LogInformation("Creating new account: {Email} with ID: {Id}", request.Email, request.Id);
 
             try
             {
