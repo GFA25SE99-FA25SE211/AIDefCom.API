@@ -165,5 +165,74 @@ namespace AIDefCom.API.Controllers
 
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
+
+        /// <summary>
+        /// Download Excel template for student-group import
+        /// </summary>
+        [HttpGet("import/student-group-template")]
+        public IActionResult DownloadStudentGroupTemplate()
+        {
+            _logger.LogInformation("Generating student-group import template");
+
+            var fileBytes = _service.GenerateStudentGroupTemplate();
+            var fileName = $"Student_Group_Import_Template_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+
+            return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
+        /// <summary>
+        /// Import students with groups from Excel file
+        /// </summary>
+        [HttpPost("import/student-groups")]
+        public async Task<IActionResult> ImportStudentsWithGroups([FromForm] StudentGroupImportRequestDto request)
+        {
+            _logger.LogInformation("Starting student-group import. SemesterId: {SemesterId}, MajorId: {MajorId}", request.SemesterId, request.MajorId);
+
+            if (request.File == null || request.File.Length == 0)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = "File is required",
+                    Data = null
+                });
+            }
+
+            if (request.SemesterId <= 0 || request.MajorId <= 0)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = "Valid SemesterId and MajorId are required",
+                    Data = null
+                });
+            }
+
+            try
+            {
+                var result = await _service.ImportStudentsWithGroupsAsync(request.SemesterId, request.MajorId, request.File);
+
+                _logger.LogInformation(
+                    "Student-group import completed. Success: {Success}, Failures: {Failures}, Students: {Students}, Groups: {Groups}",
+                    result.SuccessCount, result.FailureCount, result.CreatedStudentIds.Count, result.CreatedGroupIds.Count);
+
+                return Ok(new ApiResponse<StudentGroupImportResultDto>
+                {
+                    Code = ResponseCodes.Success,
+                    Message = result.Message,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during student-group import");
+                return BadRequest(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = ex.Message,
+                    Data = null
+                });
+            }
+        }
     }
 }
