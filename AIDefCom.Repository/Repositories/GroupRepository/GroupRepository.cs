@@ -23,6 +23,7 @@ namespace AIDefCom.Repository.Repositories.GroupRepository
         {
             return await _set.AsNoTracking()
                              .Include(g => g.Semester)
+                             .Include(g => g.Major)
                              .OrderBy(g => g.ProjectCode)
                              .ToListAsync();
         }
@@ -31,6 +32,7 @@ namespace AIDefCom.Repository.Repositories.GroupRepository
         {
             return await _set.AsNoTracking()
                              .Include(g => g.Semester)
+                             .Include(g => g.Major)
                              .FirstOrDefaultAsync(g => g.Id == id);
         }
 
@@ -38,6 +40,7 @@ namespace AIDefCom.Repository.Repositories.GroupRepository
         {
             return await _set.AsNoTracking()
                              .Include(g => g.Semester)
+                             .Include(g => g.Major)
                              .Where(g => g.SemesterId == semesterId)
                              .ToListAsync();
         }
@@ -56,6 +59,7 @@ namespace AIDefCom.Repository.Repositories.GroupRepository
             existing.TopicTitle_EN = group.TopicTitle_EN;
             existing.TopicTitle_VN = group.TopicTitle_VN;
             existing.SemesterId = group.SemesterId;
+            existing.MajorId = group.MajorId;
             existing.Status = group.Status;
         }
 
