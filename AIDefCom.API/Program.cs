@@ -1,4 +1,5 @@
 using AIDefCom.API.Mapper;
+using AIDefCom.API.Middlewares;
 using AIDefCom.Repository;
 using AIDefCom.Repository.Entities;
 using AIDefCom.Repository.UnitOfWork;
@@ -9,7 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Microsoft.Extensions.Logging; // <-- cần cho LoggerFactory
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Text;
 
@@ -66,11 +67,17 @@ namespace AIDefCom.API
             // 3) Identity
             builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
             {
+                // Password settings
                 options.Password.RequiredLength = 6;
                 options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequireDigit = false;
                 options.Password.RequireUppercase = false;
                 options.Password.RequireLowercase = false;
+
+                // User settings - Allow spaces and special characters in username
+                options.User.AllowedUserNameCharacters = 
+                    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+ ";
+                options.User.RequireUniqueEmail = false; // Allow duplicate emails if needed
             })
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();
@@ -157,6 +164,10 @@ namespace AIDefCom.API
             var app = builder.Build();
 
             // ---------- Pipeline thứ tự chuẩn ----------
+            
+            // ⭐ Global Exception Handling Middleware - PHẢI ĐẶT ĐẦU TIÊN
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
+            
             app.UseSwagger();
             app.UseSwaggerUI();
 
