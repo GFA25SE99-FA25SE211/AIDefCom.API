@@ -10,15 +10,17 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read        # cần cho checkout
+      id-token: write       # cần cho azure/login (OIDC)
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout source
+        uses: actions/checkout@v4
 
-      - name: Set up .NET Core
+      - name: Set up .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.x'
@@ -26,35 +28,12 @@ jobs:
       - name: Restore
         run: dotnet restore AIDefCom.API/AIDefCom.API.csproj
 
-      - name: dotnet publish
-        run: dotnet publish AIDefCom.API/AIDefCom.API.csproj -c Release -o ${{ runner.temp }}/publish
+      - name: Publish
+        run: dotnet publish AIDefCom.API/AIDefCom.API.csproj -c Release -o ./publish
 
       - name: Show publish contents
-        run: ls -la ${{ runner.temp }}/publish
-    
-      - name: Upload artifact for deployment job
-        uses: actions/upload-artifact@v4
-        with:
-          name: api-publish
-          path: ${{ runner.temp }}/publish
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
-
-    steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: api-publish
-          path: ./publish
-
-      - name: Show downloaded files
         run: ls -la ./publish
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -67,7 +46,5 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'aidefcomapi'
-          slot-name: 'Production'
+          # slot-name: 'Production'   # nếu bạn không dùng deployment slot riêng thì có thể bỏ dòng này
           package: ./publish
-          
-
