@@ -10,6 +10,9 @@ namespace AIDefCom.Service.Dto.Account
     public class CreateAccountDto
     {
         [Required]
+        public string Id { get; set; } = default!;
+
+        [Required]
         public string FullName { get; set; } = default!;
 
         [Required]
