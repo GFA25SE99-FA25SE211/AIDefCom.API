@@ -21,9 +21,9 @@ namespace AIDefCom.Service.Services.MajorRubricService
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<MajorRubricReadDto>> GetAllAsync()
+        public async Task<IEnumerable<MajorRubricReadDto>> GetAllAsync(bool includeDeleted = false)
         {
-            var list = await _uow.MajorRubrics.GetAllAsync();
+            var list = await _uow.MajorRubrics.GetAllAsync(includeDeleted);
             return list.Select(x => new MajorRubricReadDto
             {
                 Id = x.Id,
@@ -71,7 +71,7 @@ namespace AIDefCom.Service.Services.MajorRubricService
             return entity.Id;
         }
 
-        public async Task<bool> UpdateAsync(int id, MajorRubricUpdateDto dto)  // ✅ thêm
+        public async Task<bool> UpdateAsync(int id, MajorRubricUpdateDto dto)
         {
             var existing = await _uow.MajorRubrics.GetByIdAsync(id);
             if (existing == null) return false;
@@ -93,10 +93,25 @@ namespace AIDefCom.Service.Services.MajorRubricService
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var item = await _uow.MajorRubrics.GetByIdAsync(id);
-            if (item == null) return false;
+            return await SoftDeleteAsync(id);
+        }
 
-            await _uow.MajorRubrics.DeleteAsync(id);
+        public async Task<bool> SoftDeleteAsync(int id)
+        {
+            var existing = await _uow.MajorRubrics.GetByIdAsync(id);
+            if (existing == null) return false;
+
+            await _uow.MajorRubrics.SoftDeleteAsync(id);
+            await _uow.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RestoreAsync(int id)
+        {
+            var existing = await _uow.MajorRubrics.GetByIdAsync(id, includeDeleted: true);
+            if (existing == null) return false;
+
+            await _uow.MajorRubrics.RestoreAsync(id);
             await _uow.SaveChangesAsync();
             return true;
         }

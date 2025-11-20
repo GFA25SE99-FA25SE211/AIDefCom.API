@@ -21,9 +21,9 @@ namespace AIDefCom.Service.Services.MajorService
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<MajorReadDto>> GetAllAsync()
+        public async Task<IEnumerable<MajorReadDto>> GetAllAsync(bool includeDeleted = false)
         {
-            var majors = await _uow.Majors.GetAllAsync();
+            var majors = await _uow.Majors.GetAllAsync(includeDeleted);
             return _mapper.Map<IEnumerable<MajorReadDto>>(majors);
         }
 
@@ -58,10 +58,26 @@ namespace AIDefCom.Service.Services.MajorService
 
         public async Task<bool> DeleteAsync(int id)
         {
+            // Deprecated - redirects to SoftDeleteAsync
+            return await SoftDeleteAsync(id);
+        }
+
+        public async Task<bool> SoftDeleteAsync(int id)
+        {
             var existing = await _uow.Majors.GetByIdAsync(id);
             if (existing == null) return false;
 
-            await _uow.Majors.DeleteAsync(id);
+            await _uow.Majors.SoftDeleteAsync(id);
+            await _uow.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RestoreAsync(int id)
+        {
+            var existing = await _uow.Majors.GetByIdAsync(id, includeDeleted: true);
+            if (existing == null) return false;
+
+            await _uow.Majors.RestoreAsync(id);
             await _uow.SaveChangesAsync();
             return true;
         }

@@ -19,18 +19,26 @@ namespace AIDefCom.Repository.Repositories.SemesterRepository
             _set = _context.Set<Semester>();
         }
 
-        public async Task<IEnumerable<Semester>> GetAllAsync()
+        public async Task<IEnumerable<Semester>> GetAllAsync(bool includeDeleted = false)
         {
-            return await _set.AsNoTracking()
-                             .OrderByDescending(s => s.Year)
+            var query = _set.AsNoTracking();
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.OrderByDescending(s => s.Year)
                              .ThenBy(s => s.SemesterName)
                              .ToListAsync();
         }
 
-        public async Task<Semester?> GetByIdAsync(int id)
+        public async Task<Semester?> GetByIdAsync(int id, bool includeDeleted = false)
         {
-            return await _set.AsNoTracking()
-                             .FirstOrDefaultAsync(s => s.Id == id);
+            var query = _set.AsNoTracking();
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.FirstOrDefaultAsync(s => s.Id == id);
         }
 
         public async Task<IEnumerable<Semester>> GetByMajorIdAsync(int majorId)
@@ -61,12 +69,30 @@ namespace AIDefCom.Repository.Repositories.SemesterRepository
             if (entity != null) _set.Remove(entity);
         }
 
+        public async Task SoftDeleteAsync(int id)
+        {
+            var entity = await _set.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity != null)
+            {
+                entity.IsDeleted = true;
+            }
+        }
+
+        public async Task RestoreAsync(int id)
+        {
+            var entity = await _set.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity != null)
+            {
+                entity.IsDeleted = false;
+            }
+        }
+
         public async Task<bool> ExistsByNameAsync(string name, int year, int majorId)
         {
             // Semester không còn MajorId, chỉ check name và year
-            return await _set.AnyAsync(s =>
-                s.SemesterName == name &&
-                s.Year == year);
+            return await _set
+                .Where(x => !x.IsDeleted)
+                .AnyAsync(s => s.SemesterName == name && s.Year == year);
         }
     }
 }

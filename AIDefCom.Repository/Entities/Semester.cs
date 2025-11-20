@@ -13,5 +13,8 @@ namespace AIDefCom.Repository.Entities
         public int Year { get; set; }
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
+        
+        // Soft Delete
+        public bool IsDeleted { get; set; } = false;
     }
 }

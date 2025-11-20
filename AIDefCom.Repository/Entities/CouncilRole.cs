@@ -12,5 +12,8 @@ namespace AIDefCom.Repository.Entities
 
         public string RoleName { get; set; } = string.Empty;
         public string? Description { get; set; }
+        
+        // Soft Delete
+        public bool IsDeleted { get; set; } = false;
     }
 }

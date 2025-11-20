@@ -21,9 +21,9 @@ namespace AIDefCom.Service.Services.CommitteeAssignmentService
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<CommitteeAssignmentReadDto>> GetAllAsync()
+        public async Task<IEnumerable<CommitteeAssignmentReadDto>> GetAllAsync(bool includeDeleted = false)
         {
-            var list = await _uow.CommitteeAssignments.GetAllAsync();
+            var list = await _uow.CommitteeAssignments.GetAllAsync(includeDeleted);
             return list.Select(a => new CommitteeAssignmentReadDto
             {
                 Id = a.Id,
@@ -81,10 +81,25 @@ namespace AIDefCom.Service.Services.CommitteeAssignmentService
 
         public async Task<bool> DeleteAsync(string id)
         {
+            return await SoftDeleteAsync(id);
+        }
+
+        public async Task<bool> SoftDeleteAsync(string id)
+        {
             var existing = await _uow.CommitteeAssignments.GetByIdAsync(id);
             if (existing == null) return false;
 
-            await _uow.CommitteeAssignments.DeleteAsync(id);
+            await _uow.CommitteeAssignments.SoftDeleteAsync(id);
+            await _uow.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RestoreAsync(string id)
+        {
+            var existing = await _uow.CommitteeAssignments.GetByIdAsync(id, includeDeleted: true);
+            if (existing == null) return false;
+
+            await _uow.CommitteeAssignments.RestoreAsync(id);
             await _uow.SaveChangesAsync();
             return true;
         }

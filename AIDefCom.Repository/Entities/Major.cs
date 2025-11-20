@@ -11,5 +11,8 @@ namespace AIDefCom.Repository.Entities
         public int Id { get; set; } // Primary Key
         public string MajorName { get; set; } = string.Empty;
         public string? Description { get; set; }
+        
+        // Soft Delete
+        public bool IsDeleted { get; set; } = false;
     }
 }

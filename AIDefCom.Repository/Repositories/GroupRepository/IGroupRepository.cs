@@ -9,14 +9,15 @@ namespace AIDefCom.Repository.Repositories.GroupRepository
 {
     public interface IGroupRepository
     {
-        Task<IEnumerable<Group>> GetAllAsync();
-        Task<Group?> GetByIdAsync(string id);
-        Task<IEnumerable<Group>> GetBySemesterIdAsync(int semesterId);
+        Task<IEnumerable<Group>> GetAllAsync(bool includeDeleted = false);
+        Task<Group?> GetByIdAsync(string id, bool includeDeleted = false);
+        Task<IEnumerable<Group>> GetBySemesterIdAsync(int semesterId, bool includeDeleted = false);
         Task AddAsync(Group group);
         Task UpdateAsync(Group group);
         Task DeleteAsync(string id);
+        Task SoftDeleteAsync(string id);
+        Task RestoreAsync(string id);
         Task<bool> ExistsByProjectCodeAsync(string code);
         IQueryable<Group> Query();
-
     }
 }

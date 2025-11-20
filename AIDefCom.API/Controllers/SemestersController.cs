@@ -26,10 +26,10 @@ namespace AIDefCom.API.Controllers
         /// Get all semesters
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] bool includeDeleted = false)
         {
-            _logger.LogInformation("Retrieving all semesters");
-            var data = await _service.GetAllAsync();
+            _logger.LogInformation("Retrieving all semesters (includeDeleted: {IncludeDeleted})", includeDeleted);
+            var data = await _service.GetAllAsync(includeDeleted);
             
             return Ok(new ApiResponse<IEnumerable<SemesterReadDto>>
             {
@@ -122,13 +122,13 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Delete a semester
+        /// Soft delete a semester (sets IsDeleted = true)
         /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            _logger.LogInformation("Deleting semester with ID: {Id}", id);
-            var ok = await _service.DeleteAsync(id);
+            _logger.LogInformation("Soft deleting semester with ID: {Id}", id);
+            var ok = await _service.SoftDeleteAsync(id);
             
             if (!ok)
             {
@@ -136,8 +136,31 @@ namespace AIDefCom.API.Controllers
                 throw new KeyNotFoundException($"Semester with ID {id} not found");
             }
 
-            _logger.LogInformation("Semester {Id} deleted successfully", id);
+            _logger.LogInformation("Semester {Id} soft deleted successfully", id);
             return NoContent();
+        }
+
+        /// <summary>
+        /// Restore a soft-deleted semester
+        /// </summary>
+        [HttpPut("{id}/restore")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            _logger.LogInformation("Restoring semester with ID: {Id}", id);
+            var ok = await _service.RestoreAsync(id);
+            
+            if (!ok)
+            {
+                _logger.LogWarning("Semester with ID {Id} not found for restoration", id);
+                throw new KeyNotFoundException($"Semester with ID {id} not found");
+            }
+
+            _logger.LogInformation("Semester {Id} restored successfully", id);
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.Success,
+                Message = "Semester restored successfully"
+            });
         }
     }
 }

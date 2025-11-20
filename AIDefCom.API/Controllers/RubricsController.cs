@@ -20,10 +20,10 @@ namespace AIDefCom.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] bool includeDeleted = false)
         {
-            _logger.LogInformation("Retrieving all rubrics");
-            var rubrics = await _rubricService.GetAllAsync();
+            _logger.LogInformation("Retrieving all rubrics (includeDeleted: {IncludeDeleted})", includeDeleted);
+            var rubrics = await _rubricService.GetAllAsync(includeDeleted);
             
             return Ok(new ApiResponse<IEnumerable<RubricReadDto>>
             {
@@ -92,8 +92,8 @@ namespace AIDefCom.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            _logger.LogInformation("Deleting rubric with ID: {Id}", id);
-            var success = await _rubricService.DeleteAsync(id);
+            _logger.LogInformation("Soft deleting rubric with ID: {Id}", id);
+            var success = await _rubricService.SoftDeleteAsync(id);
             
             if (!success)
             {
@@ -101,8 +101,28 @@ namespace AIDefCom.API.Controllers
                 throw new KeyNotFoundException($"Rubric with ID {id} not found");
             }
 
-            _logger.LogInformation("Rubric {Id} deleted successfully", id);
+            _logger.LogInformation("Rubric {Id} soft deleted successfully", id);
             return NoContent();
+        }
+
+        [HttpPut("{id}/restore")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            _logger.LogInformation("Restoring rubric with ID: {Id}", id);
+            var success = await _rubricService.RestoreAsync(id);
+            
+            if (!success)
+            {
+                _logger.LogWarning("Rubric with ID {Id} not found for restoration", id);
+                throw new KeyNotFoundException($"Rubric with ID {id} not found");
+            }
+
+            _logger.LogInformation("Rubric {Id} restored successfully", id);
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.Success,
+                Message = "Rubric restored successfully"
+            });
         }
     }
 }

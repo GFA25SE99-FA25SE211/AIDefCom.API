@@ -9,10 +9,12 @@ namespace AIDefCom.Service.Services.MajorService
 {
     public interface IMajorService
     {
-        Task<IEnumerable<MajorReadDto>> GetAllAsync();
+        Task<IEnumerable<MajorReadDto>> GetAllAsync(bool includeDeleted = false);
         Task<MajorReadDto?> GetByIdAsync(int id);
         Task<int> AddAsync(MajorCreateDto dto);
         Task<bool> UpdateAsync(int id, MajorUpdateDto dto);
-        Task<bool> DeleteAsync(int id);
+        Task<bool> DeleteAsync(int id);  // Deprecated - use SoftDeleteAsync
+        Task<bool> SoftDeleteAsync(int id);
+        Task<bool> RestoreAsync(int id);
     }
 }

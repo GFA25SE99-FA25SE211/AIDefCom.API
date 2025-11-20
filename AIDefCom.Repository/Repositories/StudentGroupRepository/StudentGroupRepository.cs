@@ -19,28 +19,35 @@ namespace AIDefCom.Repository.Repositories.StudentGroupRepository
             _set = _context.Set<StudentGroup>();
         }
 
-        public async Task<IEnumerable<StudentGroup>> GetAllAsync()
+        public async Task<IEnumerable<StudentGroup>> GetAllAsync(bool includeDeleted = false)
         {
-            return await _set.AsNoTracking()
+            IQueryable<StudentGroup> query = _set.AsNoTracking()
                              .Include(x => x.Student)
-                             .Include(x => x.Group)
-                             .OrderBy(x => x.GroupId)
-                             .ToListAsync();
+                             .Include(x => x.Group);
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.OrderBy(x => x.GroupId).ToListAsync();
         }
 
-        public async Task<StudentGroup?> GetByIdAsync(int id)
+        public async Task<StudentGroup?> GetByIdAsync(int id, bool includeDeleted = false)
         {
-            return await _set.AsNoTracking()
+            IQueryable<StudentGroup> query = _set.AsNoTracking()
                              .Include(x => x.Student)
-                             .Include(x => x.Group)
-                             .FirstOrDefaultAsync(x => x.Id == id);
+                             .Include(x => x.Group);
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.FirstOrDefaultAsync(x => x.Id == id);
         }
 
         public async Task<IEnumerable<StudentGroup>> GetByGroupIdAsync(string groupId)
         {
             return await _set.AsNoTracking()
                              .Include(x => x.Student)
-                             .Where(x => x.GroupId == groupId)
+                             .Where(x => x.GroupId == groupId && !x.IsDeleted)
                              .ToListAsync();
         }
 
@@ -48,7 +55,7 @@ namespace AIDefCom.Repository.Repositories.StudentGroupRepository
         {
             return await _set.AsNoTracking()
                              .Include(x => x.Group)
-                             .Where(x => x.UserId == studentId)
+                             .Where(x => x.UserId == studentId && !x.IsDeleted)
                              .ToListAsync();
         }
 
@@ -72,6 +79,24 @@ namespace AIDefCom.Repository.Repositories.StudentGroupRepository
             var existing = await _set.FindAsync(id);
             if (existing != null)
                 _set.Remove(existing);
+        }
+
+        public async Task SoftDeleteAsync(int id)
+        {
+            var entity = await _set.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity != null)
+            {
+                entity.IsDeleted = true;
+            }
+        }
+
+        public async Task RestoreAsync(int id)
+        {
+            var entity = await _set.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity != null)
+            {
+                entity.IsDeleted = false;
+            }
         }
 
         public IQueryable<StudentGroup> Query()

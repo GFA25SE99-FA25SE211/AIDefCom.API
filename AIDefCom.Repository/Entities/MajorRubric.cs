@@ -17,5 +17,8 @@ namespace AIDefCom.Repository.Entities
         // Foreign Key to Rubric
         public int RubricId { get; set; }
         public Rubric? Rubric { get; set; }
+        
+        // Soft Delete
+        public bool IsDeleted { get; set; } = false;
     }
 }

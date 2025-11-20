@@ -26,10 +26,10 @@ namespace AIDefCom.API.Controllers
         /// Get all committee assignments
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] bool includeDeleted = false)
         {
-            _logger.LogInformation("Retrieving all committee assignments");
-            var data = await _service.GetAllAsync();
+            _logger.LogInformation("Retrieving all committee assignments (includeDeleted: {IncludeDeleted})", includeDeleted);
+            var data = await _service.GetAllAsync(includeDeleted);
             
             return Ok(new ApiResponse<IEnumerable<CommitteeAssignmentReadDto>>
             {
@@ -155,13 +155,13 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Delete a committee assignment
+        /// Soft delete a committee assignment
         /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            _logger.LogInformation("Deleting committee assignment with ID: {Id}", id);
-            var ok = await _service.DeleteAsync(id);
+            _logger.LogInformation("Soft deleting committee assignment with ID: {Id}", id);
+            var ok = await _service.SoftDeleteAsync(id);
             
             if (!ok)
             {
@@ -169,8 +169,31 @@ namespace AIDefCom.API.Controllers
                 throw new KeyNotFoundException($"Committee assignment with ID {id} not found");
             }
 
-            _logger.LogInformation("Committee assignment {Id} deleted successfully", id);
+            _logger.LogInformation("Committee assignment {Id} soft deleted successfully", id);
             return NoContent();
+        }
+
+        /// <summary>
+        /// Restore a soft-deleted committee assignment
+        /// </summary>
+        [HttpPut("{id}/restore")]
+        public async Task<IActionResult> Restore(string id)
+        {
+            _logger.LogInformation("Restoring committee assignment with ID: {Id}", id);
+            var ok = await _service.RestoreAsync(id);
+            
+            if (!ok)
+            {
+                _logger.LogWarning("Committee assignment with ID {Id} not found for restoration", id);
+                throw new KeyNotFoundException($"Committee assignment with ID {id} not found");
+            }
+
+            _logger.LogInformation("Committee assignment {Id} restored successfully", id);
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.Success,
+                Message = "Committee assignment restored successfully"
+            });
         }
     }
 }
