@@ -1,4 +1,5 @@
 using AIDefCom.API.Mapper;
+using AIDefCom.API.Middlewares;
 using AIDefCom.Repository;
 using AIDefCom.Repository.Entities;
 using AIDefCom.Repository.UnitOfWork;
@@ -163,6 +164,10 @@ namespace AIDefCom.API
             var app = builder.Build();
 
             // ---------- Pipeline thứ tự chuẩn ----------
+            
+            // ⭐ Global Exception Handling Middleware - PHẢI ĐẶT ĐẦU TIÊN
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
+            
             app.UseSwagger();
             app.UseSwaggerUI();
 
