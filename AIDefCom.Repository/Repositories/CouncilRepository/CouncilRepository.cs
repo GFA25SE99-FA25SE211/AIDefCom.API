@@ -21,7 +21,7 @@ namespace AIDefCom.Repository.Repositories.CouncilRepository
 
         public async Task<IEnumerable<Council>> GetAllAsync(bool includeInactive = false)
         {
-            var query = _set.AsNoTracking();
+            IQueryable<Council> query = _set.AsNoTracking().Include(c => c.Major);
             if (!includeInactive)
                 query = query.Where(c => c.IsActive);
             return await query.OrderByDescending(c => c.CreatedDate).ToListAsync();
@@ -29,7 +29,9 @@ namespace AIDefCom.Repository.Repositories.CouncilRepository
 
         public async Task<Council?> GetByIdAsync(int id)
         {
-            return await _set.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
+            return await _set.AsNoTracking()
+                             .Include(c => c.Major)
+                             .FirstOrDefaultAsync(x => x.Id == id);
         }
 
         public async Task AddAsync(Council entity)
@@ -42,6 +44,7 @@ namespace AIDefCom.Repository.Repositories.CouncilRepository
             var existing = await _set.FirstOrDefaultAsync(x => x.Id == entity.Id);
             if (existing == null) return;
 
+            existing.MajorId = entity.MajorId;
             existing.Description = entity.Description;
             existing.IsActive = entity.IsActive;
         }

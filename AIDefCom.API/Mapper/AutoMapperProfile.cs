@@ -62,7 +62,8 @@ namespace AIDefCom.API.Mapper
                 .ForAllMembers(opts => opts.Condition((src, dest, srcMember) => srcMember != null));
 
             CreateMap<Group, GroupReadDto>()
-                .ForMember(dest => dest.SemesterName, opt => opt.MapFrom(src => src.Semester!.SemesterName));
+                .ForMember(dest => dest.SemesterName, opt => opt.MapFrom(src => src.Semester!.SemesterName))
+                .ForMember(dest => dest.MajorName, opt => opt.MapFrom(src => src.Major!.MajorName));
             CreateMap<GroupCreateDto, Group>();
             CreateMap<GroupUpdateDto, Group>();
 
@@ -77,7 +78,8 @@ namespace AIDefCom.API.Mapper
             CreateMap<MemberNoteCreateDto, MemberNote>();
             CreateMap<MemberNoteUpdateDto, MemberNote>();
 
-            CreateMap<Council, CouncilReadDto>();
+            CreateMap<Council, CouncilReadDto>()
+                .ForMember(dest => dest.MajorName, opt => opt.MapFrom(src => src.Major!.MajorName));
             CreateMap<CouncilCreateDto, Council>();
             CreateMap<CouncilUpdateDto, Council>();
 

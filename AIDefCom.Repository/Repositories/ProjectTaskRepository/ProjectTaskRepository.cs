@@ -24,6 +24,7 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
             return await _set.AsNoTracking()
                              .Include(t => t.AssignedBy)
                              .Include(t => t.AssignedTo)
+                             .Include(t => t.Rubric)
                              .OrderByDescending(t => t.Id)
                              .ToListAsync();
         }
@@ -33,6 +34,7 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
             return await _set.AsNoTracking()
                              .Include(t => t.AssignedBy)
                              .Include(t => t.AssignedTo)
+                             .Include(t => t.Rubric)
                              .FirstOrDefaultAsync(t => t.Id == id);
         }
 
@@ -40,6 +42,7 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
         {
             return await _set.AsNoTracking()
                              .Include(t => t.AssignedTo)
+                             .Include(t => t.Rubric)
                              .Where(t => t.AssignedById == assignedById)
                              .ToListAsync();
         }
@@ -48,6 +51,7 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
         {
             return await _set.AsNoTracking()
                              .Include(t => t.AssignedBy)
+                             .Include(t => t.Rubric)
                              .Where(t => t.AssignedToId == assignedToId)
                              .ToListAsync();
         }
@@ -66,6 +70,7 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
             existing.Description = entity.Description;
             existing.AssignedById = entity.AssignedById;
             existing.AssignedToId = entity.AssignedToId;
+            existing.RubricId = entity.RubricId;
             existing.Status = entity.Status;
         }
 

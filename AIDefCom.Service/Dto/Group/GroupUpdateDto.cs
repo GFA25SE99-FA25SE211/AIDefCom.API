@@ -12,6 +12,7 @@ namespace AIDefCom.Service.Dto.Group
         public string TopicTitle_EN { get; set; } = string.Empty;
         public string TopicTitle_VN { get; set; } = string.Empty;
         public int SemesterId { get; set; }
+        public int MajorId { get; set; }
         public string Status { get; set; } = string.Empty;
     }
 }
