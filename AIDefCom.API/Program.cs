@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using Microsoft.Extensions.Logging; // <-- cần cho LoggerFactory
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
 using System.Text;
 
@@ -66,11 +66,17 @@ namespace AIDefCom.API
             // 3) Identity
             builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
             {
+                // Password settings
                 options.Password.RequiredLength = 6;
                 options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequireDigit = false;
                 options.Password.RequireUppercase = false;
                 options.Password.RequireLowercase = false;
+
+                // User settings - Allow spaces and special characters in username
+                options.User.AllowedUserNameCharacters = 
+                    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+ ";
+                options.User.RequireUniqueEmail = false; // Allow duplicate emails if needed
             })
             .AddEntityFrameworkStores<ApplicationDbContext>()
             .AddDefaultTokenProviders();

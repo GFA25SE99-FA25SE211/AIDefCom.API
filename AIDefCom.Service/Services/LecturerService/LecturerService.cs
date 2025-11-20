@@ -2,6 +2,7 @@ using AIDefCom.Repository.Entities;
 using AIDefCom.Repository.UnitOfWork;
 using AIDefCom.Service.Dto.Import;
 using AIDefCom.Service.Dto.Lecturer;
+using AIDefCom.Service.Helpers;
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
@@ -26,7 +27,7 @@ namespace AIDefCom.Service.Services.LecturerService
             _uow = uow;
             _mapper = mapper;
             _userManager = userManager;
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+            ExcelHelper.ConfigureExcelPackage();
         }
 
         public async Task<IEnumerable<LecturerReadDto>> GetAllAsync()
@@ -175,8 +176,27 @@ namespace AIDefCom.Service.Services.LecturerService
                     DateTime? dateOfBirth = null;
                     if (!string.IsNullOrEmpty(dateOfBirthStr))
                     {
-                        if (DateTime.TryParse(dateOfBirthStr, out var dob))
+                        // Try parsing with multiple date formats
+                        var dateFormats = new[]
                         {
+                            "dd/MM/yyyy",     // 14/03/1980 (Vietnamese format)
+                            "MM/dd/yyyy",     // 03/14/1980 (US format)
+                            "yyyy-MM-dd",     // 1980-03-14 (ISO format)
+                            "dd-MM-yyyy",     // 14-03-1980
+                            "MM-dd-yyyy",     // 03-14-1980
+                            "d/M/yyyy",       // 14/3/1980 (without leading zeros)
+                            "M/d/yyyy"        // 3/14/1980 (without leading zeros)
+                        };
+
+                        if (DateTime.TryParseExact(dateOfBirthStr, dateFormats, 
+                            System.Globalization.CultureInfo.InvariantCulture, 
+                            System.Globalization.DateTimeStyles.None, out var dob))
+                        {
+                            dateOfBirth = dob;
+                        }
+                        else if (DateTime.TryParse(dateOfBirthStr, out dob))
+                        {
+                            // Fallback to default parsing
                             dateOfBirth = dob;
                         }
                         else
@@ -185,7 +205,7 @@ namespace AIDefCom.Service.Services.LecturerService
                             {
                                 Row = row,
                                 Field = "DateOfBirth",
-                                ErrorMessage = "Invalid date format",
+                                ErrorMessage = "Invalid date format. Use dd/MM/yyyy (e.g., 15/01/1980)",
                                 Value = dateOfBirthStr
                             });
                             result.FailureCount++;
@@ -254,6 +274,7 @@ namespace AIDefCom.Service.Services.LecturerService
             using var package = new ExcelPackage();
             var worksheet = package.Workbook.Worksheets.Add("Lecturers");
 
+            // Headers
             worksheet.Cells[1, 1].Value = "UserName";
             worksheet.Cells[1, 2].Value = "Email";
             worksheet.Cells[1, 3].Value = "FullName";
@@ -264,6 +285,7 @@ namespace AIDefCom.Service.Services.LecturerService
             worksheet.Cells[1, 8].Value = "AcademicRank";
             worksheet.Cells[1, 9].Value = "Degree";
 
+            // Format headers
             using (var range = worksheet.Cells[1, 1, 1, 9])
             {
                 range.Style.Font.Bold = true;
@@ -271,15 +293,20 @@ namespace AIDefCom.Service.Services.LecturerService
                 range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
             }
 
+            // Sample data
             worksheet.Cells[2, 1].Value = "lecturer001";
             worksheet.Cells[2, 2].Value = "lecturer001@university.edu.vn";
             worksheet.Cells[2, 3].Value = "Dr. Nguyen Van A";
-            worksheet.Cells[2, 4].Value = "01/15/1980";
+            worksheet.Cells[2, 4].Value = "15/01/1980";  // dd/MM/yyyy format
             worksheet.Cells[2, 5].Value = "Male";
             worksheet.Cells[2, 6].Value = "0123456789";
             worksheet.Cells[2, 7].Value = "Computer Science";
             worksheet.Cells[2, 8].Value = "Associate Professor";
             worksheet.Cells[2, 9].Value = "PhD";
+
+            // Add helpful comments
+            worksheet.Cells[1, 1].AddComment("Username can contain letters, numbers, spaces, and special characters (-, ., _, @, +)", "System");
+            worksheet.Cells[1, 4].AddComment("Format: dd/MM/yyyy (e.g., 15/01/1980)", "System");
 
             worksheet.Cells.AutoFitColumns();
             return package.GetAsByteArray();

@@ -9,6 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.17.0" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.26.0" />
+    <PackageReference Include="EPPlus" Version="7.3.2" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.16" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.16">
       <PrivateAssets>all</PrivateAssets>

@@ -21,6 +21,8 @@ namespace AIDefCom.Service.Services.StudentService
         
         // Import methods
         Task<ImportResultDto> ImportFromExcelAsync(IFormFile file);
+        Task<StudentGroupImportResultDto> ImportStudentsWithGroupsAsync(int semesterId, int majorId, IFormFile file);
         byte[] GenerateExcelTemplate();
+        byte[] GenerateStudentGroupTemplate();
     }
 }

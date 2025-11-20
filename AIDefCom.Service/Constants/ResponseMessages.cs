@@ -9,7 +9,7 @@ namespace AIDefCom.Service.Constants
         
         public const string Success = "Operation completed successfully.";
         public const string Created = "Resource created successfully.";
-        public const string NoContent = "Operation completed successfully.";
+        public const string NoContent = "Operation completed successfully, no content returned.";
         
         // Resource-specific success messages
         public const string Retrieved = "{0} retrieved successfully.";
