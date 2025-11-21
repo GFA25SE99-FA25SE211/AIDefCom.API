@@ -469,5 +469,68 @@ namespace AIDefCom.API.Controllers
                 Data = user
             });
         }
+
+        /// <summary>
+        /// Update user account information (Admin only)
+        /// </summary>
+        [HttpPut("users/{id}")]
+        public async Task<IActionResult> UpdateAccount(string id, [FromBody] UpdateAccountDto request)
+        {
+            if (string.IsNullOrWhiteSpace(request.FullName) || 
+                string.IsNullOrWhiteSpace(request.Email))
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = "FullName and Email are required"
+                });
+            }
+
+            // Validation cho password update
+            if (!string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                if (string.IsNullOrWhiteSpace(request.ConfirmNewPassword))
+                {
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Code = ResponseCodes.BadRequest,
+                        Message = "Confirm new password is required when changing password"
+                    });
+                }
+
+                if (request.NewPassword != request.ConfirmNewPassword)
+                {
+                    return BadRequest(new ApiResponse<object>
+                    {
+                        Code = ResponseCodes.BadRequest,
+                        Message = "New password and confirm password do not match"
+                    });
+                }
+            }
+
+            _logger.LogInformation("Admin updating account for user ID: {Id}", id);
+            
+            try
+            {
+                var updatedUser = await _authService.UpdateAccountAsync(id, request);
+                
+                _logger.LogInformation("Account updated successfully for user ID: {Id}", id);
+                return Ok(new ApiResponse<AppUserResponseDto>
+                {
+                    Code = ResponseCodes.Success,
+                    Message = string.Format(ResponseMessages.Updated, "Account"),
+                    Data = updatedUser
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Account update failed for user ID: {Id}", id);
+                return BadRequest(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = ex.Message
+                });
+            }
+        }
     }
 }
