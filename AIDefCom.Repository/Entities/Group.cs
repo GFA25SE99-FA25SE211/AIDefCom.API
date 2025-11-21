@@ -23,5 +23,8 @@ namespace AIDefCom.Repository.Entities
         public Major? Major { get; set; }
         
         public string ProjectCode { get; set; } = string.Empty;
+        
+        // Soft Delete
+        public bool IsDeleted { get; set; } = false;
     }
 }

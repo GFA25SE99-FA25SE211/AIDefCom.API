@@ -23,9 +23,9 @@ namespace AIDefCom.Service.Services.DefenseSessionService
 
         // ------------------ CRUD ------------------
 
-        public async Task<IEnumerable<DefenseSessionReadDto>> GetAllAsync()
+        public async Task<IEnumerable<DefenseSessionReadDto>> GetAllAsync(bool includeDeleted = false)
         {
-            var list = await _uow.DefenseSessions.GetAllAsync();
+            var list = await _uow.DefenseSessions.GetAllAsync(includeDeleted);
             return _mapper.Map<IEnumerable<DefenseSessionReadDto>>(list);
         }
 
@@ -75,15 +75,29 @@ namespace AIDefCom.Service.Services.DefenseSessionService
 
         public async Task<bool> DeleteAsync(int id)
         {
-            var entity = await _uow.DefenseSessions.GetByIdAsync(id);
-            if (entity == null) return false;
+            return await SoftDeleteAsync(id);
+        }
 
-            await _uow.DefenseSessions.DeleteAsync(id);
+        public async Task<bool> SoftDeleteAsync(int id)
+        {
+            var existing = await _uow.DefenseSessions.GetByIdAsync(id);
+            if (existing == null) return false;
+
+            await _uow.DefenseSessions.SoftDeleteAsync(id);
             await _uow.SaveChangesAsync();
             return true;
         }
 
-        
+        public async Task<bool> RestoreAsync(int id)
+        {
+            var existing = await _uow.DefenseSessions.GetByIdAsync(id, includeDeleted: true);
+            if (existing == null) return false;
+
+            await _uow.DefenseSessions.RestoreAsync(id);
+            await _uow.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<IEnumerable<UserReadDto>> GetUsersByDefenseSessionIdAsync(int defenseSessionId)
         {
             // 1️⃣ Lấy session

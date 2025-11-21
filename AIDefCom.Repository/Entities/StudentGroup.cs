@@ -19,5 +19,8 @@ namespace AIDefCom.Repository.Entities
         public Group? Group { get; set; }
 
         public string? GroupRole { get; set; } // e.g., Leader, Member
+        
+        // Soft Delete
+        public bool IsDeleted { get; set; } = false;
     }
 }

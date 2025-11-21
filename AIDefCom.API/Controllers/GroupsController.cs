@@ -20,10 +20,10 @@ namespace AIDefCom.API.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] bool includeDeleted = false)
         {
-            _logger.LogInformation("Retrieving all groups");
-            var data = await _service.GetAllAsync();
+            _logger.LogInformation("Retrieving all groups (includeDeleted: {IncludeDeleted})", includeDeleted);
+            var data = await _service.GetAllAsync(includeDeleted);
             
             return Ok(new ApiResponse<IEnumerable<GroupReadDto>>
             {
@@ -106,8 +106,8 @@ namespace AIDefCom.API.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            _logger.LogInformation("Deleting group with ID: {Id}", id);
-            var ok = await _service.DeleteAsync(id);
+            _logger.LogInformation("Soft deleting group with ID: {Id}", id);
+            var ok = await _service.SoftDeleteAsync(id);
             
             if (!ok)
             {
@@ -115,8 +115,28 @@ namespace AIDefCom.API.Controllers
                 throw new KeyNotFoundException($"Group with ID {id} not found");
             }
 
-            _logger.LogInformation("Group {Id} deleted successfully", id);
+            _logger.LogInformation("Group {Id} soft deleted successfully", id);
             return NoContent();
+        }
+
+        [HttpPut("{id}/restore")]
+        public async Task<IActionResult> Restore(string id)
+        {
+            _logger.LogInformation("Restoring group with ID: {Id}", id);
+            var ok = await _service.RestoreAsync(id);
+            
+            if (!ok)
+            {
+                _logger.LogWarning("Group with ID {Id} not found for restoration", id);
+                throw new KeyNotFoundException($"Group with ID {id} not found");
+            }
+
+            _logger.LogInformation("Group {Id} restored successfully", id);
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.Success,
+                Message = "Group restored successfully"
+            });
         }
     }
 }

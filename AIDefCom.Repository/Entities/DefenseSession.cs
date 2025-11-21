@@ -25,5 +25,8 @@ namespace AIDefCom.Repository.Entities
         public Council? Council { get; set; }
         
         public DateTime CreatedAt { get; set; }
+        
+        // Soft Delete
+        public bool IsDeleted { get; set; } = false;
     }
 }

@@ -23,10 +23,10 @@ namespace AIDefCom.API.Controllers
         /// Get all defense sessions
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] bool includeDeleted = false)
         {
-            _logger.LogInformation("Retrieving all defense sessions");
-            var data = await _service.GetAllAsync();
+            _logger.LogInformation("Retrieving all defense sessions (includeDeleted: {IncludeDeleted})", includeDeleted);
+            var data = await _service.GetAllAsync(includeDeleted);
             
             return Ok(new ApiResponse<IEnumerable<DefenseSessionReadDto>>
             {
@@ -142,13 +142,13 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Delete a defense session
+        /// Soft delete a defense session
         /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            _logger.LogInformation("Deleting defense session with ID: {Id}", id);
-            var ok = await _service.DeleteAsync(id);
+            _logger.LogInformation("Soft deleting defense session with ID: {Id}", id);
+            var ok = await _service.SoftDeleteAsync(id);
             
             if (!ok)
             {
@@ -156,8 +156,31 @@ namespace AIDefCom.API.Controllers
                 throw new KeyNotFoundException($"Defense session with ID {id} not found");
             }
 
-            _logger.LogInformation("Defense session {Id} deleted successfully", id);
+            _logger.LogInformation("Defense session {Id} soft deleted successfully", id);
             return NoContent();
+        }
+
+        /// <summary>
+        /// Restore a soft-deleted defense session
+        /// </summary>
+        [HttpPut("{id}/restore")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            _logger.LogInformation("Restoring defense session with ID: {Id}", id);
+            var ok = await _service.RestoreAsync(id);
+            
+            if (!ok)
+            {
+                _logger.LogWarning("Defense session with ID {Id} not found for restoration", id);
+                throw new KeyNotFoundException($"Defense session with ID {id} not found");
+            }
+
+            _logger.LogInformation("Defense session {Id} restored successfully", id);
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.Success,
+                Message = "Defense session restored successfully"
+            });
         }
     }
 }

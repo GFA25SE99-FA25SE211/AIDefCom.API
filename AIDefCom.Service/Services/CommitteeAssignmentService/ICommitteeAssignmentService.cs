@@ -9,7 +9,7 @@ namespace AIDefCom.Service.Services.CommitteeAssignmentService
 {
     public interface ICommitteeAssignmentService
     {
-        Task<IEnumerable<CommitteeAssignmentReadDto>> GetAllAsync();
+        Task<IEnumerable<CommitteeAssignmentReadDto>> GetAllAsync(bool includeDeleted = false);
         Task<CommitteeAssignmentReadDto?> GetByIdAsync(string id);
         Task<IEnumerable<CommitteeAssignmentReadDto>> GetByCouncilIdAsync(int councilId);
         Task<IEnumerable<CommitteeAssignmentReadDto>> GetBySessionIdAsync(int sessionId);
@@ -17,5 +17,7 @@ namespace AIDefCom.Service.Services.CommitteeAssignmentService
         Task<string> AddAsync(CommitteeAssignmentCreateDto dto);
         Task<bool> UpdateAsync(string id, CommitteeAssignmentUpdateDto dto);
         Task<bool> DeleteAsync(string id);
+        Task<bool> SoftDeleteAsync(string id);
+        Task<bool> RestoreAsync(string id);
     }
 }

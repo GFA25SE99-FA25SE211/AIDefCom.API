@@ -9,14 +9,16 @@ namespace AIDefCom.Repository.Repositories.CommitteeAssignmentRepository
 {
     public interface ICommitteeAssignmentRepository
     {
-        Task<IEnumerable<CommitteeAssignment>> GetAllAsync();
-        Task<CommitteeAssignment?> GetByIdAsync(string id);
+        Task<IEnumerable<CommitteeAssignment>> GetAllAsync(bool includeDeleted = false);
+        Task<CommitteeAssignment?> GetByIdAsync(string id, bool includeDeleted = false);
         Task<IEnumerable<CommitteeAssignment>> GetByCouncilIdAsync(int councilId);
         Task<IEnumerable<CommitteeAssignment>> GetBySessionIdAsync(int sessionId);
         Task<IEnumerable<CommitteeAssignment>> GetByLecturerIdAsync(string lecturerId);
         Task AddAsync(CommitteeAssignment entity);
         Task UpdateAsync(CommitteeAssignment entity);
         Task DeleteAsync(string id);
+        Task SoftDeleteAsync(string id);
+        Task RestoreAsync(string id);
         IQueryable<CommitteeAssignment> Query();
     }
 }

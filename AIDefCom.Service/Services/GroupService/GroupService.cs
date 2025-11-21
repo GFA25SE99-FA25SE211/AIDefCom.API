@@ -21,9 +21,9 @@ namespace AIDefCom.Service.Services.GroupService
             _mapper = mapper;
         }
 
-        public async Task<IEnumerable<GroupReadDto>> GetAllAsync()
+        public async Task<IEnumerable<GroupReadDto>> GetAllAsync(bool includeDeleted = false)
         {
-            var list = await _uow.Groups.GetAllAsync();
+            var list = await _uow.Groups.GetAllAsync(includeDeleted);
             return _mapper.Map<IEnumerable<GroupReadDto>>(list);
         }
 
@@ -64,10 +64,25 @@ namespace AIDefCom.Service.Services.GroupService
 
         public async Task<bool> DeleteAsync(string id)
         {
-            var entity = await _uow.Groups.GetByIdAsync(id);
-            if (entity == null) return false;
+            return await SoftDeleteAsync(id);
+        }
 
-            await _uow.Groups.DeleteAsync(id);
+        public async Task<bool> SoftDeleteAsync(string id)
+        {
+            var existing = await _uow.Groups.GetByIdAsync(id);
+            if (existing == null) return false;
+
+            await _uow.Groups.SoftDeleteAsync(id);
+            await _uow.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RestoreAsync(string id)
+        {
+            var existing = await _uow.Groups.GetByIdAsync(id, includeDeleted: true);
+            if (existing == null) return false;
+
+            await _uow.Groups.RestoreAsync(id);
             await _uow.SaveChangesAsync();
             return true;
         }

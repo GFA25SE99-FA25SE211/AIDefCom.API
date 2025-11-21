@@ -26,10 +26,10 @@ namespace AIDefCom.API.Controllers
         /// Get all major-rubric links
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] bool includeDeleted = false)
         {
-            _logger.LogInformation("Retrieving all major-rubric links");
-            var data = await _service.GetAllAsync();
+            _logger.LogInformation("Retrieving all major-rubric links (includeDeleted: {IncludeDeleted})", includeDeleted);
+            var data = await _service.GetAllAsync(includeDeleted);
             
             return Ok(new ApiResponse<IEnumerable<MajorRubricReadDto>>
             {
@@ -115,13 +115,13 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Delete a major-rubric link
+        /// Soft delete a major-rubric link
         /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            _logger.LogInformation("Deleting major-rubric link with ID: {Id}", id);
-            var success = await _service.DeleteAsync(id);
+            _logger.LogInformation("Soft deleting major-rubric link with ID: {Id}", id);
+            var success = await _service.SoftDeleteAsync(id);
             
             if (!success)
             {
@@ -129,8 +129,31 @@ namespace AIDefCom.API.Controllers
                 throw new KeyNotFoundException($"Major-rubric link with ID {id} not found");
             }
 
-            _logger.LogInformation("Major-rubric link {Id} deleted successfully", id);
+            _logger.LogInformation("Major-rubric link {Id} soft deleted successfully", id);
             return NoContent();
+        }
+
+        /// <summary>
+        /// Restore a soft-deleted major-rubric link
+        /// </summary>
+        [HttpPut("{id}/restore")]
+        public async Task<IActionResult> Restore(int id)
+        {
+            _logger.LogInformation("Restoring major-rubric link with ID: {Id}", id);
+            var success = await _service.RestoreAsync(id);
+            
+            if (!success)
+            {
+                _logger.LogWarning("Major-rubric link with ID {Id} not found for restoration", id);
+                throw new KeyNotFoundException($"Major-rubric link with ID {id} not found");
+            }
+
+            _logger.LogInformation("Major-rubric link {Id} restored successfully", id);
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.Success,
+                Message = "Major-rubric link restored successfully"
+            });
         }
     }
 }

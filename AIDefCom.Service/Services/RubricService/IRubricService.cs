@@ -9,10 +9,12 @@ namespace AIDefCom.Service.Services.RubricService
 {
     public interface IRubricService
     {
-        Task<IEnumerable<RubricReadDto>> GetAllAsync();
+        Task<IEnumerable<RubricReadDto>> GetAllAsync(bool includeDeleted = false);
         Task<RubricReadDto?> GetByIdAsync(int id);
         Task<int> AddAsync(RubricCreateDto dto);
         Task<bool> UpdateAsync(int id, RubricUpdateDto dto);
         Task<bool> DeleteAsync(int id);
+        Task<bool> SoftDeleteAsync(int id);
+        Task<bool> RestoreAsync(int id);
     }
 }

@@ -19,23 +19,30 @@ namespace AIDefCom.Repository.Repositories.CommitteeAssignmentRepository
             _set = _context.Set<CommitteeAssignment>();
         }
 
-        public async Task<IEnumerable<CommitteeAssignment>> GetAllAsync()
+        public async Task<IEnumerable<CommitteeAssignment>> GetAllAsync(bool includeDeleted = false)
         {
-            return await _set.AsNoTracking()
+            IQueryable<CommitteeAssignment> query = _set.AsNoTracking()
                              .Include(x => x.Lecturer)
                              .Include(x => x.Council)
-                             .Include(x => x.CouncilRole)
-                             .OrderBy(x => x.CouncilRole!.RoleName)
-                             .ToListAsync();
+                             .Include(x => x.CouncilRole);
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.OrderBy(x => x.CouncilRole!.RoleName).ToListAsync();
         }
 
-        public async Task<CommitteeAssignment?> GetByIdAsync(string id)
+        public async Task<CommitteeAssignment?> GetByIdAsync(string id, bool includeDeleted = false)
         {
-            return await _set.AsNoTracking()
+            IQueryable<CommitteeAssignment> query = _set.AsNoTracking()
                              .Include(x => x.Lecturer)
                              .Include(x => x.Council)
-                             .Include(x => x.CouncilRole)
-                             .FirstOrDefaultAsync(x => x.Id == id);
+                             .Include(x => x.CouncilRole);
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.FirstOrDefaultAsync(x => x.Id == id);
         }
 
         public async Task<IEnumerable<CommitteeAssignment>> GetByCouncilIdAsync(int councilId)
@@ -43,7 +50,7 @@ namespace AIDefCom.Repository.Repositories.CommitteeAssignmentRepository
             return await _set.AsNoTracking()
                              .Include(x => x.Lecturer)
                              .Include(x => x.CouncilRole)
-                             .Where(x => x.CouncilId == councilId)
+                             .Where(x => x.CouncilId == councilId && !x.IsDeleted)
                              .ToListAsync();
         }
 
@@ -60,7 +67,7 @@ namespace AIDefCom.Repository.Repositories.CommitteeAssignmentRepository
                              .Include(x => x.Lecturer)
                              .Include(x => x.Council)
                              .Include(x => x.CouncilRole)
-                             .Where(x => councilIds.Contains(x.CouncilId))
+                             .Where(x => councilIds.Contains(x.CouncilId) && !x.IsDeleted)
                              .ToListAsync();
         }
 
@@ -69,7 +76,7 @@ namespace AIDefCom.Repository.Repositories.CommitteeAssignmentRepository
             return await _set.AsNoTracking()
                              .Include(x => x.Council)
                              .Include(x => x.CouncilRole)
-                             .Where(x => x.LecturerId == lecturerId)
+                             .Where(x => x.LecturerId == lecturerId && !x.IsDeleted)
                              .ToListAsync();
         }
 
@@ -119,10 +126,28 @@ namespace AIDefCom.Repository.Repositories.CommitteeAssignmentRepository
 
             _set.Remove(existing);
         }
+
+        public async Task SoftDeleteAsync(string id)
+        {
+            var entity = await _set.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity != null)
+            {
+                entity.IsDeleted = true;
+            }
+        }
+
+        public async Task RestoreAsync(string id)
+        {
+            var entity = await _set.FirstOrDefaultAsync(x => x.Id == id);
+            if (entity != null)
+            {
+                entity.IsDeleted = false;
+            }
+        }
+
         public IQueryable<CommitteeAssignment> Query()
         {
             return _set.AsQueryable();
         }
-
     }
 }
