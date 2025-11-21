@@ -579,5 +579,85 @@ namespace AIDefCom.Service.Services.AuthService
                 RefreshTokenExpiryTime = user.RefreshTokenExpiryTime
             };
         }
+
+        // ------------------ UPDATE ACCOUNT ------------------
+        public async Task<AppUserResponseDto> UpdateAccountAsync(string userId, UpdateAccountDto request)
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+                throw new Exception("User not found.");
+
+            // Kiểm tra email mới có trùng với user khác không
+            if (user.Email != request.Email)
+            {
+                var existingUserWithEmail = await _userManager.FindByEmailAsync(request.Email);
+                if (existingUserWithEmail != null && existingUserWithEmail.Id != userId)
+                    throw new Exception("Email already exists.");
+                
+                user.Email = request.Email;
+                user.NormalizedEmail = request.Email.ToUpper();
+                user.UserName = request.Email;
+                user.NormalizedUserName = request.Email.ToUpper();
+            }
+
+            // Cập nhật thông tin
+            user.FullName = request.FullName;
+            user.PhoneNumber = request.PhoneNumber;
+
+            // Xử lý reset password (Admin có quyền reset password trực tiếp)
+            if (!string.IsNullOrWhiteSpace(request.NewPassword))
+            {
+                // Kiểm tra NewPassword và ConfirmNewPassword khớp nhau
+                if (string.IsNullOrWhiteSpace(request.ConfirmNewPassword))
+                    throw new Exception("Confirm new password is required.");
+
+                if (request.NewPassword != request.ConfirmNewPassword)
+                    throw new Exception("New password and confirm password do not match.");
+
+                // Admin reset password: Xóa password cũ và tạo password mới
+                if (await _userManager.HasPasswordAsync(user))
+                {
+                    // Xóa password cũ
+                    var removePasswordResult = await _userManager.RemovePasswordAsync(user);
+                    if (!removePasswordResult.Succeeded)
+                    {
+                        var errors = string.Join(", ", removePasswordResult.Errors.Select(e => e.Description));
+                        throw new Exception($"Failed to remove old password: {errors}");
+                    }
+                }
+
+                // Thêm password mới
+                var addPasswordResult = await _userManager.AddPasswordAsync(user, request.NewPassword);
+                if (!addPasswordResult.Succeeded)
+                {
+                    var errors = string.Join(", ", addPasswordResult.Errors.Select(e => e.Description));
+                    throw new Exception($"Failed to set new password: {errors}");
+                }
+
+                // Cập nhật flag password generated
+                user.HasGeneratedPassword = false;
+                user.PasswordGeneratedAt = DateTime.UtcNow;
+            }
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+                throw new Exception($"Update account failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+
+            // Trả về thông tin user đã cập nhật
+            var roles = await _userManager.GetRolesAsync(user);
+            return new AppUserResponseDto
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                Email = user.Email ?? string.Empty,
+                PhoneNumber = user.PhoneNumber,
+                EmailConfirmed = user.EmailConfirmed,
+                IsDelete = user.IsDelete,
+                Roles = roles,
+                HasGeneratedPassword = user.HasGeneratedPassword,
+                PasswordGeneratedAt = user.PasswordGeneratedAt,
+                RefreshTokenExpiryTime = user.RefreshTokenExpiryTime
+            };
+        }
     }
 }
