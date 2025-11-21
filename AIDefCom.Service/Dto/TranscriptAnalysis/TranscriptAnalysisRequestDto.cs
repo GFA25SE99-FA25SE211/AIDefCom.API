@@ -4,8 +4,10 @@ namespace AIDefCom.Service.Dto.TranscriptAnalysis
 {
     public class TranscriptAnalysisRequestDto
     {
-        [Required(ErrorMessage = "Transcript text is required.")]
-        public string Transcript { get; set; } = string.Empty;
+        /// <summary>
+        /// ID c?a Defense Session - dùng ?? l?y transcript t? Redis cache
+        /// </summary>
+        [Required(ErrorMessage = "Defense Session ID is required.")]
         public int DefenseSessionId { get; set; }
     }
 }

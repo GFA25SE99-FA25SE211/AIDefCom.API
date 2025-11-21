@@ -34,15 +34,29 @@ using AIDefCom.Service.Services.SemesterService;
 using AIDefCom.Service.Services.StudentService;
 using AIDefCom.Service.Services.TranscriptService;
 using AIDefCom.Service.Services.TranscriptAnalysisService;
+using AIDefCom.Service.Services.RedisCache;
 using Microsoft.Extensions.DependencyInjection;
 using AIDefCom.Service.Services.RecordingService;
+using StackExchange.Redis;
+using Microsoft.Extensions.Configuration;
 
 namespace AIDefCom.API
 {
     public static class DependencyInjection
     {
-        public static IServiceCollection AddProjectServices(this IServiceCollection services)
+        public static IServiceCollection AddProjectServices(this IServiceCollection services, IConfiguration configuration)
         {
+            // Redis Configuration
+            var redisConfig = configuration.GetSection("Redis");
+            var redisConnectionString = $"{redisConfig["Host"]}:{redisConfig["Port"]},password={redisConfig["Password"]},ssl={redisConfig.GetValue<bool>("Ssl")},abortConnect=False";
+            
+            services.AddSingleton<IConnectionMultiplexer>(sp =>
+            {
+                return ConnectionMultiplexer.Connect(redisConnectionString);
+            });
+            
+            services.AddScoped<IRedisCache, RedisCache>();
+
             // Repositories
             services.AddScoped<IAppUserRepository, AppUserRepository>();
             services.AddScoped<ILecturerRepository, LecturerRepository>();

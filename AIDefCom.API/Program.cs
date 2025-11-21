@@ -158,7 +158,7 @@ namespace AIDefCom.API
 
             // Repo + UoW + Services
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-            builder.Services.AddProjectServices();
+            builder.Services.AddProjectServices(builder.Configuration);
 
             // ---------- Build ----------
             var app = builder.Build();
