@@ -1,5 +1,6 @@
 using AIDefCom.Repository.UnitOfWork;
 using AIDefCom.Service.Dto.TranscriptAnalysis;
+using AIDefCom.Service.Services.RedisCache;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System;
@@ -20,17 +21,20 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
         private readonly IConfiguration _config;
         private readonly ILogger<TranscriptAnalysisService> _logger;
         private readonly IUnitOfWork _uow;
+        private readonly IRedisCache _redisCache;
 
         public TranscriptAnalysisService(
             HttpClient httpClient,
             IConfiguration config,
             ILogger<TranscriptAnalysisService> logger,
-            IUnitOfWork uow)
+            IUnitOfWork uow,
+            IRedisCache redisCache)
         {
             _httpClient = httpClient;
             _config = config;
             _logger = logger;
             _uow = uow;
+            _redisCache = redisCache;
         }
 
         public async Task<TranscriptAnalysisResponseDto> AnalyzeTranscriptAsync(TranscriptAnalysisRequestDto request)
@@ -41,24 +45,36 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
                 if (string.IsNullOrEmpty(token))
                     throw new InvalidOperationException("AI API token is missing. Please configure 'AI:OpenRouterToken' in appsettings.json.");
 
-                // ?? B1: L?y bu?i b?o v?
+                // ?? B1: L?y transcript t? Redis cache
+                var transcriptKey = $"partial_transcript:{request.DefenseSessionId}";
+                _logger.LogInformation("?? Fetching transcript from Redis with key: {Key}", transcriptKey);
+                
+                var transcript = await _redisCache.GetAsync(transcriptKey);
+                if (string.IsNullOrWhiteSpace(transcript))
+                {
+                    throw new Exception($"Transcript not found in Redis cache for session ID: {request.DefenseSessionId}");
+                }
+
+                _logger.LogInformation("? Retrieved transcript from Redis: {Length} characters", transcript.Length);
+
+                // ?? B2: L?y bu?i b?o v?
                 var defense = await _uow.DefenseSessions.GetByIdAsync(request.DefenseSessionId);
                 if (defense == null)
                     throw new Exception("Defense session not found.");
 
-                // ?? B2: L?y h?i ??ng
+                // ?? B3: L?y h?i ??ng
                 var council = await _uow.Councils.GetByIdAsync(defense.CouncilId);
                 if (council == null)
                     throw new Exception("Council not found.");
 
-                // ?? B3: L?y rubric th?t c?a ngành
+                // ?? B4: L?y rubric th?t c?a ngành
                 var rubrics = await _uow.MajorRubrics.GetRubricsByMajorIdAsync(council.MajorId);
                 var rubricNames = rubrics.Select(r => r.RubricName).ToList();
 
-                // ?? B4: T?o prompt ??n gi?n hóa
-                var prompt = BuildSimplifiedPrompt(request.Transcript, rubricNames);
+                // ?? B5: T?o prompt ??n gi?n hóa
+                var prompt = BuildSimplifiedPrompt(transcript, rubricNames);
 
-                // ?? B5: Chu?n b? HttpClient
+                // ?? B6: Chu?n b? HttpClient
                 _httpClient.DefaultRequestHeaders.Clear();
                 _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
                 _httpClient.DefaultRequestHeaders.Add("HTTP-Referer", "https://openrouter.ai/");
@@ -67,10 +83,10 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
                 // ?? Ch?n model m?nh h?n
                 var model = _config["AI:Model"] ?? "gpt-4o-mini";
 
-                // ? Gi?i h?n ?? dài transcript
-                var trimmedTranscript = request.Transcript.Length > 5000
-                    ? request.Transcript.Substring(0, 5000)
-                    : request.Transcript;
+                // ?? Gi?i h?n ?? dài transcript
+                var trimmedTranscript = transcript.Length > 5000
+                    ? transcript.Substring(0, 5000)
+                    : transcript;
 
                 var payload = new
                 {
@@ -105,7 +121,7 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "?? Error analyzing transcript with AI");
+                _logger.LogError(ex, "? Error analyzing transcript with AI");
                 throw;
             }
         }
@@ -130,7 +146,7 @@ Tr? v? k?t qu? d??i d?ng JSON h?p l? theo m?u:
   ""lecturerFeedbacks"": [
     {{
       ""lecturer"": ""Tên gi?ng viên ho?c vai trò"",
-      ""mainComments"": ""Nh?n xét t?ng quát"",
+      ""mainComments"": ""Nhân xét t?ng quát"",
       ""positivePoints"": [""Ít nh?t 2 ?i?m m?nh""],
       ""improvementPoints"": [""Ít nh?t 2 ?i?m c?n c?i thi?n""],
       ""rubricScores"": {{
