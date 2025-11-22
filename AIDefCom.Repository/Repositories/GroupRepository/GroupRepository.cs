@@ -43,6 +43,18 @@ namespace AIDefCom.Repository.Repositories.GroupRepository
             return await query.FirstOrDefaultAsync(g => g.Id == id);
         }
 
+        public async Task<Group?> GetByProjectCodeAsync(string projectCode, bool includeDeleted = false)
+        {
+            IQueryable<Group> query = _set.AsNoTracking()
+                             .Include(g => g.Semester)
+                             .Include(g => g.Major);
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.FirstOrDefaultAsync(g => g.ProjectCode == projectCode);
+        }
+
         public async Task<IEnumerable<Group>> GetBySemesterIdAsync(int semesterId, bool includeDeleted = false)
         {
             IQueryable<Group> query = _set.AsNoTracking()

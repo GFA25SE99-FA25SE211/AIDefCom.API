@@ -2,6 +2,7 @@
 using AIDefCom.Repository.Repositories.AppUserRepository;
 using AIDefCom.Repository.Repositories.CommitteeAssignmentRepository;
 using AIDefCom.Repository.Repositories.CouncilRepository;
+using AIDefCom.Repository.Repositories.CouncilRoleRepository;
 using AIDefCom.Repository.Repositories.DefenseSessionRepository;
 using AIDefCom.Repository.Repositories.GroupRepository;
 using AIDefCom.Repository.Repositories.LecturerRepository;
@@ -16,6 +17,7 @@ using AIDefCom.Repository.Repositories.StudentRepository;
 using AIDefCom.Repository.Repositories.RecordingRepository;
 using AIDefCom.Repository.Repositories.TranscriptRepository;
 using AIDefCom.Repository.Repositories.StudentGroupRepository;
+using AIDefCom.Repository.Repositories.ScoreRepository;
 using AIDefCom.Repository.UnitOfWork;
 using AIDefCom.Service.Services.AuthService;
 using AIDefCom.Service.Services.CommitteeAssignmentService;
@@ -34,6 +36,7 @@ using AIDefCom.Service.Services.SemesterService;
 using AIDefCom.Service.Services.StudentService;
 using AIDefCom.Service.Services.TranscriptService;
 using AIDefCom.Service.Services.TranscriptAnalysisService;
+using AIDefCom.Service.Services.ScoreService;
 using AIDefCom.Service.Services.RedisCache;
 using Microsoft.Extensions.DependencyInjection;
 using AIDefCom.Service.Services.RecordingService;
@@ -70,11 +73,13 @@ namespace AIDefCom.API
             services.AddScoped<IDefenseSessionRepository, DefenseSessionRepository>();
             services.AddScoped<IMemberNoteRepository, MemberNoteRepository>();
             services.AddScoped<ICouncilRepository, CouncilRepository>();
+            services.AddScoped<ICouncilRoleRepository, CouncilRoleRepository>();
             services.AddScoped<IStudentGroupRepository, StudentGroupRepository>();
             services.AddScoped<ICommitteeAssignmentRepository, CommitteeAssignmentRepository>();
             services.AddScoped<IProjectTaskRepository, ProjectTaskRepository>();
             services.AddScoped<IRecordingRepository, RecordingRepository>();
             services.AddScoped<ITranscriptRepository, TranscriptRepository>();
+            services.AddScoped<IScoreRepository, ScoreRepository>();
 
             // Unit of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -102,6 +107,7 @@ namespace AIDefCom.API
             services.AddScoped<IRecordingService, RecordingService>();
             services.AddScoped<ITranscriptService, TranscriptService>();
             services.AddScoped<ITranscriptAnalysisService, TranscriptAnalysisService>();
+            services.AddScoped<IScoreService, ScoreService>();
 
             return services;
         }

@@ -1,4 +1,6 @@
 ﻿using AIDefCom.Service.Dto.Council;
+using AIDefCom.Service.Dto.Import;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,5 +17,9 @@ namespace AIDefCom.Service.Services.CouncilService
         Task<bool> UpdateAsync(int id, CouncilUpdateDto dto);
         Task<bool> SoftDeleteAsync(int id);
         Task<bool> RestoreAsync(int id);
+        
+        // Import methods
+        Task<CouncilCommitteeImportResultDto> ImportCouncilsWithCommitteesAsync(int majorId, IFormFile file);
+        byte[] GenerateCouncilCommitteeTemplate();
     }
 }

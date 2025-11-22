@@ -62,6 +62,17 @@ namespace AIDefCom.Service.Services.GroupService
             return true;
         }
 
+        public async Task<bool> UpdateTotalScoreAsync(string id, GroupTotalScoreUpdateDto dto)
+        {
+            var existing = await _uow.Groups.GetByIdAsync(id);
+            if (existing == null) return false;
+
+            existing.TotalScore = dto.TotalScore;
+            await _uow.Groups.UpdateAsync(existing);
+            await _uow.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<bool> DeleteAsync(string id)
         {
             return await SoftDeleteAsync(id);
