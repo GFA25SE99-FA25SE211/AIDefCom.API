@@ -1,6 +1,7 @@
 ﻿using AIDefCom.Service.Constants;
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.DefenseSession;
+using AIDefCom.Service.Dto.Import;
 using AIDefCom.Service.Services.DefenseSessionService;
 using Microsoft.AspNetCore.Mvc;
 
@@ -181,6 +182,65 @@ namespace AIDefCom.API.Controllers
                 Code = ResponseCodes.Success,
                 Message = "Defense session restored successfully"
             });
+        }
+
+        /// <summary>
+        /// Import defense sessions from Excel file
+        /// </summary>
+        [HttpPost("import")]
+        public async Task<IActionResult> ImportDefenseSessions(IFormFile file)
+        {
+            _logger.LogInformation("Starting defense session import from Excel");
+
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = "File is required",
+                    Data = null
+                });
+            }
+
+            try
+            {
+                var result = await _service.ImportDefenseSessionsAsync(file);
+
+                _logger.LogInformation(
+                    "Defense session import completed. Success: {Success}, Failures: {Failures}",
+                    result.SuccessCount, result.FailureCount);
+
+                return Ok(new ApiResponse<DefenseSessionImportResultDto>
+                {
+                    Code = ResponseCodes.Success,
+                    Message = result.Message,
+                    Data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during defense session import");
+                return BadRequest(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = ex.Message,
+                    Data = null
+                });
+            }
+        }
+
+        /// <summary>
+        /// Download Excel template for defense session import
+        /// </summary>
+        [HttpGet("import/template")]
+        public IActionResult DownloadDefenseSessionTemplate()
+        {
+            _logger.LogInformation("Generating defense session import template");
+
+            var fileBytes = _service.GenerateDefenseSessionTemplate();
+            var fileName = $"DefenseSession_Import_Template_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+
+            return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
         }
     }
 }

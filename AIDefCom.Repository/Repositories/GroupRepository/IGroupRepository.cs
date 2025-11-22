@@ -11,6 +11,7 @@ namespace AIDefCom.Repository.Repositories.GroupRepository
     {
         Task<IEnumerable<Group>> GetAllAsync(bool includeDeleted = false);
         Task<Group?> GetByIdAsync(string id, bool includeDeleted = false);
+        Task<Group?> GetByProjectCodeAsync(string projectCode, bool includeDeleted = false);
         Task<IEnumerable<Group>> GetBySemesterIdAsync(int semesterId, bool includeDeleted = false);
         Task AddAsync(Group group);
         Task UpdateAsync(Group group);

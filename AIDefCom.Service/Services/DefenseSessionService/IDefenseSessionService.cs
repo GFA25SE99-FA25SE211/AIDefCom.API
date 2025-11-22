@@ -1,4 +1,6 @@
 ﻿using AIDefCom.Service.Dto.DefenseSession;
+using AIDefCom.Service.Dto.Import;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,5 +20,9 @@ namespace AIDefCom.Service.Services.DefenseSessionService
         Task<bool> SoftDeleteAsync(int id);
         Task<bool> RestoreAsync(int id);
         Task<IEnumerable<UserReadDto>> GetUsersByDefenseSessionIdAsync(int defenseSessionId);
+        
+        // Import methods
+        Task<DefenseSessionImportResultDto> ImportDefenseSessionsAsync(IFormFile file);
+        byte[] GenerateDefenseSessionTemplate();
     }
 }

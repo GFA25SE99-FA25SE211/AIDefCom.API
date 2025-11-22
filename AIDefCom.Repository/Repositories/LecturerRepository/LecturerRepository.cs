@@ -32,6 +32,12 @@ namespace AIDefCom.Repository.Repositories.LecturerRepository
                              .FirstOrDefaultAsync(l => l.Id == id);
         }
 
+        public async Task<Lecturer?> GetByFullNameAsync(string fullName)
+        {
+            return await _set.AsNoTracking()
+                             .FirstOrDefaultAsync(l => l.FullName == fullName);
+        }
+
         public async Task<IEnumerable<Lecturer>> GetByDepartmentAsync(string department)
         {
             return await _set.AsNoTracking()

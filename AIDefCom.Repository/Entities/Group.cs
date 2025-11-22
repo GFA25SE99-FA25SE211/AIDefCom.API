@@ -24,6 +24,9 @@ namespace AIDefCom.Repository.Entities
         
         public string ProjectCode { get; set; } = string.Empty;
         
+        // Total Score for the group
+        public double? TotalScore { get; set; }
+        
         // Soft Delete
         public bool IsDeleted { get; set; } = false;
     }

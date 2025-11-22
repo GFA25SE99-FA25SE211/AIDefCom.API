@@ -24,6 +24,15 @@ namespace AIDefCom.API.Middlewares
         {
             try
             {
+                // Skip exception handling for Swagger endpoints
+                if (context.Request.Path.StartsWithSegments("/swagger") || 
+                    context.Request.Path.StartsWithSegments("/v1/swagger.json") ||
+                    context.Request.Path.Value?.Contains("swagger", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    await _next(context);
+                    return;
+                }
+
                 await _next(context);
             }
             catch (Exception ex)
