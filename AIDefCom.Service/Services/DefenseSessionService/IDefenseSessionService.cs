@@ -14,6 +14,8 @@ namespace AIDefCom.Service.Services.DefenseSessionService
         Task<IEnumerable<DefenseSessionReadDto>> GetAllAsync(bool includeDeleted = false);
         Task<DefenseSessionReadDto?> GetByIdAsync(int id);
         Task<IEnumerable<DefenseSessionReadDto>> GetByGroupIdAsync(string groupId);
+        Task<IEnumerable<DefenseSessionReadDto>> GetByLecturerIdAsync(string lecturerId);
+        Task<string?> GetLecturerRoleInDefenseSessionAsync(string lecturerId, int defenseSessionId);
         Task<int> AddAsync(DefenseSessionCreateDto dto);
         Task<bool> UpdateAsync(int id, DefenseSessionUpdateDto dto);
         Task<bool> DeleteAsync(int id);
