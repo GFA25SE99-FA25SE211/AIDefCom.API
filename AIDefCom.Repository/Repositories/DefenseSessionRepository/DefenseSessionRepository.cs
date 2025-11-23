@@ -52,6 +52,46 @@ namespace AIDefCom.Repository.Repositories.DefenseSessionRepository
                              .ToListAsync();
         }
 
+        public async Task<IEnumerable<DefenseSession>> GetByLecturerIdAsync(string lecturerId)
+        {
+            // Get all CouncilIds where the lecturer is assigned
+            var councilIds = await _context.CommitteeAssignments
+                .Where(ca => ca.LecturerId == lecturerId && !ca.IsDeleted)
+                .Select(ca => ca.CouncilId)
+                .Distinct()
+                .ToListAsync();
+
+            // Get all defense sessions with those CouncilIds
+            return await _set.AsNoTracking()
+                             .Include(x => x.Group)
+                             .Include(x => x.Council)
+                             .Where(x => councilIds.Contains(x.CouncilId) && !x.IsDeleted)
+                             .OrderByDescending(x => x.DefenseDate)
+                             .ToListAsync();
+        }
+
+        public async Task<string?> GetLecturerRoleInDefenseSessionAsync(string lecturerId, int defenseSessionId)
+        {
+            // Get the defense session to find its CouncilId
+            var defenseSession = await _set.AsNoTracking()
+                .Where(x => x.Id == defenseSessionId && !x.IsDeleted)
+                .FirstOrDefaultAsync();
+
+            if (defenseSession == null)
+                return null;
+
+            // Get the committee assignment for this lecturer in this council
+            var assignment = await _context.CommitteeAssignments
+                .AsNoTracking()
+                .Include(ca => ca.CouncilRole)
+                .Where(ca => ca.LecturerId == lecturerId 
+                          && ca.CouncilId == defenseSession.CouncilId 
+                          && !ca.IsDeleted)
+                .FirstOrDefaultAsync();
+
+            return assignment?.CouncilRole?.RoleName;
+        }
+
         public async Task AddAsync(DefenseSession session)
         {
             await _set.AddAsync(session);

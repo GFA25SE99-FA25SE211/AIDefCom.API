@@ -78,6 +78,54 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
+        /// Get defense sessions by lecturer ID
+        /// </summary>
+        [HttpGet("lecturer/{lecturerId}")]
+        public async Task<IActionResult> GetByLecturerId(string lecturerId)
+        {
+            _logger.LogInformation("Retrieving defense sessions for lecturer ID: {LecturerId}", lecturerId);
+            var data = await _service.GetByLecturerIdAsync(lecturerId);
+            
+            return Ok(new ApiResponse<IEnumerable<DefenseSessionReadDto>>
+            {
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Defense sessions by lecturer"),
+                Data = data
+            });
+        }
+
+        /// <summary>
+        /// Get lecturer's role in a specific defense session
+        /// </summary>
+        [HttpGet("{defenseSessionId}/lecturer/{lecturerId}/role")]
+        public async Task<IActionResult> GetLecturerRoleInDefenseSession(string lecturerId, int defenseSessionId)
+        {
+            _logger.LogInformation("Retrieving role for lecturer {LecturerId} in defense session {DefenseSessionId}", 
+                lecturerId, defenseSessionId);
+            
+            var roleName = await _service.GetLecturerRoleInDefenseSessionAsync(lecturerId, defenseSessionId);
+            
+            if (roleName == null)
+            {
+                _logger.LogWarning("Lecturer {LecturerId} not found in defense session {DefenseSessionId}", 
+                    lecturerId, defenseSessionId);
+                return NotFound(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.NotFound,
+                    Message = "Lecturer not found in this defense session or defense session does not exist",
+                    Data = null
+                });
+            }
+
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.Success,
+                Message = "Lecturer role retrieved successfully",
+                Data = new { LecturerId = lecturerId, DefenseSessionId = defenseSessionId, RoleName = roleName }
+            });
+        }
+
+        /// <summary>
         /// Get users by defense session ID
         /// </summary>
         [HttpGet("{id}/users")]

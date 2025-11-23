@@ -48,6 +48,17 @@ namespace AIDefCom.Service.Services.DefenseSessionService
             return _mapper.Map<IEnumerable<DefenseSessionReadDto>>(list);
         }
 
+        public async Task<IEnumerable<DefenseSessionReadDto>> GetByLecturerIdAsync(string lecturerId)
+        {
+            var list = await _uow.DefenseSessions.GetByLecturerIdAsync(lecturerId);
+            return _mapper.Map<IEnumerable<DefenseSessionReadDto>>(list);
+        }
+
+        public async Task<string?> GetLecturerRoleInDefenseSessionAsync(string lecturerId, int defenseSessionId)
+        {
+            return await _uow.DefenseSessions.GetLecturerRoleInDefenseSessionAsync(lecturerId, defenseSessionId);
+        }
+
         public async Task<int> AddAsync(DefenseSessionCreateDto dto)
         {
             var council = await _uow.Councils.GetByIdAsync(dto.CouncilId);
