@@ -1,6 +1,7 @@
 ﻿using AIDefCom.Repository.Repositories.AppUserRepository;
 using AIDefCom.Repository.Repositories.CommitteeAssignmentRepository;
 using AIDefCom.Repository.Repositories.CouncilRepository;
+using AIDefCom.Repository.Repositories.CouncilRoleRepository;
 using AIDefCom.Repository.Repositories.DefenseSessionRepository;
 using AIDefCom.Repository.Repositories.GroupRepository;
 using AIDefCom.Repository.Repositories.LecturerRepository;
@@ -15,6 +16,7 @@ using AIDefCom.Repository.Repositories.StudentRepository;
 using AIDefCom.Repository.Repositories.StudentGroupRepository;
 using AIDefCom.Repository.Repositories.RecordingRepository;
 using AIDefCom.Repository.Repositories.TranscriptRepository;
+using AIDefCom.Repository.Repositories.ScoreRepository;
 using System;
 using System.Threading.Tasks;
 
@@ -34,10 +36,12 @@ namespace AIDefCom.Repository.UnitOfWork
         IMajorRubricRepository MajorRubrics { get; }
         IReportRepository Reports { get; }
         IMemberNoteRepository MemberNotes { get; }
+        IScoreRepository Scores { get; }
 
         // ------------------ Defense & Committee ------------------
         IDefenseSessionRepository DefenseSessions { get; }
         ICouncilRepository Councils { get; }
+        ICouncilRoleRepository CouncilRoles { get; }
         ICommitteeAssignmentRepository CommitteeAssignments { get; }
 
         // ------------------ Users & Projects ------------------

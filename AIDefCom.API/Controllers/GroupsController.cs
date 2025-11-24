@@ -103,6 +103,29 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Update total score for a group
+        /// </summary>
+        [HttpPut("{id}/total-score")]
+        public async Task<IActionResult> UpdateTotalScore(string id, [FromBody] GroupTotalScoreUpdateDto dto)
+        {
+            _logger.LogInformation("Updating total score for group with ID: {Id}, Score: {Score}", id, dto.TotalScore);
+            var ok = await _service.UpdateTotalScoreAsync(id, dto);
+            
+            if (!ok)
+            {
+                _logger.LogWarning("Group with ID {Id} not found for total score update", id);
+                throw new KeyNotFoundException($"Group with ID {id} not found");
+            }
+
+            _logger.LogInformation("Group {Id} total score updated successfully to {Score}", id, dto.TotalScore);
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.Success,
+                Message = "Group total score updated successfully"
+            });
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {

@@ -1,6 +1,7 @@
 ﻿using AIDefCom.Repository.Repositories.AppUserRepository;
 using AIDefCom.Repository.Repositories.CommitteeAssignmentRepository;
 using AIDefCom.Repository.Repositories.CouncilRepository;
+using AIDefCom.Repository.Repositories.CouncilRoleRepository;
 using AIDefCom.Repository.Repositories.DefenseSessionRepository;
 using AIDefCom.Repository.Repositories.GroupRepository;
 using AIDefCom.Repository.Repositories.LecturerRepository;
@@ -15,6 +16,7 @@ using AIDefCom.Repository.Repositories.StudentRepository;
 using AIDefCom.Repository.Repositories.StudentGroupRepository;
 using AIDefCom.Repository.Repositories.RecordingRepository;
 using AIDefCom.Repository.Repositories.TranscriptRepository;
+using AIDefCom.Repository.Repositories.ScoreRepository;
 using System;
 using System.Threading.Tasks;
 
@@ -36,10 +38,12 @@ namespace AIDefCom.Repository.UnitOfWork
         public IMajorRubricRepository MajorRubrics { get; }
         public IReportRepository Reports { get; }
         public IMemberNoteRepository MemberNotes { get; }
+        public IScoreRepository Scores { get; }
 
         // ------------------ Defense & Committee ------------------
         public IDefenseSessionRepository DefenseSessions { get; }
         public ICouncilRepository Councils { get; }
+        public ICouncilRoleRepository CouncilRoles { get; }
         public ICommitteeAssignmentRepository CommitteeAssignments { get; }
 
         // ------------------ Users & Projects ------------------
@@ -66,10 +70,12 @@ namespace AIDefCom.Repository.UnitOfWork
             IDefenseSessionRepository defenseSessionRepository,
             IMemberNoteRepository memberNoteRepository,
             ICouncilRepository councilRepository,
+            ICouncilRoleRepository councilRoleRepository,
             ICommitteeAssignmentRepository committeeAssignmentRepository,
             IProjectTaskRepository projectTaskRepository,
             IRecordingRepository recordingRepository,
-            ITranscriptRepository transcriptRepository)
+            ITranscriptRepository transcriptRepository,
+            IScoreRepository scoreRepository)
         {
             _context = context;
 
@@ -85,10 +91,12 @@ namespace AIDefCom.Repository.UnitOfWork
             MajorRubrics = majorRubricRepository;
             Reports = reportRepository;
             MemberNotes = memberNoteRepository;
+            Scores = scoreRepository;
 
             // Defense & Committee
             DefenseSessions = defenseSessionRepository;
             Councils = councilRepository;
+            CouncilRoles = councilRoleRepository;
             CommitteeAssignments = committeeAssignmentRepository;
 
             // Users & Projects

@@ -13,6 +13,7 @@ using AIDefCom.Service.Dto.Rubric;
 using AIDefCom.Service.Dto.Semester;
 using AIDefCom.Service.Dto.Student;
 using AIDefCom.Service.Dto.Transcript;
+using AIDefCom.Service.Dto.Score;
 using AutoMapper;
 
 namespace AIDefCom.API.Mapper
@@ -113,6 +114,14 @@ namespace AIDefCom.API.Mapper
                 .ForMember(dest => dest.FullName, opt => opt.MapFrom(src => src.FullName))
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
                 .ForMember(dest => dest.Role, opt => opt.MapFrom(src => "Student"));
+
+            // Score mappings
+            CreateMap<Score, ScoreReadDto>()
+                .ForMember(dest => dest.RubricName, opt => opt.MapFrom(src => src.Rubric!.RubricName))
+                .ForMember(dest => dest.EvaluatorName, opt => opt.MapFrom(src => src.Evaluator!.FullName))
+                .ForMember(dest => dest.StudentName, opt => opt.MapFrom(src => src.Student!.FullName));
+            CreateMap<ScoreCreateDto, Score>();
+            CreateMap<ScoreUpdateDto, Score>();
         }
     }
 }

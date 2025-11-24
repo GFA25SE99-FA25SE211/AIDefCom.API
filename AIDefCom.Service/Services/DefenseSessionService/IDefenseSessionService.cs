@@ -1,4 +1,6 @@
 ﻿using AIDefCom.Service.Dto.DefenseSession;
+using AIDefCom.Service.Dto.Import;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,11 +14,17 @@ namespace AIDefCom.Service.Services.DefenseSessionService
         Task<IEnumerable<DefenseSessionReadDto>> GetAllAsync(bool includeDeleted = false);
         Task<DefenseSessionReadDto?> GetByIdAsync(int id);
         Task<IEnumerable<DefenseSessionReadDto>> GetByGroupIdAsync(string groupId);
+        Task<IEnumerable<DefenseSessionReadDto>> GetByLecturerIdAsync(string lecturerId);
+        Task<string?> GetLecturerRoleInDefenseSessionAsync(string lecturerId, int defenseSessionId);
         Task<int> AddAsync(DefenseSessionCreateDto dto);
         Task<bool> UpdateAsync(int id, DefenseSessionUpdateDto dto);
         Task<bool> DeleteAsync(int id);
         Task<bool> SoftDeleteAsync(int id);
         Task<bool> RestoreAsync(int id);
         Task<IEnumerable<UserReadDto>> GetUsersByDefenseSessionIdAsync(int defenseSessionId);
+        
+        // Import methods
+        Task<DefenseSessionImportResultDto> ImportDefenseSessionsAsync(IFormFile file);
+        byte[] GenerateDefenseSessionTemplate();
     }
 }
