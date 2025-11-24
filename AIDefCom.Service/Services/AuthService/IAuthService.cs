@@ -31,7 +31,7 @@ namespace AIDefCom.Service.Services.AuthService
 
         Task<TokenResponseDto> GoogleLoginAsync(GoogleUserLoginDTO googleLoginDTO);
 
-        Task<TokenResponseDto> GoogleLoginAsMemberAsync(GoogleUserLoginDTO googleLoginDTO);
+        Task<TokenResponseDto> GoogleLoginAsLecturerAsync(GoogleUserLoginDTO googleLoginDTO);
 
         Task<TokenResponseDto> GoogleSetPasswordAsync(SetPasswordDTO request, string token);
 
