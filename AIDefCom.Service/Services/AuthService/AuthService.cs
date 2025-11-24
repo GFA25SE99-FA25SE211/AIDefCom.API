@@ -409,7 +409,7 @@ namespace AIDefCom.Service.Services.AuthService
             return response;
         }
 
-        public async Task<TokenResponseDto> GoogleLoginAsMemberAsync(GoogleUserLoginDTO googleLoginDTO)
+        public async Task<TokenResponseDto> GoogleLoginAsLecturerAsync(GoogleUserLoginDTO googleLoginDTO)
         {
             var payload = await GoogleJsonWebSignature.ValidateAsync(
                 googleLoginDTO.Token,
@@ -460,8 +460,8 @@ namespace AIDefCom.Service.Services.AuthService
                 }
             }
 
-            // Đảm bảo user có role Member
-            var defaultRole = "Member";
+            // Đảm bảo user có role Lecturer
+            var defaultRole = "Lecturer";
             if (!await _roleManager.RoleExistsAsync(defaultRole))
                 await _roleManager.CreateAsync(new IdentityRole(defaultRole));
             if (!await _userManager.IsInRoleAsync(user, defaultRole))
