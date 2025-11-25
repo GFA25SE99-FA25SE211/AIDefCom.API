@@ -39,10 +39,17 @@ namespace AIDefCom.Service.Services.ReportService
             return _mapper.Map<IEnumerable<ReportReadDto>>(list);
         }
 
+        public async Task<IEnumerable<ReportReadDto>> GetByLecturerIdAsync(string lecturerId)
+        {
+            var list = await _uow.Reports.GetByLecturerIdAsync(lecturerId);
+            return _mapper.Map<IEnumerable<ReportReadDto>>(list);
+        }
+
         public async Task<int> AddAsync(ReportCreateDto dto)
         {
             var entity = _mapper.Map<Report>(dto);
             entity.GeneratedDate = DateTime.UtcNow;
+            entity.Status = "Pending"; // Set default status to Pending
             await _uow.Reports.AddAsync(entity);
             await _uow.SaveChangesAsync();
             return entity.Id;
@@ -67,6 +74,28 @@ namespace AIDefCom.Service.Services.ReportService
             if (entity == null) return false;
 
             await _uow.Reports.DeleteAsync(id);
+            await _uow.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> ApproveAsync(int id)
+        {
+            var entity = await _uow.Reports.GetByIdAsync(id);
+            if (entity == null) return false;
+
+            entity.Status = "Approved";
+            await _uow.Reports.UpdateAsync(entity);
+            await _uow.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<bool> RejectAsync(int id)
+        {
+            var entity = await _uow.Reports.GetByIdAsync(id);
+            if (entity == null) return false;
+
+            entity.Status = "Rejected";
+            await _uow.Reports.UpdateAsync(entity);
             await _uow.SaveChangesAsync();
             return true;
         }

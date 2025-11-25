@@ -67,6 +67,20 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [HttpGet("lecturer/{lecturerId}")]
+        public async Task<IActionResult> GetByLecturerId(string lecturerId)
+        {
+            _logger.LogInformation("Retrieving reports for lecturer ID: {LecturerId}", lecturerId);
+            var data = await _service.GetByLecturerIdAsync(lecturerId);
+            
+            return Ok(new ApiResponse<IEnumerable<ReportReadDto>>
+            {
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Reports for lecturer"),
+                Data = data
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] ReportCreateDto dto)
         {
@@ -117,6 +131,46 @@ namespace AIDefCom.API.Controllers
 
             _logger.LogInformation("Report {Id} deleted successfully", id);
             return NoContent();
+        }
+
+        [HttpPut("{id}/approve")]
+        public async Task<IActionResult> Approve(int id)
+        {
+            _logger.LogInformation("Approving report with ID: {Id}", id);
+            var success = await _service.ApproveAsync(id);
+            
+            if (!success)
+            {
+                _logger.LogWarning("Report with ID {Id} not found for approval", id);
+                throw new KeyNotFoundException($"Report with ID {id} not found");
+            }
+
+            _logger.LogInformation("Report {Id} approved successfully", id);
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.Success,
+                Message = "Report approved successfully"
+            });
+        }
+
+        [HttpPut("{id}/reject")]
+        public async Task<IActionResult> Reject(int id)
+        {
+            _logger.LogInformation("Rejecting report with ID: {Id}", id);
+            var success = await _service.RejectAsync(id);
+            
+            if (!success)
+            {
+                _logger.LogWarning("Report with ID {Id} not found for rejection", id);
+                throw new KeyNotFoundException($"Report with ID {id} not found");
+            }
+
+            _logger.LogInformation("Report {Id} rejected successfully", id);
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.Success,
+                Message = "Report rejected successfully"
+            });
         }
     }
 }
