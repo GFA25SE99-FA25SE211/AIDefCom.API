@@ -41,6 +41,21 @@ namespace AIDefCom.Repository.Repositories.ReportRepository
                              .ToListAsync();
         }
 
+        public async Task<IEnumerable<Report>> GetByLecturerIdAsync(string lecturerId)
+        {
+            return await _set.AsNoTracking()
+                .Include(r => r.Session)
+                    .ThenInclude(s => s!.Council)
+                .Where(r => r.Session != null && 
+                           r.Session.Council != null &&
+                           _context.Set<CommitteeAssignment>()
+                               .Any(ca => ca.LecturerId == lecturerId && 
+                                         ca.CouncilId == r.Session.CouncilId &&
+                                         !ca.IsDeleted))
+                .OrderByDescending(r => r.GeneratedDate)
+                .ToListAsync();
+        }
+
         public async Task AddAsync(Report report)
         {
             await _set.AddAsync(report);

@@ -69,6 +69,14 @@ namespace AIDefCom.Service.Services.DefenseSessionService
             if (group == null)
                 throw new ArgumentException($"Group with id {dto.GroupId} not found.");
 
+            // Validate DefenseDate with Semester
+            var semester = await _uow.Semesters.GetByIdAsync(group.SemesterId);
+            if (semester == null)
+                throw new ArgumentException($"Semester not found for Group {dto.GroupId}.");
+
+            if (dto.DefenseDate.Date < semester.StartDate.Date || dto.DefenseDate.Date > semester.EndDate.Date)
+                throw new ArgumentException($"Defense date must be within semester period ({semester.StartDate:dd/MM/yyyy} - {semester.EndDate:dd/MM/yyyy}).");
+
             var entity = _mapper.Map<DefenseSession>(dto);
             entity.CreatedAt = DateTime.UtcNow;
 
@@ -305,6 +313,34 @@ namespace AIDefCom.Service.Services.DefenseSessionService
                             Field = "Time",
                             ErrorMessage = "Invalid time format. Use format like '17h30-19h00'",
                             Value = timeRange
+                        });
+                        result.FailureCount++;
+                        continue;
+                    }
+
+                    // Validate DefenseDate with Semester
+                    var semester = await _uow.Semesters.GetByIdAsync(group.SemesterId);
+                    if (semester == null)
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "DefenseDate",
+                            ErrorMessage = $"Semester not found for Group {projectCode}",
+                            Value = defenseDate
+                        });
+                        result.FailureCount++;
+                        continue;
+                    }
+
+                    if (parsedDate.Date < semester.StartDate.Date || parsedDate.Date > semester.EndDate.Date)
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "DefenseDate",
+                            ErrorMessage = $"Defense date must be within semester period ({semester.StartDate:dd/MM/yyyy} - {semester.EndDate:dd/MM/yyyy})",
+                            Value = defenseDate
                         });
                         result.FailureCount++;
                         continue;
