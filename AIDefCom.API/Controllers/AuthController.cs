@@ -171,17 +171,17 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Google login as member
+        /// Google login as lecturer
         /// </summary>
-        [HttpPost("login/google/member")]
-        public async Task<IActionResult> GoogleLoginAsMember([FromBody] GoogleUserLoginDTO googleLoginDTO)
+        [HttpPost("login/google/lecturer")]
+        public async Task<IActionResult> GoogleLoginAsLecturer([FromBody] GoogleUserLoginDTO googleLoginDTO)
         {
-            _logger.LogInformation("Google member login attempt");
-            var response = await _authService.GoogleLoginAsMemberAsync(googleLoginDTO);
+            _logger.LogInformation("Google lecturer login attempt");
+            var response = await _authService.GoogleLoginAsLecturerAsync(googleLoginDTO);
 
             if (!string.IsNullOrEmpty(response.TemporaryPassword))
             {
-                _logger.LogInformation("New Google member account created with temporary password");
+                _logger.LogInformation("New Google lecturer account created with temporary password");
                 return Ok(new ApiResponse<object>
                 {
                     Code = ResponseCodes.Created,
@@ -195,11 +195,11 @@ namespace AIDefCom.API.Controllers
                 });
             }
 
-            _logger.LogInformation("Google member login successful");
+            _logger.LogInformation("Google lecturer login successful");
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Google member login successful",
+                Message = "Google lecturer login successful",
                 Data = response
             });
         }
