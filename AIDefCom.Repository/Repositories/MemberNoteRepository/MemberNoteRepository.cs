@@ -23,6 +23,7 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
         {
             return await _set.AsNoTracking()
                              .Include(n => n.CommitteeAssignment)
+                                 .ThenInclude(ca => ca.Lecturer)
                              .Include(n => n.Group)
                              .OrderByDescending(n => n.CreatedAt)
                              .ToListAsync();
@@ -32,6 +33,7 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
         {
             return await _set.AsNoTracking()
                              .Include(n => n.CommitteeAssignment)
+                                 .ThenInclude(ca => ca.Lecturer)
                              .Include(n => n.Group)
                              .FirstOrDefaultAsync(n => n.Id == id);
         }
@@ -40,6 +42,7 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
         {
             return await _set.AsNoTracking()
                              .Include(n => n.CommitteeAssignment)
+                                 .ThenInclude(ca => ca.Lecturer)
                              .Where(n => n.GroupId == groupId)
                              .OrderByDescending(n => n.CreatedAt)
                              .ToListAsync();
@@ -48,6 +51,8 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
         public async Task<IEnumerable<MemberNote>> GetByUserIdAsync(string userId)
         {
             return await _set.AsNoTracking()
+                             .Include(n => n.CommitteeAssignment)
+                                 .ThenInclude(ca => ca.Lecturer)
                              .Include(n => n.Group)
                              .Where(n => n.CommitteeAssignmentId == userId)
                              .OrderByDescending(n => n.CreatedAt)
