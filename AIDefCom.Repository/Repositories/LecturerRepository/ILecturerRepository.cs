@@ -12,6 +12,7 @@ namespace AIDefCom.Repository.Repositories.LecturerRepository
         Task<IEnumerable<Lecturer>> GetAllAsync();
         Task<Lecturer?> GetByIdAsync(string id);
         Task<Lecturer?> GetByFullNameAsync(string fullName);
+        Task<Lecturer?> GetByEmailAsync(string email);
         Task<IEnumerable<Lecturer>> GetByDepartmentAsync(string department);
         Task<IEnumerable<Lecturer>> GetByAcademicRankAsync(string academicRank);
         Task AddAsync(Lecturer lecturer);
