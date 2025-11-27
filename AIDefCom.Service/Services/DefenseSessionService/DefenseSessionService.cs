@@ -208,6 +208,10 @@ namespace AIDefCom.Service.Services.DefenseSessionService
             int rowCount = worksheet.Dimension?.Rows ?? 0;
             result.TotalRows = rowCount - 1;
 
+            // Dictionary để track defense sessions đã tạo (key: projectCode + date + time)
+            var createdSessions = new Dictionary<string, int>();
+            var createdCouncils = new Dictionary<int, bool>(); // Track councils đã tồn tại
+
             for (int row = 2; row <= rowCount; row++)
             {
                 try
@@ -217,8 +221,11 @@ namespace AIDefCom.Service.Services.DefenseSessionService
                     var timeRange = worksheet.Cells[row, 6].Text?.Trim(); // Giờ
                     var councilIdStr = worksheet.Cells[row, 7].Text?.Trim(); // Hội đồng
                     var location = worksheet.Cells[row, 8].Text?.Trim(); // Địa điểm
+                    var memberRole = worksheet.Cells[row, 9].Text?.Trim(); // Nhiệm vụ TVHĐ
+                    var memberName = worksheet.Cells[row, 10].Text?.Trim(); // Họ và tên TVHĐ
+                    var memberEmail = worksheet.Cells[row, 11].Text?.Trim(); // Email
 
-                    // Validate required fields
+                    // Validate required fields for defense session
                     if (string.IsNullOrEmpty(projectCode) || string.IsNullOrEmpty(defenseDate) || 
                         string.IsNullOrEmpty(timeRange) || string.IsNullOrEmpty(councilIdStr) || 
                         string.IsNullOrEmpty(location))
@@ -229,21 +236,6 @@ namespace AIDefCom.Service.Services.DefenseSessionService
                             Field = "Required",
                             ErrorMessage = "Project Code, Defense Date, Time, Council, and Location are required",
                             Value = ""
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    // Get Group by ProjectCode
-                    var group = await _uow.Groups.GetByProjectCodeAsync(projectCode);
-                    if (group == null)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "ProjectCode",
-                            ErrorMessage = "DEF404: Group not found with this project code",
-                            Value = projectCode
                         });
                         result.FailureCount++;
                         continue;
@@ -263,106 +255,201 @@ namespace AIDefCom.Service.Services.DefenseSessionService
                         continue;
                     }
 
-                    // Check if Council exists
-                    var council = await _uow.Councils.GetByIdAsync(councilId);
-                    if (council == null)
+                    // Check if Council exists (cache result)
+                    if (!createdCouncils.ContainsKey(councilId))
                     {
-                        result.Errors.Add(new ImportErrorDto
+                        var council = await _uow.Councils.GetByIdAsync(councilId);
+                        if (council == null)
                         {
-                            Row = row,
-                            Field = "CouncilId",
-                            ErrorMessage = "DEF404: Council not found",
-                            Value = councilIdStr
-                        });
-                        result.FailureCount++;
-                        continue;
+                            result.Errors.Add(new ImportErrorDto
+                            {
+                                Row = row,
+                                Field = "CouncilId",
+                                ErrorMessage = "DEF404: Council not found",
+                                Value = councilIdStr
+                            });
+                            result.FailureCount++;
+                            continue;
+                        }
+                        createdCouncils[councilId] = true;
                     }
 
-                    // Parse Defense Date
-                    DateTime parsedDate;
-                    var dateFormats = new[]
-                    {
-                        "dd/MM/yyyy", "d/M/yyyy", "MM/dd/yyyy", "M/d/yyyy",
-                        "yyyy-MM-dd", "dd-MM-yyyy"
-                    };
+                    // Create unique key for this defense session
+                    string sessionKey = $"{projectCode}_{defenseDate}_{timeRange}";
 
-                    if (!DateTime.TryParseExact(defenseDate, dateFormats, 
-                        CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate))
+                    // Check if defense session already created for this row group
+                    int defenseSessionId;
+                    if (createdSessions.ContainsKey(sessionKey))
                     {
-                        if (!DateTime.TryParse(defenseDate, out parsedDate))
+                        // Defense session already exists, just get the ID
+                        defenseSessionId = createdSessions[sessionKey];
+                    }
+                    else
+                    {
+                        // Create new defense session
+
+                        // Get Group by ProjectCode
+                        var group = await _uow.Groups.GetByProjectCodeAsync(projectCode);
+                        if (group == null)
+                        {
+                            result.Errors.Add(new ImportErrorDto
+                            {
+                                Row = row,
+                                Field = "ProjectCode",
+                                ErrorMessage = "DEF404: Group not found with this project code",
+                                Value = projectCode
+                            });
+                            result.FailureCount++;
+                            continue;
+                        }
+
+                        // Parse Defense Date
+                        DateTime parsedDate;
+                        var dateFormats = new[]
+                        {
+                            "dd/MM/yyyy", "d/M/yyyy", "MM/dd/yyyy", "M/d/yyyy",
+                            "yyyy-MM-dd", "dd-MM-yyyy"
+                        };
+
+                        if (!DateTime.TryParseExact(defenseDate, dateFormats, 
+                            CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate))
+                        {
+                            if (!DateTime.TryParse(defenseDate, out parsedDate))
+                            {
+                                result.Errors.Add(new ImportErrorDto
+                                {
+                                    Row = row,
+                                    Field = "DefenseDate",
+                                    ErrorMessage = "Invalid date format. Use dd/MM/yyyy (e.g., 10/3/2025)",
+                                    Value = defenseDate
+                                });
+                                result.FailureCount++;
+                                continue;
+                            }
+                        }
+
+                        // Parse Time Range (e.g., "17h30-19h00")
+                        TimeSpan startTime, endTime;
+                        if (!TryParseTimeRange(timeRange, out startTime, out endTime))
+                        {
+                            result.Errors.Add(new ImportErrorDto
+                            {
+                                Row = row,
+                                Field = "Time",
+                                ErrorMessage = "Invalid time format. Use format like '17h30-19h00'",
+                                Value = timeRange
+                            });
+                            result.FailureCount++;
+                            continue;
+                        }
+
+                        // Validate DefenseDate with Semester
+                        var semester = await _uow.Semesters.GetByIdAsync(group.SemesterId);
+                        if (semester == null)
                         {
                             result.Errors.Add(new ImportErrorDto
                             {
                                 Row = row,
                                 Field = "DefenseDate",
-                                ErrorMessage = "Invalid date format. Use dd/MM/yyyy (e.g., 10/3/2025)",
+                                ErrorMessage = $"Semester not found for Group {projectCode}",
                                 Value = defenseDate
                             });
                             result.FailureCount++;
                             continue;
                         }
-                    }
 
-                    // Parse Time Range (e.g., "17h30-19h00")
-                    TimeSpan startTime, endTime;
-                    if (!TryParseTimeRange(timeRange, out startTime, out endTime))
-                    {
-                        result.Errors.Add(new ImportErrorDto
+                        if (parsedDate.Date < semester.StartDate.Date || parsedDate.Date > semester.EndDate.Date)
                         {
-                            Row = row,
-                            Field = "Time",
-                            ErrorMessage = "Invalid time format. Use format like '17h30-19h00'",
-                            Value = timeRange
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
+                            result.Errors.Add(new ImportErrorDto
+                            {
+                                Row = row,
+                                Field = "DefenseDate",
+                                ErrorMessage = $"Defense date must be within semester period ({semester.StartDate:dd/MM/yyyy} - {semester.EndDate:dd/MM/yyyy})",
+                                Value = defenseDate
+                            });
+                            result.FailureCount++;
+                            continue;
+                        }
 
-                    // Validate DefenseDate with Semester
-                    var semester = await _uow.Semesters.GetByIdAsync(group.SemesterId);
-                    if (semester == null)
-                    {
-                        result.Errors.Add(new ImportErrorDto
+                        // Create DefenseSession
+                        var defenseSession = new DefenseSession
                         {
-                            Row = row,
-                            Field = "DefenseDate",
-                            ErrorMessage = $"Semester not found for Group {projectCode}",
-                            Value = defenseDate
-                        });
-                        result.FailureCount++;
-                        continue;
+                            GroupId = group.Id,
+                            Location = location,
+                            DefenseDate = parsedDate,
+                            StartTime = startTime,
+                            EndTime = endTime,
+                            Status = "Scheduled",
+                            CouncilId = councilId,
+                            CreatedAt = DateTime.UtcNow,
+                            IsDeleted = false
+                        };
+
+                        await _uow.DefenseSessions.AddAsync(defenseSession);
+                        await _uow.SaveChangesAsync(); // Save để có ID
+
+                        defenseSessionId = defenseSession.Id;
+                        createdSessions[sessionKey] = defenseSessionId;
+                        result.CreatedDefenseSessionIds.Add(defenseSessionId);
                     }
 
-                    if (parsedDate.Date < semester.StartDate.Date || parsedDate.Date > semester.EndDate.Date)
+                    // Process committee member if provided
+                    if (!string.IsNullOrEmpty(memberEmail) && !string.IsNullOrEmpty(memberRole))
                     {
-                        result.Errors.Add(new ImportErrorDto
+                        // Find lecturer by email
+                        var lecturer = await _uow.Lecturers.GetByEmailAsync(memberEmail);
+                        if (lecturer == null)
                         {
-                            Row = row,
-                            Field = "DefenseDate",
-                            ErrorMessage = $"Defense date must be within semester period ({semester.StartDate:dd/MM/yyyy} - {semester.EndDate:dd/MM/yyyy})",
-                            Value = defenseDate
-                        });
-                        result.FailureCount++;
-                        continue;
+                            result.Errors.Add(new ImportErrorDto
+                            {
+                                Row = row,
+                                Field = "Email",
+                                ErrorMessage = $"Lecturer not found with email: {memberEmail}",
+                                Value = memberEmail
+                            });
+                            // Don't fail the row, just skip member assignment
+                        }
+                        else
+                        {
+                            // Find CouncilRole by role name
+                            var councilRole = await _uow.CouncilRoles.GetByRoleNameAsync(memberRole);
+                            if (councilRole == null)
+                            {
+                                result.Errors.Add(new ImportErrorDto
+                                {
+                                    Row = row,
+                                    Field = "MemberRole",
+                                    ErrorMessage = $"Council role not found: {memberRole}",
+                                    Value = memberRole
+                                });
+                            }
+                            else
+                            {
+                                // Check if this lecturer already assigned to this council
+                                var existingAssignment = await _uow.CommitteeAssignments.Query()
+                                    .FirstOrDefaultAsync(ca => ca.LecturerId == lecturer.Id && 
+                                                              ca.CouncilId == councilId &&
+                                                              !ca.IsDeleted);
+
+                                if (existingAssignment == null)
+                                {
+                                    // Create committee assignment
+                                    var assignment = new CommitteeAssignment
+                                    {
+                                        Id = Guid.NewGuid().ToString(),
+                                        LecturerId = lecturer.Id,
+                                        CouncilId = councilId,
+                                        CouncilRoleId = councilRole.Id,
+                                        IsDeleted = false
+                                    };
+
+                                    await _uow.CommitteeAssignments.AddAsync(assignment);
+                                }
+                            }
+                        }
                     }
 
-                    // Create DefenseSession
-                    var defenseSession = new DefenseSession
-                    {
-                        GroupId = group.Id,
-                        Location = location,
-                        DefenseDate = parsedDate,
-                        StartTime = startTime,
-                        EndTime = endTime,
-                        Status = "Scheduled",
-                        CouncilId = councilId,
-                        CreatedAt = DateTime.UtcNow,
-                        IsDeleted = false
-                    };
-
-                    await _uow.DefenseSessions.AddAsync(defenseSession);
                     result.SuccessCount++;
-                    result.CreatedDefenseSessionIds.Add(defenseSession.Id);
                 }
                 catch (Exception ex)
                 {
@@ -377,10 +464,10 @@ namespace AIDefCom.Service.Services.DefenseSessionService
                 }
             }
 
-            // Save all changes
+            // Save all committee assignments
             await _uow.SaveChangesAsync();
 
-            result.Message = $"Import completed. {result.SuccessCount} defense sessions created successfully, {result.FailureCount} failed.";
+            result.Message = $"Import completed. {result.CreatedDefenseSessionIds.Count} defense sessions created successfully with committee members. Total rows processed: {result.SuccessCount}, {result.FailureCount} failed.";
             return result;
         }
 
