@@ -137,7 +137,11 @@ namespace AIDefCom.API.Controllers
             }
 
             _logger.LogInformation("Semester {Id} soft deleted successfully", id);
-            return NoContent();
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.NoContent,
+                Message = string.Format(ResponseMessages.SoftDeleted, "Semester")
+            });
         }
 
         /// <summary>
@@ -159,7 +163,7 @@ namespace AIDefCom.API.Controllers
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Semester restored successfully"
+                Message = string.Format(ResponseMessages.Restored, "Semester")
             });
         }
     }

@@ -24,7 +24,6 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving all rubrics (includeDeleted: {IncludeDeleted})", includeDeleted);
             var rubrics = await _rubricService.GetAllAsync(includeDeleted);
-            
             return Ok(new ApiResponse<IEnumerable<RubricReadDto>>
             {
                 Code = ResponseCodes.Success,
@@ -38,13 +37,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving rubric with ID: {Id}", id);
             var rubric = await _rubricService.GetByIdAsync(id);
-            
             if (rubric == null)
             {
                 _logger.LogWarning("Rubric with ID {Id} not found", id);
                 throw new KeyNotFoundException($"Rubric with ID {id} not found");
             }
-
             return Ok(new ApiResponse<RubricReadDto>
             {
                 Code = ResponseCodes.Success,
@@ -60,7 +57,6 @@ namespace AIDefCom.API.Controllers
             var id = await _rubricService.AddAsync(request);
             var createdRubric = await _rubricService.GetByIdAsync(id);
             _logger.LogInformation("Rubric created with ID: {Id}", id);
-
             return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<RubricReadDto>
             {
                 Code = ResponseCodes.Created,
@@ -74,14 +70,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Updating rubric with ID: {Id}", id);
             var success = await _rubricService.UpdateAsync(id, request);
-            
             if (!success)
             {
                 _logger.LogWarning("Rubric with ID {Id} not found for update", id);
                 throw new KeyNotFoundException($"Rubric with ID {id} not found");
             }
-
-            _logger.LogInformation("Rubric {Id} updated successfully", id);
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
@@ -94,15 +87,16 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Soft deleting rubric with ID: {Id}", id);
             var success = await _rubricService.SoftDeleteAsync(id);
-            
             if (!success)
             {
                 _logger.LogWarning("Rubric with ID {Id} not found for deletion", id);
                 throw new KeyNotFoundException($"Rubric with ID {id} not found");
             }
-
-            _logger.LogInformation("Rubric {Id} soft deleted successfully", id);
-            return NoContent();
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.NoContent,
+                Message = string.Format(ResponseMessages.SoftDeleted, "Rubric")
+            });
         }
 
         [HttpPut("{id}/restore")]
@@ -110,18 +104,15 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Restoring rubric with ID: {Id}", id);
             var success = await _rubricService.RestoreAsync(id);
-            
             if (!success)
             {
                 _logger.LogWarning("Rubric with ID {Id} not found for restoration", id);
                 throw new KeyNotFoundException($"Rubric with ID {id} not found");
             }
-
-            _logger.LogInformation("Rubric {Id} restored successfully", id);
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Rubric restored successfully"
+                Message = string.Format(ResponseMessages.Restored, "Rubric")
             });
         }
     }

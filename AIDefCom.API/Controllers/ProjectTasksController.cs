@@ -130,7 +130,11 @@ namespace AIDefCom.API.Controllers
             }
 
             _logger.LogInformation("Project task {Id} deleted successfully", id);
-            return NoContent();
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.NoContent,
+                Message = string.Format(ResponseMessages.Deleted, "Project task")
+            });
         }
     }
 }

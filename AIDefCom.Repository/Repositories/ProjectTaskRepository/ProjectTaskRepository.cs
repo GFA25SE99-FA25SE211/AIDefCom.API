@@ -22,8 +22,8 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
         public async Task<IEnumerable<ProjectTask>> GetAllAsync()
         {
             return await _set.AsNoTracking()
-                             .Include(t => t.AssignedBy)
-                             .Include(t => t.AssignedTo)
+                             .Include(t => t.AssignedBy).ThenInclude(a => a.Lecturer)
+                             .Include(t => t.AssignedTo).ThenInclude(a => a.Lecturer)
                              .Include(t => t.Rubric)
                              .OrderByDescending(t => t.Id)
                              .ToListAsync();
@@ -32,8 +32,8 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
         public async Task<ProjectTask?> GetByIdAsync(int id)
         {
             return await _set.AsNoTracking()
-                             .Include(t => t.AssignedBy)
-                             .Include(t => t.AssignedTo)
+                             .Include(t => t.AssignedBy).ThenInclude(a => a.Lecturer)
+                             .Include(t => t.AssignedTo).ThenInclude(a => a.Lecturer)
                              .Include(t => t.Rubric)
                              .FirstOrDefaultAsync(t => t.Id == id);
         }
@@ -41,7 +41,8 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
         public async Task<IEnumerable<ProjectTask>> GetByAssignerAsync(string assignedById)
         {
             return await _set.AsNoTracking()
-                             .Include(t => t.AssignedTo)
+                             .Include(t => t.AssignedBy).ThenInclude(a => a.Lecturer)
+                             .Include(t => t.AssignedTo).ThenInclude(a => a.Lecturer)
                              .Include(t => t.Rubric)
                              .Where(t => t.AssignedById == assignedById)
                              .ToListAsync();
@@ -50,7 +51,8 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
         public async Task<IEnumerable<ProjectTask>> GetByAssigneeAsync(string assignedToId)
         {
             return await _set.AsNoTracking()
-                             .Include(t => t.AssignedBy)
+                             .Include(t => t.AssignedBy).ThenInclude(a => a.Lecturer)
+                             .Include(t => t.AssignedTo).ThenInclude(a => a.Lecturer)
                              .Include(t => t.Rubric)
                              .Where(t => t.AssignedToId == assignedToId)
                              .ToListAsync();

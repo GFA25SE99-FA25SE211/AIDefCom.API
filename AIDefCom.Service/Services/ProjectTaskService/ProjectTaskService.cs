@@ -2,6 +2,7 @@
 using AIDefCom.Repository.UnitOfWork;
 using AIDefCom.Service.Dto.ProjectTask;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -58,10 +59,47 @@ namespace AIDefCom.Service.Services.ProjectTaskService
 
         public async Task<int> AddAsync(ProjectTaskCreateDto dto)
         {
+            // ✅ Validate AssignedById - If dto contains LecturerId, find CommitteeAssignment
+            var assignedByList = await _uow.CommitteeAssignments.GetByLecturerIdAsync(dto.AssignedById);
+            var assignedBy = assignedByList.FirstOrDefault();
+            if (assignedBy == null)
+            {
+                throw new ArgumentException($"No active CommitteeAssignment found for Lecturer ID '{dto.AssignedById}' (AssignedById)");
+            }
+
+            // ✅ Validate AssignedToId - If dto contains LecturerId, find CommitteeAssignment
+            var assignedToList = await _uow.CommitteeAssignments.GetByLecturerIdAsync(dto.AssignedToId);
+            var assignedTo = assignedToList.FirstOrDefault();
+            if (assignedTo == null)
+            {
+                throw new ArgumentException($"No active CommitteeAssignment found for Lecturer ID '{dto.AssignedToId}' (AssignedToId)");
+            }
+
+            // ✅ Validate RubricId exists
+            var rubric = await _uow.Rubrics.GetByIdAsync(dto.RubricId);
+            if (rubric == null)
+            {
+                throw new ArgumentException($"Rubric with ID {dto.RubricId} not found");
+            }
+
+            // Map DTO to Entity
             var entity = _mapper.Map<ProjectTask>(dto);
-            await _uow.ProjectTasks.AddAsync(entity);
-            await _uow.SaveChangesAsync();
-            return entity.Id;
+            
+            // ⚠️ IMPORTANT: Override with CommitteeAssignmentId (not LecturerId)
+            entity.AssignedById = assignedBy.Id;
+            entity.AssignedToId = assignedTo.Id;
+            
+            try
+            {
+                await _uow.ProjectTasks.AddAsync(entity);
+                await _uow.SaveChangesAsync();
+                return entity.Id;
+            }
+            catch (DbUpdateException ex)
+            {
+                var innerMessage = ex.InnerException?.Message ?? ex.Message;
+                throw new InvalidOperationException($"Database error while saving ProjectTask: {innerMessage}", ex);
+            }
         }
 
         public async Task<bool> UpdateAsync(int id, ProjectTaskUpdateDto dto)

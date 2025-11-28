@@ -75,6 +75,14 @@ namespace AIDefCom.API.Middlewares
         {
             return exception switch
             {
+                // Host shutdown / cancellation (server stopping) -> treat as 500 but specific message
+                OperationCanceledException _ when !System.Threading.CancellationToken.None.CanBeCanceled => (
+                    ResponseCodes.InternalError,
+                    ResponseMessages.HostShutdown,
+                    HttpStatusCode.InternalServerError,
+                    LogLevel.Warning
+                ),
+
                 // Validation Exceptions ? DEF400
                 ArgumentNullException ex => (
                     ResponseCodes.BadRequest,

@@ -83,7 +83,7 @@ namespace AIDefCom.API.Controllers
             var id = await _service.AddAsync(dto);
             _logger.LogInformation("Major-rubric link created with ID: {Id}", id);
             
-            return CreatedAtAction(nameof(GetAll), new { id }, new ApiResponse<object>
+            return CreatedAtAction(nameof(GetByMajorId), new { majorId = dto.MajorId }, new ApiResponse<object>
             {
                 Code = ResponseCodes.Created,
                 Message = ResponseMessages.Created,
@@ -130,7 +130,11 @@ namespace AIDefCom.API.Controllers
             }
 
             _logger.LogInformation("Major-rubric link {Id} soft deleted successfully", id);
-            return NoContent();
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.NoContent,
+                Message = string.Format(ResponseMessages.SoftDeleted, "Major-rubric link")
+            });
         }
 
         /// <summary>
@@ -152,7 +156,7 @@ namespace AIDefCom.API.Controllers
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Major-rubric link restored successfully"
+                Message = string.Format(ResponseMessages.Restored, "Major-rubric link")
             });
         }
     }

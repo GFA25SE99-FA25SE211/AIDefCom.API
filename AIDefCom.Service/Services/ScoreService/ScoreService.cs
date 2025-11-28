@@ -1,6 +1,7 @@
 using AIDefCom.Repository.Entities;
 using AIDefCom.Repository.UnitOfWork;
 using AIDefCom.Service.Dto.Score;
+using AIDefCom.Service.Services.ScoreNotification;
 using AutoMapper;
 using System;
 using System.Collections.Generic;
@@ -13,11 +14,13 @@ namespace AIDefCom.Service.Services.ScoreService
     {
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
+        private readonly IScoreNotificationService _notificationService;
 
-        public ScoreService(IUnitOfWork uow, IMapper mapper)
+        public ScoreService(IUnitOfWork uow, IMapper mapper, IScoreNotificationService notificationService)
         {
             _uow = uow;
             _mapper = mapper;
+            _notificationService = notificationService;
         }
 
         public async Task<IEnumerable<ScoreReadDto>> GetAllAsync()
@@ -136,7 +139,7 @@ namespace AIDefCom.Service.Services.ScoreService
             });
         }
 
-        public async Task<int> AddAsync(ScoreCreateDto dto)
+        public async Task<ScoreReadDto> AddAsync(ScoreCreateDto dto)
         {
             // Validate foreign keys
             var rubric = await _uow.Rubrics.GetByIdAsync(dto.RubricId);
@@ -161,19 +164,55 @@ namespace AIDefCom.Service.Services.ScoreService
             await _uow.Scores.AddAsync(score);
             await _uow.SaveChangesAsync();
 
-            return score.Id;
+            var scoreReadDto = new ScoreReadDto
+            {
+                Id = score.Id,
+                Value = score.Value,
+                RubricId = score.RubricId,
+                RubricName = rubric.RubricName,
+                EvaluatorId = score.EvaluatorId,
+                EvaluatorName = evaluator.FullName,
+                StudentId = score.StudentId,
+                StudentName = student.FullName,
+                SessionId = score.SessionId,
+                Comment = score.Comment,
+                CreatedAt = score.CreatedAt
+            };
+
+            // Send real-time notification
+            await _notificationService.NotifyScoreCreated(scoreReadDto);
+
+            return scoreReadDto;
         }
 
-        public async Task<bool> UpdateAsync(int id, ScoreUpdateDto dto)
+        public async Task<ScoreReadDto?> UpdateAsync(int id, ScoreUpdateDto dto)
         {
             var existing = await _uow.Scores.GetByIdAsync(id);
-            if (existing == null) return false;
+            if (existing == null) return null;
 
             _mapper.Map(dto, existing);
             await _uow.Scores.UpdateAsync(existing);
             await _uow.SaveChangesAsync();
 
-            return true;
+            var scoreReadDto = new ScoreReadDto
+            {
+                Id = existing.Id,
+                Value = existing.Value,
+                RubricId = existing.RubricId,
+                RubricName = existing.Rubric?.RubricName,
+                EvaluatorId = existing.EvaluatorId,
+                EvaluatorName = existing.Evaluator?.FullName,
+                StudentId = existing.StudentId,
+                StudentName = existing.Student?.FullName,
+                SessionId = existing.SessionId,
+                Comment = existing.Comment,
+                CreatedAt = existing.CreatedAt
+            };
+
+            // Send real-time notification
+            await _notificationService.NotifyScoreUpdated(scoreReadDto);
+
+            return scoreReadDto;
         }
 
         public async Task<bool> DeleteAsync(int id)
@@ -181,8 +220,26 @@ namespace AIDefCom.Service.Services.ScoreService
             var score = await _uow.Scores.GetByIdAsync(id);
             if (score == null) return false;
 
+            var scoreReadDto = new ScoreReadDto
+            {
+                Id = score.Id,
+                Value = score.Value,
+                RubricId = score.RubricId,
+                RubricName = score.Rubric?.RubricName,
+                EvaluatorId = score.EvaluatorId,
+                EvaluatorName = score.Evaluator?.FullName,
+                StudentId = score.StudentId,
+                StudentName = score.Student?.FullName,
+                SessionId = score.SessionId,
+                Comment = score.Comment,
+                CreatedAt = score.CreatedAt
+            };
+
             await _uow.Scores.DeleteAsync(id);
             await _uow.SaveChangesAsync();
+
+            // Send real-time notification
+            await _notificationService.NotifyScoreDeleted(scoreReadDto);
 
             return true;
         }

@@ -37,6 +37,7 @@ using AIDefCom.Service.Services.StudentService;
 using AIDefCom.Service.Services.TranscriptService;
 using AIDefCom.Service.Services.TranscriptAnalysisService;
 using AIDefCom.Service.Services.ScoreService;
+using AIDefCom.Service.Services.ScoreNotification;
 using AIDefCom.Service.Services.RedisCache;
 using Microsoft.Extensions.DependencyInjection;
 using AIDefCom.Service.Services.RecordingService;
@@ -86,6 +87,9 @@ namespace AIDefCom.API
 
             // HttpClient for AI Services
             services.AddHttpClient<ITranscriptAnalysisService, TranscriptAnalysisService>();
+
+            // SignalR Notification Services
+            services.AddScoped<IScoreNotificationService, Services.ScoreNotificationService>();
 
             // Services
             services.AddScoped<IAuthService, AuthService>();

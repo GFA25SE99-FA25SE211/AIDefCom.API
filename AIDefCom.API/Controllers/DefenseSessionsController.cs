@@ -107,20 +107,13 @@ namespace AIDefCom.API.Controllers
             
             if (roleName == null)
             {
-                _logger.LogWarning("Lecturer {LecturerId} not found in defense session {DefenseSessionId}", 
-                    lecturerId, defenseSessionId);
-                return NotFound(new ApiResponse<object>
-                {
-                    Code = ResponseCodes.NotFound,
-                    Message = "Lecturer not found in this defense session or defense session does not exist",
-                    Data = null
-                });
+                throw new KeyNotFoundException("Lecturer not found in this defense session or defense session does not exist");
             }
 
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Lecturer role retrieved successfully",
+                Message = string.Format(ResponseMessages.Retrieved, "Lecturer role"),
                 Data = new { LecturerId = lecturerId, DefenseSessionId = defenseSessionId, RoleName = roleName }
             });
         }
@@ -136,7 +129,6 @@ namespace AIDefCom.API.Controllers
             
             if (!users.Any())
             {
-                _logger.LogWarning("No users found for defense session ID {Id}", id);
                 throw new KeyNotFoundException($"No users found for defense session {id}");
             }
 
@@ -157,7 +149,6 @@ namespace AIDefCom.API.Controllers
             _logger.LogInformation("Creating new defense session for group {GroupId}", dto.GroupId);
             var id = await _service.AddAsync(dto);
             var created = await _service.GetByIdAsync(id);
-            _logger.LogInformation("Defense session created with ID: {Id}", id);
             
             return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<DefenseSessionReadDto>
             {
@@ -178,11 +169,9 @@ namespace AIDefCom.API.Controllers
             
             if (!ok)
             {
-                _logger.LogWarning("Defense session with ID {Id} not found for update", id);
                 throw new KeyNotFoundException($"Defense session with ID {id} not found");
             }
 
-            _logger.LogInformation("Defense session {Id} updated successfully", id);
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
@@ -201,12 +190,14 @@ namespace AIDefCom.API.Controllers
             
             if (!ok)
             {
-                _logger.LogWarning("Defense session with ID {Id} not found for deletion", id);
                 throw new KeyNotFoundException($"Defense session with ID {id} not found");
             }
 
-            _logger.LogInformation("Defense session {Id} soft deleted successfully", id);
-            return NoContent();
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.NoContent,
+                Message = string.Format(ResponseMessages.SoftDeleted, "Defense session")
+            });
         }
 
         /// <summary>
@@ -220,15 +211,13 @@ namespace AIDefCom.API.Controllers
             
             if (!ok)
             {
-                _logger.LogWarning("Defense session with ID {Id} not found for restoration", id);
                 throw new KeyNotFoundException($"Defense session with ID {id} not found");
             }
 
-            _logger.LogInformation("Defense session {Id} restored successfully", id);
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Defense session restored successfully"
+                Message = string.Format(ResponseMessages.Restored, "Defense session")
             });
         }
 
@@ -242,39 +231,17 @@ namespace AIDefCom.API.Controllers
 
             if (file == null || file.Length == 0)
             {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Code = ResponseCodes.BadRequest,
-                    Message = "File is required",
-                    Data = null
-                });
+                throw new ArgumentNullException(nameof(file), "File is required");
             }
 
-            try
+            var result = await _service.ImportDefenseSessionsAsync(file);
+
+            return Ok(new ApiResponse<DefenseSessionImportResultDto>
             {
-                var result = await _service.ImportDefenseSessionsAsync(file);
-
-                _logger.LogInformation(
-                    "Defense session import completed. Success: {Success}, Failures: {Failures}",
-                    result.SuccessCount, result.FailureCount);
-
-                return Ok(new ApiResponse<DefenseSessionImportResultDto>
-                {
-                    Code = ResponseCodes.Success,
-                    Message = result.Message,
-                    Data = result
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during defense session import");
-                return BadRequest(new ApiResponse<object>
-                {
-                    Code = ResponseCodes.BadRequest,
-                    Message = ex.Message,
-                    Data = null
-                });
-            }
+                Code = ResponseCodes.Success,
+                Message = result.Message,
+                Data = result
+            });
         }
 
         /// <summary>

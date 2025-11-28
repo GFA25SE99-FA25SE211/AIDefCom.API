@@ -117,7 +117,11 @@ namespace AIDefCom.API.Controllers
             }
 
             _logger.LogInformation("Major {Id} soft deleted successfully", id);
-            return NoContent();
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.NoContent,
+                Message = string.Format(ResponseMessages.SoftDeleted, "Major")
+            });
         }
 
         /// <summary>
@@ -139,7 +143,7 @@ namespace AIDefCom.API.Controllers
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Major restored successfully"
+                Message = string.Format(ResponseMessages.Restored, "Major")
             });
         }
     }

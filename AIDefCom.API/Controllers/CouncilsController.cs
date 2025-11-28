@@ -121,7 +121,11 @@ namespace AIDefCom.API.Controllers
             }
 
             _logger.LogInformation("Council {Id} soft deleted successfully", id);
-            return NoContent();
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.NoContent,
+                Message = string.Format(ResponseMessages.SoftDeleted, "Council")
+            });
         }
 
         /// <summary>
@@ -143,7 +147,7 @@ namespace AIDefCom.API.Controllers
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = string.Format(ResponseMessages.Updated, "Council")
+                Message = string.Format(ResponseMessages.Restored, "Council")
             });
         }
 
@@ -157,49 +161,26 @@ namespace AIDefCom.API.Controllers
 
             if (request.File == null || request.File.Length == 0)
             {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Code = ResponseCodes.BadRequest,
-                    Message = "File is required",
-                    Data = null
-                });
+                throw new ArgumentNullException(nameof(request.File), "File is required");
             }
 
             if (request.MajorId <= 0)
             {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Code = ResponseCodes.BadRequest,
-                    Message = "Valid MajorId is required",
-                    Data = null
-                });
+                throw new ArgumentException("Valid MajorId is required");
             }
 
-            try
+            var result = await _service.ImportCouncilsWithCommitteesAsync(request.MajorId, request.File);
+
+            _logger.LogInformation(
+                "Council & committee import completed. Success: {Success}, Failures: {Failures}, Councils: {Councils}, Assignments: {Assignments}",
+                result.SuccessCount, result.FailureCount, result.CreatedCouncilIds.Count, result.CreatedCommitteeAssignmentIds.Count);
+
+            return Ok(new ApiResponse<CouncilCommitteeImportResultDto>
             {
-                var result = await _service.ImportCouncilsWithCommitteesAsync(request.MajorId, request.File);
-
-                _logger.LogInformation(
-                    "Council & committee import completed. Success: {Success}, Failures: {Failures}, Councils: {Councils}, Assignments: {Assignments}",
-                    result.SuccessCount, result.FailureCount, result.CreatedCouncilIds.Count, result.CreatedCommitteeAssignmentIds.Count);
-
-                return Ok(new ApiResponse<CouncilCommitteeImportResultDto>
-                {
-                    Code = ResponseCodes.Success,
-                    Message = result.Message,
-                    Data = result
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during council & committee import");
-                return BadRequest(new ApiResponse<object>
-                {
-                    Code = ResponseCodes.BadRequest,
-                    Message = ex.Message,
-                    Data = null
-                });
-            }
+                Code = ResponseCodes.Success,
+                Message = result.Message,
+                Data = result
+            });
         }
 
         /// <summary>

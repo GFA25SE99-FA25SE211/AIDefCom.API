@@ -12,8 +12,8 @@ namespace AIDefCom.Service.Services.ScoreService
         Task<IEnumerable<ScoreReadDto>> GetByStudentIdAsync(string studentId);
         Task<IEnumerable<ScoreReadDto>> GetByEvaluatorIdAsync(string evaluatorId);
         Task<IEnumerable<ScoreReadDto>> GetByRubricIdAsync(int rubricId);
-        Task<int> AddAsync(ScoreCreateDto dto);
-        Task<bool> UpdateAsync(int id, ScoreUpdateDto dto);
+        Task<ScoreReadDto> AddAsync(ScoreCreateDto dto);
+        Task<ScoreReadDto?> UpdateAsync(int id, ScoreUpdateDto dto);
         Task<bool> DeleteAsync(int id);
     }
 }
