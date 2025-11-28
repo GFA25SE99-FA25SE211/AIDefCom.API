@@ -5,6 +5,7 @@ using AIDefCom.Service.Dto.Import;
 using AIDefCom.Service.Helpers;
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
@@ -35,12 +36,29 @@ namespace AIDefCom.Service.Services.CouncilService
 
         public async Task<CouncilReadDto?> GetByIdAsync(int id)
         {
+            // Validate ID
+            if (id <= 0)
+                throw new ArgumentException("Council ID must be greater than 0", nameof(id));
+
             var entity = await _uow.Councils.GetByIdAsync(id);
             return entity == null ? null : _mapper.Map<CouncilReadDto>(entity);
         }
 
         public async Task<int> AddAsync(CouncilCreateDto dto)
         {
+            // Validate Major exists and not deleted
+            var major = await _uow.Majors.GetByIdAsync(dto.MajorId);
+            if (major == null)
+                throw new KeyNotFoundException($"Major with ID {dto.MajorId} not found or has been deleted");
+
+            // Validate description if provided
+            if (!string.IsNullOrWhiteSpace(dto.Description))
+            {
+                dto.Description = dto.Description.Trim();
+                if (dto.Description.Length < 10)
+                    throw new ArgumentException("Council description must be at least 10 characters if provided");
+            }
+
             var entity = _mapper.Map<Council>(dto);
             entity.CreatedDate = DateTime.UtcNow;
             entity.IsActive = true;
@@ -52,8 +70,53 @@ namespace AIDefCom.Service.Services.CouncilService
 
         public async Task<bool> UpdateAsync(int id, CouncilUpdateDto dto)
         {
+            // Validate ID
+            if (id <= 0)
+                throw new ArgumentException("Council ID must be greater than 0", nameof(id));
+
+            // Check if Council exists
             var existing = await _uow.Councils.GetByIdAsync(id);
-            if (existing == null) return false;
+            if (existing == null) 
+                return false;
+
+            // Validate Major exists and not deleted (if changed)
+            if (existing.MajorId != dto.MajorId)
+            {
+                var major = await _uow.Majors.GetByIdAsync(dto.MajorId);
+                if (major == null)
+                    throw new KeyNotFoundException($"Major with ID {dto.MajorId} not found or has been deleted");
+
+                // Check if council has defense sessions - cannot change major if it has sessions
+                var defenseSessions = await _uow.DefenseSessions.Query()
+                    .Where(ds => ds.CouncilId == id && !ds.IsDeleted)
+                    .ToListAsync();
+                
+                if (defenseSessions.Any())
+                    throw new InvalidOperationException($"Cannot change Major for Council {id} because it has {defenseSessions.Count} defense session(s). Please remove defense sessions first or create a new council.");
+            }
+
+            // Validate description if provided
+            if (!string.IsNullOrWhiteSpace(dto.Description))
+            {
+                dto.Description = dto.Description.Trim();
+                if (dto.Description.Length < 10)
+                    throw new ArgumentException("Council description must be at least 10 characters if provided");
+            }
+
+            // Validate IsActive transition
+            if (existing.IsActive && !dto.IsActive)
+            {
+                // Deactivating council - check for active defense sessions
+                var activeSessions = await _uow.DefenseSessions.Query()
+                    .Where(ds => ds.CouncilId == id && 
+                                !ds.IsDeleted && 
+                                ds.Status != "Completed" && 
+                                ds.Status != "Cancelled")
+                    .ToListAsync();
+
+                if (activeSessions.Any())
+                    throw new InvalidOperationException($"Cannot deactivate Council {id} because it has {activeSessions.Count} active defense session(s). Please complete or cancel these sessions first.");
+            }
 
             _mapper.Map(dto, existing);
             await _uow.Councils.UpdateAsync(existing);
@@ -63,8 +126,29 @@ namespace AIDefCom.Service.Services.CouncilService
 
         public async Task<bool> SoftDeleteAsync(int id)
         {
+            // Validate ID
+            if (id <= 0)
+                throw new ArgumentException("Council ID must be greater than 0", nameof(id));
+
             var existing = await _uow.Councils.GetByIdAsync(id);
-            if (existing == null) return false;
+            if (existing == null) 
+                return false;
+
+            // Check if council has committee assignments
+            var committeeAssignments = await _uow.CommitteeAssignments.Query()
+                .Where(ca => ca.CouncilId == id && !ca.IsDeleted)
+                .ToListAsync();
+
+            if (committeeAssignments.Any())
+                throw new InvalidOperationException($"Cannot delete Council {id} because it has {committeeAssignments.Count} committee assignment(s). Please remove committee members first.");
+
+            // Check if council has defense sessions
+            var defenseSessions = await _uow.DefenseSessions.Query()
+                .Where(ds => ds.CouncilId == id && !ds.IsDeleted)
+                .ToListAsync();
+
+            if (defenseSessions.Any())
+                throw new InvalidOperationException($"Cannot delete Council {id} because it has {defenseSessions.Count} defense session(s). Please remove defense sessions first.");
 
             await _uow.Councils.SoftDeleteAsync(id);
             await _uow.SaveChangesAsync();
@@ -73,8 +157,22 @@ namespace AIDefCom.Service.Services.CouncilService
 
         public async Task<bool> RestoreAsync(int id)
         {
+            // Validate ID
+            if (id <= 0)
+                throw new ArgumentException("Council ID must be greater than 0", nameof(id));
+
             var existing = await _uow.Councils.GetByIdAsync(id);
-            if (existing == null) return false;
+            if (existing == null) 
+                return false;
+
+            // Check if already active
+            if (existing.IsActive)
+                throw new InvalidOperationException($"Council {id} is already active");
+
+            // Validate that Major still exists and is not deleted
+            var major = await _uow.Majors.GetByIdAsync(existing.MajorId);
+            if (major == null)
+                throw new InvalidOperationException($"Cannot restore Council because Major with ID {existing.MajorId} no longer exists or has been deleted");
 
             await _uow.Councils.RestoreAsync(id);
             await _uow.SaveChangesAsync();
@@ -93,9 +191,12 @@ namespace AIDefCom.Service.Services.CouncilService
                 throw new ArgumentException("File must be an Excel file (.xlsx or .xls)");
 
             // Validate majorId
+            if (majorId <= 0)
+                throw new ArgumentException("Major ID must be greater than 0", nameof(majorId));
+
             var major = await _uow.Majors.GetByIdAsync(majorId);
             if (major == null)
-                throw new ArgumentException($"DEF404: Major with ID {majorId} not found");
+                throw new KeyNotFoundException($"Major with ID {majorId} not found or has been deleted");
 
             using var stream = new MemoryStream();
             await file.CopyToAsync(stream);
@@ -188,6 +289,20 @@ namespace AIDefCom.Service.Services.CouncilService
                         }
                         else
                         {
+                            // Validate that existing council belongs to the same major
+                            if (existingCouncil.MajorId != majorId)
+                            {
+                                result.Errors.Add(new ImportErrorDto
+                                {
+                                    Row = row,
+                                    Field = "CouncilId",
+                                    ErrorMessage = $"Council {councilIdFromExcel} already exists but belongs to different Major (ID: {existingCouncil.MajorId})",
+                                    Value = councilIdStr
+                                });
+                                result.FailureCount++;
+                                continue;
+                            }
+
                             actualCouncilId = existingCouncil.Id;
                             createdCouncils[councilIdStr] = actualCouncilId;
                         }
@@ -223,7 +338,27 @@ namespace AIDefCom.Service.Services.CouncilService
                         continue;
                     }
 
-                    // Step 4: Create CommitteeAssignment
+                    // Step 4: Check for duplicate committee assignment
+                    var existingAssignment = await _uow.CommitteeAssignments.Query()
+                        .Where(ca => ca.LecturerId == lecturer.Id && 
+                                    ca.CouncilId == actualCouncilId &&
+                                    !ca.IsDeleted)
+                        .FirstOrDefaultAsync();
+
+                    if (existingAssignment != null)
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "Duplicate",
+                            ErrorMessage = $"Lecturer '{lecturerName}' is already assigned to Council {councilIdStr}",
+                            Value = ""
+                        });
+                        result.FailureCount++;
+                        continue;
+                    }
+
+                    // Step 5: Create CommitteeAssignment
                     var committeeAssignment = new CommitteeAssignment
                     {
                         Id = Guid.NewGuid().ToString(),
