@@ -1,6 +1,7 @@
 using AIDefCom.API.Mapper;
 using AIDefCom.API.Middlewares;
 using AIDefCom.API.Hubs;
+using AIDefCom.API.Swagger;
 using AIDefCom.Repository;
 using AIDefCom.Repository.Entities;
 using AIDefCom.Repository.UnitOfWork;
@@ -36,6 +37,9 @@ namespace AIDefCom.API
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(option =>
             {
+                // Add custom schema filter for better examples
+                option.SchemaFilter<SchemaExampleFilter>();
+
                 option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     In = ParameterLocation.Header,

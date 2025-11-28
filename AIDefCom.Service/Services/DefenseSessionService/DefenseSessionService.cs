@@ -38,47 +38,130 @@ namespace AIDefCom.Service.Services.DefenseSessionService
 
         public async Task<DefenseSessionReadDto?> GetByIdAsync(int id)
         {
+            // Validate ID
+            if (id <= 0)
+                throw new ArgumentException("Defense session ID must be greater than 0", nameof(id));
+
             var entity = await _uow.DefenseSessions.GetByIdAsync(id);
             return entity == null ? null : _mapper.Map<DefenseSessionReadDto>(entity);
         }
 
         public async Task<IEnumerable<DefenseSessionReadDto>> GetByGroupIdAsync(string groupId)
         {
+            // Validate GroupId
+            if (string.IsNullOrWhiteSpace(groupId))
+                throw new ArgumentException("Group ID cannot be null or empty", nameof(groupId));
+
             var list = await _uow.DefenseSessions.GetByGroupIdAsync(groupId);
             return _mapper.Map<IEnumerable<DefenseSessionReadDto>>(list);
         }
 
         public async Task<IEnumerable<DefenseSessionReadDto>> GetByLecturerIdAsync(string lecturerId)
         {
+            // Validate LecturerId
+            if (string.IsNullOrWhiteSpace(lecturerId))
+                throw new ArgumentException("Lecturer ID cannot be null or empty", nameof(lecturerId));
+
             var list = await _uow.DefenseSessions.GetByLecturerIdAsync(lecturerId);
             return _mapper.Map<IEnumerable<DefenseSessionReadDto>>(list);
         }
 
         public async Task<string?> GetLecturerRoleInDefenseSessionAsync(string lecturerId, int defenseSessionId)
         {
+            // Validate parameters
+            if (string.IsNullOrWhiteSpace(lecturerId))
+                throw new ArgumentException("Lecturer ID cannot be null or empty", nameof(lecturerId));
+            
+            if (defenseSessionId <= 0)
+                throw new ArgumentException("Defense session ID must be greater than 0", nameof(defenseSessionId));
+
             return await _uow.DefenseSessions.GetLecturerRoleInDefenseSessionAsync(lecturerId, defenseSessionId);
         }
 
         public async Task<int> AddAsync(DefenseSessionCreateDto dto)
         {
+            // Validate Council exists and is active
             var council = await _uow.Councils.GetByIdAsync(dto.CouncilId);
             if (council == null)
-                throw new ArgumentException($"Council with id {dto.CouncilId} not found.");
+                throw new KeyNotFoundException($"Council with ID {dto.CouncilId} not found or has been deleted");
 
+            if (!council.IsActive)
+                throw new InvalidOperationException($"Council with ID {dto.CouncilId} is not active. Only active councils can conduct defense sessions.");
+
+            // Validate Group exists and not deleted
             var group = await _uow.Groups.GetByIdAsync(dto.GroupId);
             if (group == null)
-                throw new ArgumentException($"Group with id {dto.GroupId} not found.");
+                throw new KeyNotFoundException($"Group with ID {dto.GroupId} not found or has been deleted");
+
+            // Validate Group status
+            if (group.Status == "Cancelled")
+                throw new InvalidOperationException($"Cannot create defense session for cancelled group '{group.ProjectCode}'");
+
+            // Validate Council and Group belong to same Major
+            if (council.MajorId != group.MajorId)
+                throw new InvalidOperationException($"Council (Major ID: {council.MajorId}) and Group (Major ID: {group.MajorId}) must belong to the same Major");
 
             // Validate DefenseDate with Semester
             var semester = await _uow.Semesters.GetByIdAsync(group.SemesterId);
             if (semester == null)
-                throw new ArgumentException($"Semester not found for Group {dto.GroupId}.");
+                throw new KeyNotFoundException($"Semester not found for Group {dto.GroupId}");
 
             if (dto.DefenseDate.Date < semester.StartDate.Date || dto.DefenseDate.Date > semester.EndDate.Date)
-                throw new ArgumentException($"Defense date must be within semester period ({semester.StartDate:dd/MM/yyyy} - {semester.EndDate:dd/MM/yyyy}).");
+                throw new InvalidOperationException($"Defense date must be within semester period ({semester.StartDate:dd/MM/yyyy} - {semester.EndDate:dd/MM/yyyy})");
+
+            // Validate defense date is not in the past (allow today)
+            if (dto.DefenseDate.Date < DateTime.UtcNow.Date)
+                throw new InvalidOperationException("Defense date cannot be in the past");
+
+            // Validate time range
+            if (dto.StartTime >= dto.EndTime)
+                throw new InvalidOperationException("Start time must be before end time");
+
+            // Validate minimum session duration (at least 30 minutes)
+            var duration = dto.EndTime - dto.StartTime;
+            if (duration.TotalMinutes < 30)
+                throw new InvalidOperationException("Defense session must be at least 30 minutes long");
+
+            // Validate maximum session duration (no more than 8 hours)
+            if (duration.TotalHours > 8)
+                throw new InvalidOperationException("Defense session cannot exceed 8 hours");
+
+            // Validate Location
+            if (string.IsNullOrWhiteSpace(dto.Location))
+                throw new ArgumentException("Location cannot be empty");
+
+            dto.Location = dto.Location.Trim();
+            if (dto.Location.Length < 5)
+                throw new ArgumentException("Location must be at least 5 characters");
+
+            // Check for duplicate session for the same group
+            var existingSessions = await _uow.DefenseSessions.GetByGroupIdAsync(dto.GroupId);
+            var hasActiveSession = existingSessions.Any(s => 
+                s.Status != "Completed" && 
+                s.Status != "Cancelled" && 
+                !s.IsDeleted);
+
+            if (hasActiveSession)
+                throw new InvalidOperationException($"Group '{group.ProjectCode}' already has an active defense session. Please complete or cancel the existing session first.");
+
+            // Check for council schedule conflicts
+            var councilSessions = await _uow.DefenseSessions.Query()
+                .Where(s => s.CouncilId == dto.CouncilId && 
+                           s.DefenseDate.Date == dto.DefenseDate.Date &&
+                           !s.IsDeleted &&
+                           s.Status != "Cancelled")
+                .ToListAsync();
+
+            foreach (var session in councilSessions)
+            {
+                // Check if time ranges overlap
+                if (TimeRangesOverlap(dto.StartTime, dto.EndTime, session.StartTime, session.EndTime))
+                    throw new InvalidOperationException($"Council {dto.CouncilId} already has a defense session scheduled at this time ({session.StartTime:hh\\:mm} - {session.EndTime:hh\\:mm})");
+            }
 
             var entity = _mapper.Map<DefenseSession>(dto);
             entity.CreatedAt = DateTime.UtcNow;
+            entity.IsDeleted = false;
 
             await _uow.DefenseSessions.AddAsync(entity);
             await _uow.SaveChangesAsync();
@@ -87,11 +170,96 @@ namespace AIDefCom.Service.Services.DefenseSessionService
 
         public async Task<bool> UpdateAsync(int id, DefenseSessionUpdateDto dto)
         {
-            var existing = await _uow.DefenseSessions.GetByIdAsync(id);
-            if (existing == null) return false;
+            // Validate ID
+            if (id <= 0)
+                throw new ArgumentException("Defense session ID must be greater than 0", nameof(id));
 
+            // Check if DefenseSession exists
+            var existing = await _uow.DefenseSessions.GetByIdAsync(id);
+            if (existing == null) 
+                return false;
+
+            // Cannot update completed or cancelled sessions
+            if (existing.Status == "Completed")
+                throw new InvalidOperationException("Cannot update a completed defense session");
+
+            if (existing.Status == "Cancelled" && dto.Status != "Scheduled")
+                throw new InvalidOperationException("Cancelled defense sessions can only be rescheduled (Status = Scheduled)");
+
+            // Validate Council exists and is active
             var council = await _uow.Councils.GetByIdAsync(dto.CouncilId);
-            if (council == null) return false;
+            if (council == null)
+                throw new KeyNotFoundException($"Council with ID {dto.CouncilId} not found or has been deleted");
+
+            if (!council.IsActive && dto.Status != "Cancelled")
+                throw new InvalidOperationException($"Council with ID {dto.CouncilId} is not active. Cannot assign inactive council to active session.");
+
+            // Validate Group exists and not deleted
+            var group = await _uow.Groups.GetByIdAsync(dto.GroupId);
+            if (group == null)
+                throw new KeyNotFoundException($"Group with ID {dto.GroupId} not found or has been deleted");
+
+            // Validate Council and Group belong to same Major
+            if (council.MajorId != group.MajorId)
+                throw new InvalidOperationException($"Council (Major ID: {council.MajorId}) and Group (Major ID: {group.MajorId}) must belong to the same Major");
+
+            // Validate DefenseDate with Semester
+            var semester = await _uow.Semesters.GetByIdAsync(group.SemesterId);
+            if (semester == null)
+                throw new KeyNotFoundException($"Semester not found for Group {dto.GroupId}");
+
+            if (dto.DefenseDate.Date < semester.StartDate.Date || dto.DefenseDate.Date > semester.EndDate.Date)
+                throw new InvalidOperationException($"Defense date must be within semester period ({semester.StartDate:dd/MM/yyyy} - {semester.EndDate:dd/MM/yyyy})");
+
+            // Allow updating past sessions only if changing to Completed or Cancelled
+            if (dto.DefenseDate.Date < DateTime.UtcNow.Date && 
+                dto.Status != "Completed" && 
+                dto.Status != "Cancelled")
+                throw new InvalidOperationException("Past defense sessions can only be marked as Completed or Cancelled");
+
+            // Validate time range
+            if (dto.StartTime >= dto.EndTime)
+                throw new InvalidOperationException("Start time must be before end time");
+
+            // Validate session duration
+            var duration = dto.EndTime - dto.StartTime;
+            if (duration.TotalMinutes < 30)
+                throw new InvalidOperationException("Defense session must be at least 30 minutes long");
+
+            if (duration.TotalHours > 8)
+                throw new InvalidOperationException("Defense session cannot exceed 8 hours");
+
+            // Validate Location
+            if (string.IsNullOrWhiteSpace(dto.Location))
+                throw new ArgumentException("Location cannot be empty");
+
+            dto.Location = dto.Location.Trim();
+            if (dto.Location.Length < 5)
+                throw new ArgumentException("Location must be at least 5 characters");
+
+            // Validate status transitions
+            ValidateStatusTransition(existing.Status, dto.Status);
+
+            // Check for council schedule conflicts (exclude current session)
+            if (existing.DefenseDate.Date != dto.DefenseDate.Date || 
+                existing.StartTime != dto.StartTime || 
+                existing.EndTime != dto.EndTime ||
+                existing.CouncilId != dto.CouncilId)
+            {
+                var councilSessions = await _uow.DefenseSessions.Query()
+                    .Where(s => s.Id != id &&
+                               s.CouncilId == dto.CouncilId && 
+                               s.DefenseDate.Date == dto.DefenseDate.Date &&
+                               !s.IsDeleted &&
+                               s.Status != "Cancelled")
+                    .ToListAsync();
+
+                foreach (var session in councilSessions)
+                {
+                    if (TimeRangesOverlap(dto.StartTime, dto.EndTime, session.StartTime, session.EndTime))
+                        throw new InvalidOperationException($"Council {dto.CouncilId} already has a defense session scheduled at this time ({session.StartTime:hh\\:mm} - {session.EndTime:hh\\:mm})");
+                }
+            }
 
             _mapper.Map(dto, existing);
             await _uow.DefenseSessions.UpdateAsync(existing);
@@ -106,8 +274,37 @@ namespace AIDefCom.Service.Services.DefenseSessionService
 
         public async Task<bool> SoftDeleteAsync(int id)
         {
+            // Validate ID
+            if (id <= 0)
+                throw new ArgumentException("Defense session ID must be greater than 0", nameof(id));
+
             var existing = await _uow.DefenseSessions.GetByIdAsync(id);
-            if (existing == null) return false;
+            if (existing == null) 
+                return false;
+
+            // Cannot delete completed sessions
+            if (existing.Status == "Completed")
+                throw new InvalidOperationException("Cannot delete a completed defense session. Completed sessions must be preserved for record keeping.");
+
+            // Check if session has scores
+            var scores = await _uow.Scores.Query()
+                .Where(s => s.SessionId == id)
+                .ToListAsync();
+
+            if (scores.Any())
+                throw new InvalidOperationException($"Cannot delete defense session because it has {scores.Count} score(s) recorded. Please remove scores first.");
+
+            // Check if session has transcripts
+            var transcripts = await _uow.Transcripts.GetBySessionIdAsync(id);
+
+            if (transcripts.Any())
+                throw new InvalidOperationException($"Cannot delete defense session because it has {transcripts.Count()} transcript(s). Please remove transcripts first.");
+
+            // Check if session has reports
+            var reports = await _uow.Reports.GetBySessionIdAsync(id);
+
+            if (reports.Any())
+                throw new InvalidOperationException($"Cannot delete defense session because it has {reports.Count()} report(s). Please remove reports first.");
 
             await _uow.DefenseSessions.SoftDeleteAsync(id);
             await _uow.SaveChangesAsync();
@@ -116,8 +313,30 @@ namespace AIDefCom.Service.Services.DefenseSessionService
 
         public async Task<bool> RestoreAsync(int id)
         {
+            // Validate ID
+            if (id <= 0)
+                throw new ArgumentException("Defense session ID must be greater than 0", nameof(id));
+
             var existing = await _uow.DefenseSessions.GetByIdAsync(id, includeDeleted: true);
-            if (existing == null) return false;
+            if (existing == null) 
+                return false;
+
+            // Check if already active
+            if (!existing.IsDeleted)
+                throw new InvalidOperationException($"Defense session {id} is already active");
+
+            // Validate that Group still exists
+            var group = await _uow.Groups.GetByIdAsync(existing.GroupId);
+            if (group == null)
+                throw new InvalidOperationException($"Cannot restore defense session because Group with ID {existing.GroupId} no longer exists or has been deleted");
+
+            // Validate that Council still exists
+            var council = await _uow.Councils.GetByIdAsync(existing.CouncilId);
+            if (council == null)
+                throw new InvalidOperationException($"Cannot restore defense session because Council with ID {existing.CouncilId} no longer exists");
+
+            if (!council.IsActive)
+                throw new InvalidOperationException($"Cannot restore defense session because Council {existing.CouncilId} is no longer active");
 
             await _uow.DefenseSessions.RestoreAsync(id);
             await _uow.SaveChangesAsync();
@@ -126,6 +345,10 @@ namespace AIDefCom.Service.Services.DefenseSessionService
 
         public async Task<IEnumerable<UserReadDto>> GetUsersByDefenseSessionIdAsync(int defenseSessionId)
         {
+            // Validate ID
+            if (defenseSessionId <= 0)
+                throw new ArgumentException("Defense session ID must be greater than 0", nameof(defenseSessionId));
+
             // 1️⃣ Lấy session
             var session = await _uow.DefenseSessions.GetByIdAsync(defenseSessionId);
             if (session == null)
@@ -547,6 +770,39 @@ namespace AIDefCom.Service.Services.DefenseSessionService
             time = time.Replace("h", ":").Replace("H", ":");
 
             return TimeSpan.TryParse(time, out result);
+        }
+
+        /// <summary>
+        /// Validates defense session status transitions
+        /// </summary>
+        private void ValidateStatusTransition(string currentStatus, string newStatus)
+        {
+            // Define valid transitions
+            var validTransitions = new Dictionary<string, string[]>
+            {
+                ["Scheduled"] = new[] { "InProgress", "Postponed", "Cancelled" },
+                ["InProgress"] = new[] { "Completed", "Postponed", "Cancelled" },
+                ["Completed"] = new string[] { }, // Cannot change from Completed
+                ["Cancelled"] = new[] { "Scheduled" }, // Can only reschedule
+                ["Postponed"] = new[] { "Scheduled", "Cancelled" }
+            };
+
+            if (currentStatus == newStatus)
+                return; // No change
+
+            if (!validTransitions.ContainsKey(currentStatus))
+                throw new InvalidOperationException($"Unknown current status: {currentStatus}");
+
+            if (!validTransitions[currentStatus].Contains(newStatus))
+                throw new InvalidOperationException($"Invalid status transition from '{currentStatus}' to '{newStatus}'. Allowed transitions: {string.Join(", ", validTransitions[currentStatus])}");
+        }
+
+        /// <summary>
+        /// Checks if two time ranges overlap
+        /// </summary>
+        private bool TimeRangesOverlap(TimeSpan start1, TimeSpan end1, TimeSpan start2, TimeSpan end2)
+        {
+            return start1 < end2 && end1 > start2;
         }
     }
 }
