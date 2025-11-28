@@ -11,11 +11,16 @@ namespace AIDefCom.Service.Constants
         public const string Created = "Resource created successfully.";
         public const string NoContent = "Operation completed successfully, no content returned.";
         
-        // Resource-specific success messages
+        // Resource-specific success messages (parameterized)
         public const string Retrieved = "{0} retrieved successfully.";
         public const string ListRetrieved = "{0} list retrieved successfully.";
         public const string Updated = "{0} updated successfully.";
         public const string Deleted = "{0} deleted successfully.";
+        public const string Restored = "{0} restored successfully.";
+        public const string Approved = "{0} approved successfully.";
+        public const string Rejected = "{0} rejected successfully.";
+        public const string SoftDeleted = "{0} soft deleted successfully.";
+        public const string TotalScoreUpdated = "{0} total score updated successfully.";
 
         // ==================== CLIENT ERROR MESSAGES (4xx) ====================
         
@@ -48,5 +53,8 @@ namespace AIDefCom.Service.Constants
         public const string DatabaseConstraint = "The operation violates a database constraint.";
         public const string FileNotFound = "The requested file could not be found.";
         public const string StorageError = "A storage error occurred.";
+        
+        // New: host shutdown / crash
+        public const string HostShutdown = "The server is shutting down or has encountered a fatal host error.";
     }
 }

@@ -40,29 +40,25 @@ namespace AIDefCom.API.Controllers
                 string.IsNullOrWhiteSpace(request.FullName) ||
                 string.IsNullOrWhiteSpace(request.PhoneNumber))
             {
-                return BadRequest(new { Message = "All fields (Id, Email, Password, FullName, PhoneNumber) are required" });
+                throw new ArgumentNullException(nameof(request), "All fields (Id, Email, Password, FullName, PhoneNumber) are required");
             }
 
             _logger.LogInformation("Creating new account: {Email} with ID: {Id}", request.Email, request.Id);
+            var user = await _authService.CreateAccountAsync(request);
 
-            try
+            return CreatedAtAction(nameof(GetUserById), new { id = user.Id }, new ApiResponse<object>
             {
-                var user = await _authService.CreateAccountAsync(request);
-
-                return Ok(new
+                Code = ResponseCodes.Created,
+                Message = ResponseMessages.Created,
+                Data = new
                 {
                     user.Id,
                     user.Email,
                     user.EmailConfirmed,
                     user.FullName,
                     user.PhoneNumber
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Account creation failed for email: {Email}", request.Email);
-                return BadRequest(new { Message = ex.Message });
-            }
+                }
+            });
         }
 
         /// <summary>
@@ -81,18 +77,15 @@ namespace AIDefCom.API.Controllers
 
             _logger.LogInformation("Registering new student user: {Email}", request.Email);
             var user = await _authService.RegisterWithRoleAsync(request);
-            
             if (user == null)
             {
-                _logger.LogWarning("Student registration failed for email: {Email}", request.Email);
                 throw new InvalidOperationException("User with this email already exists");
             }
 
-            _logger.LogInformation("Student registered successfully: {Email}", request.Email);
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Created,
-                Message = "User registered successfully with role 'Student'",
+                Message = ResponseMessages.Created,
                 Data = new
                 {
                     user.Id,
@@ -120,18 +113,15 @@ namespace AIDefCom.API.Controllers
 
             _logger.LogInformation("Login attempt for user: {Email}", request.Email);
             var result = await _authService.LoginAsync(request);
-            
             if (result == null)
             {
-                _logger.LogWarning("Login failed for user: {Email}", request.Email);
                 throw new UnauthorizedAccessException("Invalid email or password");
             }
 
-            _logger.LogInformation("User logged in successfully: {Email}", request.Email);
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Login successful",
+                Message = ResponseMessages.Success,
                 Data = result
             });
         }
@@ -147,11 +137,10 @@ namespace AIDefCom.API.Controllers
 
             if (!string.IsNullOrEmpty(response.TemporaryPassword))
             {
-                _logger.LogInformation("New Google account created with temporary password");
                 return Ok(new ApiResponse<object>
                 {
                     Code = ResponseCodes.Created,
-                    Message = "Account created successfully with Google login",
+                    Message = ResponseMessages.Created,
                     Data = new
                     {
                         note = "Below is your one-time password for normal login. Save it securely.",
@@ -161,11 +150,10 @@ namespace AIDefCom.API.Controllers
                 });
             }
 
-            _logger.LogInformation("Google login successful");
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Google login successful",
+                Message = ResponseMessages.Success,
                 Data = response
             });
         }
@@ -181,11 +169,10 @@ namespace AIDefCom.API.Controllers
 
             if (!string.IsNullOrEmpty(response.TemporaryPassword))
             {
-                _logger.LogInformation("New Google lecturer account created with temporary password");
                 return Ok(new ApiResponse<object>
                 {
                     Code = ResponseCodes.Created,
-                    Message = "Account created successfully with Google login",
+                    Message = ResponseMessages.Created,
                     Data = new
                     {
                         note = "Below is your one-time password for normal login. Save it securely.",
@@ -195,11 +182,10 @@ namespace AIDefCom.API.Controllers
                 });
             }
 
-            _logger.LogInformation("Google lecturer login successful");
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Google lecturer login successful",
+                Message = ResponseMessages.Success,
                 Data = response
             });
         }
@@ -219,11 +205,11 @@ namespace AIDefCom.API.Controllers
 
             _logger.LogInformation("Assigning role {Role} to user {Email}", request.Role, request.Email);
             var result = await _authService.AssignRoleToUserAsync(request.Email, request.Role);
-            
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = result
+                Message = ResponseMessages.Success,
+                Data = new { Result = result }
             });
         }
 
@@ -240,11 +226,11 @@ namespace AIDefCom.API.Controllers
 
             _logger.LogInformation("Creating new role: {RoleName}", roleName);
             var result = await _authService.AddRoleAsync(roleName);
-            
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Created,
-                Message = result
+                Message = ResponseMessages.Created,
+                Data = new { Result = result }
             });
         }
 
@@ -268,7 +254,7 @@ namespace AIDefCom.API.Controllers
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Password set successfully",
+                Message = ResponseMessages.Success,
                 Data = response
             });
         }
@@ -290,11 +276,11 @@ namespace AIDefCom.API.Controllers
 
             _logger.LogInformation("User logging out: {Email}", email);
             var result = await _authService.LogoutAsync(email);
-            
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = result
+                Message = ResponseMessages.Success,
+                Data = new { Result = result }
             });
         }
 
@@ -313,6 +299,10 @@ namespace AIDefCom.API.Controllers
             {
                 throw new ArgumentNullException(nameof(request), "All password fields are required");
             }
+            if (request.NewPassword != request.ConfirmNewPassword)
+            {
+                throw new ArgumentException("New password and confirm password do not match");
+            }
 
             var email = User.FindFirst(ClaimTypes.Email)?.Value;
             if (string.IsNullOrEmpty(email))
@@ -322,11 +312,11 @@ namespace AIDefCom.API.Controllers
 
             _logger.LogInformation("Changing password for user: {Email}", email);
             var result = await _authService.ChangePasswordAsync(email, request);
-            
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = result
+                Message = ResponseMessages.Updated,
+                Data = new { Result = result }
             });
         }
 
@@ -345,17 +335,15 @@ namespace AIDefCom.API.Controllers
 
             _logger.LogInformation("Refreshing token for user: {UserId}", request.UserId);
             var result = await _authService.RefreshTokensAsync(request);
-            
             if (result == null)
             {
-                _logger.LogWarning("Invalid refresh token for user: {UserId}", request.UserId);
                 throw new UnauthorizedAccessException("Invalid refresh token");
             }
 
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Token refreshed successfully",
+                Message = ResponseMessages.Success,
                 Data = result
             });
         }
@@ -370,11 +358,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Soft deleting account: {Email}", email);
             var result = await _authService.SoftDeleteAccountAsync(email);
-            
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = result
+                Message = ResponseMessages.Updated,
+                Data = new { Result = result }
             });
         }
 
@@ -386,11 +374,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Restoring account: {Email}", email);
             var result = await _authService.RestoreAccountAsync(email);
-            
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = result
+                Message = ResponseMessages.Updated,
+                Data = new { Result = result }
             });
         }
 
@@ -404,11 +392,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Password reset requested for: {Email}", request.Email);
             var result = await _authService.ForgotPassword(request);
-            
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = result
+                Message = ResponseMessages.Success,
+                Data = new { Result = result }
             });
         }
 
@@ -420,11 +408,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Resetting password for: {Email}", request.Email);
             var result = await _authService.ResetPassword(request);
-            
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = result
+                Message = ResponseMessages.Success,
+                Data = new { Result = result }
             });
         }
 
@@ -438,7 +426,6 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving all users");
             var users = await _authService.GetAllUsersAsync();
-            
             return Ok(new ApiResponse<IEnumerable<object>>
             {
                 Code = ResponseCodes.Success,
@@ -455,10 +442,8 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving user with ID: {Id}", id);
             var user = await _authService.GetUserByIdAsync(id);
-            
             if (user == null)
             {
-                _logger.LogWarning("User with ID {Id} not found", id);
                 throw new KeyNotFoundException($"User with ID {id} not found");
             }
 
@@ -476,61 +461,27 @@ namespace AIDefCom.API.Controllers
         [HttpPut("users/{id}")]
         public async Task<IActionResult> UpdateAccount(string id, [FromBody] UpdateAccountDto request)
         {
-            if (string.IsNullOrWhiteSpace(request.FullName) || 
-                string.IsNullOrWhiteSpace(request.Email))
+            if (string.IsNullOrWhiteSpace(request.FullName) || string.IsNullOrWhiteSpace(request.Email))
             {
-                return BadRequest(new ApiResponse<object>
-                {
-                    Code = ResponseCodes.BadRequest,
-                    Message = "FullName and Email are required"
-                });
+                throw new ArgumentNullException(nameof(request), "FullName and Email are required");
             }
-
-            // Validation cho password update
-            if (!string.IsNullOrWhiteSpace(request.NewPassword))
+            if (!string.IsNullOrWhiteSpace(request.NewPassword) && string.IsNullOrWhiteSpace(request.ConfirmNewPassword))
             {
-                if (string.IsNullOrWhiteSpace(request.ConfirmNewPassword))
-                {
-                    return BadRequest(new ApiResponse<object>
-                    {
-                        Code = ResponseCodes.BadRequest,
-                        Message = "Confirm new password is required when changing password"
-                    });
-                }
-
-                if (request.NewPassword != request.ConfirmNewPassword)
-                {
-                    return BadRequest(new ApiResponse<object>
-                    {
-                        Code = ResponseCodes.BadRequest,
-                        Message = "New password and confirm password do not match"
-                    });
-                }
+                throw new ArgumentException("Confirm new password is required when changing password");
+            }
+            if (!string.IsNullOrWhiteSpace(request.NewPassword) && request.NewPassword != request.ConfirmNewPassword)
+            {
+                throw new ArgumentException("New password and confirm password do not match");
             }
 
             _logger.LogInformation("Admin updating account for user ID: {Id}", id);
-            
-            try
+            var updatedUser = await _authService.UpdateAccountAsync(id, request);
+            return Ok(new ApiResponse<AppUserResponseDto>
             {
-                var updatedUser = await _authService.UpdateAccountAsync(id, request);
-                
-                _logger.LogInformation("Account updated successfully for user ID: {Id}", id);
-                return Ok(new ApiResponse<AppUserResponseDto>
-                {
-                    Code = ResponseCodes.Success,
-                    Message = string.Format(ResponseMessages.Updated, "Account"),
-                    Data = updatedUser
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Account update failed for user ID: {Id}", id);
-                return BadRequest(new ApiResponse<object>
-                {
-                    Code = ResponseCodes.BadRequest,
-                    Message = ex.Message
-                });
-            }
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Updated, "Account"),
+                Data = updatedUser
+            });
         }
     }
 }

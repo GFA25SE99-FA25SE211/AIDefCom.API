@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace AIDefCom.API.Controllers
 {
     /// <summary>
-    /// Controller for managing scores (grading)
+    /// Controller for managing scores (grading) - Supports both REST API and real-time updates via SignalR
     /// </summary>
     [Route("api/scores")]
     [ApiController]
@@ -131,17 +131,16 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Create a new score
+        /// Create a new score - Real-time notification will be sent via SignalR
         /// </summary>
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] ScoreCreateDto dto)
         {
             _logger.LogInformation("Creating new score for student {StudentId} by evaluator {EvaluatorId}", dto.StudentId, dto.EvaluatorId);
-            var id = await _service.AddAsync(dto);
-            var created = await _service.GetByIdAsync(id);
-            _logger.LogInformation("Score created with ID: {Id}", id);
+            var created = await _service.AddAsync(dto);
+            _logger.LogInformation("Score created with ID: {Id}", created.Id);
             
-            return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<ScoreReadDto>
+            return CreatedAtAction(nameof(GetById), new { id = created.Id }, new ApiResponse<ScoreReadDto>
             {
                 Code = ResponseCodes.Created,
                 Message = ResponseMessages.Created,
@@ -150,30 +149,31 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Update an existing score
+        /// Update an existing score - Real-time notification will be sent via SignalR
         /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] ScoreUpdateDto dto)
         {
             _logger.LogInformation("Updating score with ID: {Id}", id);
-            var success = await _service.UpdateAsync(id, dto);
+            var updated = await _service.UpdateAsync(id, dto);
             
-            if (!success)
+            if (updated == null)
             {
                 _logger.LogWarning("Score with ID {Id} not found for update", id);
                 throw new KeyNotFoundException($"Score with ID {id} not found");
             }
 
             _logger.LogInformation("Score {Id} updated successfully", id);
-            return Ok(new ApiResponse<object>
+            return Ok(new ApiResponse<ScoreReadDto>
             {
                 Code = ResponseCodes.Success,
-                Message = string.Format(ResponseMessages.Updated, "Score")
+                Message = string.Format(ResponseMessages.Updated, "Score"),
+                Data = updated
             });
         }
 
         /// <summary>
-        /// Delete a score
+        /// Delete a score - Real-time notification will be sent via SignalR
         /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
@@ -188,7 +188,11 @@ namespace AIDefCom.API.Controllers
             }
 
             _logger.LogInformation("Score {Id} deleted successfully", id);
-            return NoContent();
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.NoContent,
+                Message = string.Format(ResponseMessages.Deleted, "Score")
+            });
         }
     }
 }

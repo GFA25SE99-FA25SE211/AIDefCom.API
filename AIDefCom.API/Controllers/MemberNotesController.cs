@@ -130,7 +130,11 @@ namespace AIDefCom.API.Controllers
             }
 
             _logger.LogInformation("Member note {Id} deleted successfully", id);
-            return NoContent();
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.NoContent,
+                Message = string.Format(ResponseMessages.Deleted, "Member note")
+            });
         }
     }
 }

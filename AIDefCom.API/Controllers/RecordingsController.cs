@@ -28,6 +28,8 @@ namespace AIDefCom.API.Controllers
 
         /// <summary>
         /// Begin upload process for a new recording
+        /// - Returns 200 OK with an ApiResponse containing the upload details on success
+        /// - Returns 400 Bad Request if UserId or MimeType is null or empty
         /// </summary>
         [HttpPost("begin-upload")]
         public async Task<ActionResult<ApiResponse<BeginUploadResponse>>> BeginUpload([FromBody] BeginUploadRequest request)
@@ -44,7 +46,7 @@ namespace AIDefCom.API.Controllers
             return Ok(new ApiResponse<BeginUploadResponse>
             {
                 Code = ResponseCodes.Success,
-                Message = ResponseMessages.Success,
+                Message = ResponseMessages.Created,
                 Data = new BeginUploadResponse(recordingId, uploadUri.ToString(), blobUrl, blobPath, request.MimeType)
             });
         }
@@ -53,6 +55,8 @@ namespace AIDefCom.API.Controllers
 
         /// <summary>
         /// Finalize a recording after upload
+        /// - Returns 204 No Content on success
+        /// - Returns 400 Bad Request if the request body is null, or if DurationSec or SizeBytes are negative
         /// </summary>
         [HttpPost("{id:guid}/finalize")]
         public async Task<IActionResult> FinalizeRecording([FromRoute] Guid id, [FromBody] FinalizeRequest request)
@@ -71,11 +75,17 @@ namespace AIDefCom.API.Controllers
             await _recordingService.FinalizeAsync(id, request.DurationSec, request.SizeBytes, request.Notes);
             _logger.LogInformation("Recording {RecordingId} finalized successfully", id);
             
-            return NoContent();
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.NoContent,
+                Message = string.Format(ResponseMessages.Updated, "Recording")
+            });
         }
 
         /// <summary>
         /// Get read SAS URL for a recording
+        /// - Returns 200 OK with an ApiResponse containing the SAS URL on success
+        /// - Returns 404 Not Found if the recording does not exist
         /// </summary>
         [HttpGet("{id:guid}/read-sas")]
         public async Task<ActionResult<ApiResponse<string>>> GetReadSas([FromRoute] Guid id, [FromQuery] int? minutes)
@@ -87,7 +97,7 @@ namespace AIDefCom.API.Controllers
             return Ok(new ApiResponse<string>
             {
                 Code = ResponseCodes.Success,
-                Message = ResponseMessages.Success,
+                Message = string.Format(ResponseMessages.Retrieved, "Recording SAS URL"),
                 Data = uri.ToString()
             });
         }

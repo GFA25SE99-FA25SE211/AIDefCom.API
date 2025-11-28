@@ -1,5 +1,6 @@
 using AIDefCom.API.Mapper;
 using AIDefCom.API.Middlewares;
+using AIDefCom.API.Hubs;
 using AIDefCom.Repository;
 using AIDefCom.Repository.Entities;
 using AIDefCom.Repository.UnitOfWork;
@@ -107,6 +108,22 @@ namespace AIDefCom.API
                     IssuerSigningKey = new SymmetricSecurityKey(key),
                     ValidateIssuerSigningKey = true
                 };
+                
+                // Support JWT authentication for SignalR
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+                        
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                        {
+                            context.Token = accessToken;
+                        }
+                        return Task.CompletedTask;
+                    }
+                };
             })
             .AddGoogle(options =>
             {
@@ -130,7 +147,7 @@ namespace AIDefCom.API
                 options.Cookie.IsEssential = true;
             });
 
-            // 8) CORS
+            // 8) CORS - Updated for SignalR
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowAll", policy =>
@@ -139,9 +156,20 @@ namespace AIDefCom.API
                           .AllowAnyHeader()
                           .AllowAnyMethod();
                 });
+                
+                options.AddPolicy("SignalRPolicy", policy =>
+                {
+                    policy.WithOrigins("http://localhost:3000", "https://localhost:3000") // Add your frontend URLs
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+                });
             });
 
-            // 9) Email (optional — KHÔNG throw nếu thiếu)
+            // 9) SignalR
+            builder.Services.AddSignalR();
+
+            // 10) Email (optional — KHÔNG throw nếu thiếu)
             var emailSection = builder.Configuration.GetSection("EmailConfiguration");
             var emailConfig = emailSection.Get<EmailConfiguration>();
             if (emailConfig is null)
@@ -200,6 +228,9 @@ namespace AIDefCom.API
 
             // Controllers
             app.MapControllers();
+
+            // SignalR Hubs
+            app.MapHub<ScoreHub>("/hubs/score").RequireCors("SignalRPolicy");
 
             app.Run();
         }

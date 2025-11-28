@@ -24,7 +24,6 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving all reports");
             var data = await _service.GetAllAsync();
-            
             return Ok(new ApiResponse<IEnumerable<ReportReadDto>>
             {
                 Code = ResponseCodes.Success,
@@ -38,13 +37,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving report with ID: {Id}", id);
             var report = await _service.GetByIdAsync(id);
-            
             if (report == null)
             {
                 _logger.LogWarning("Report with ID {Id} not found", id);
                 throw new KeyNotFoundException($"Report with ID {id} not found");
             }
-
             return Ok(new ApiResponse<ReportReadDto>
             {
                 Code = ResponseCodes.Success,
@@ -58,7 +55,6 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving reports for session ID: {SessionId}", sessionId);
             var data = await _service.GetBySessionIdAsync(sessionId);
-            
             return Ok(new ApiResponse<IEnumerable<ReportReadDto>>
             {
                 Code = ResponseCodes.Success,
@@ -72,7 +68,6 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving reports for lecturer ID: {LecturerId}", lecturerId);
             var data = await _service.GetByLecturerIdAsync(lecturerId);
-            
             return Ok(new ApiResponse<IEnumerable<ReportReadDto>>
             {
                 Code = ResponseCodes.Success,
@@ -88,7 +83,6 @@ namespace AIDefCom.API.Controllers
             var id = await _service.AddAsync(dto);
             var created = await _service.GetByIdAsync(id);
             _logger.LogInformation("Report created with ID: {Id}", id);
-            
             return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<ReportReadDto>
             {
                 Code = ResponseCodes.Created,
@@ -102,14 +96,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Updating report with ID: {Id}", id);
             var success = await _service.UpdateAsync(id, dto);
-            
             if (!success)
             {
                 _logger.LogWarning("Report with ID {Id} not found for update", id);
                 throw new KeyNotFoundException($"Report with ID {id} not found");
             }
-
-            _logger.LogInformation("Report {Id} updated successfully", id);
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
@@ -122,15 +113,16 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Deleting report with ID: {Id}", id);
             var success = await _service.DeleteAsync(id);
-            
             if (!success)
             {
                 _logger.LogWarning("Report with ID {Id} not found for deletion", id);
                 throw new KeyNotFoundException($"Report with ID {id} not found");
             }
-
-            _logger.LogInformation("Report {Id} deleted successfully", id);
-            return NoContent();
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.NoContent,
+                Message = string.Format(ResponseMessages.Deleted, "Report")
+            });
         }
 
         [HttpPut("{id}/approve")]
@@ -138,18 +130,15 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Approving report with ID: {Id}", id);
             var success = await _service.ApproveAsync(id);
-            
             if (!success)
             {
                 _logger.LogWarning("Report with ID {Id} not found for approval", id);
                 throw new KeyNotFoundException($"Report with ID {id} not found");
             }
-
-            _logger.LogInformation("Report {Id} approved successfully", id);
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Report approved successfully"
+                Message = string.Format(ResponseMessages.Approved, "Report")
             });
         }
 
@@ -158,18 +147,15 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Rejecting report with ID: {Id}", id);
             var success = await _service.RejectAsync(id);
-            
             if (!success)
             {
                 _logger.LogWarning("Report with ID {Id} not found for rejection", id);
                 throw new KeyNotFoundException($"Report with ID {id} not found");
             }
-
-            _logger.LogInformation("Report {Id} rejected successfully", id);
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Report rejected successfully"
+                Message = string.Format(ResponseMessages.Rejected, "Report")
             });
         }
     }

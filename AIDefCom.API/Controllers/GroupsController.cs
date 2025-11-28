@@ -24,7 +24,6 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving all groups (includeDeleted: {IncludeDeleted})", includeDeleted);
             var data = await _service.GetAllAsync(includeDeleted);
-            
             return Ok(new ApiResponse<IEnumerable<GroupReadDto>>
             {
                 Code = ResponseCodes.Success,
@@ -38,13 +37,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving group with ID: {Id}", id);
             var group = await _service.GetByIdAsync(id);
-            
             if (group == null)
             {
                 _logger.LogWarning("Group with ID {Id} not found", id);
                 throw new KeyNotFoundException($"Group with ID {id} not found");
             }
-
             return Ok(new ApiResponse<GroupReadDto>
             {
                 Code = ResponseCodes.Success,
@@ -58,7 +55,6 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Retrieving groups for semester ID: {SemesterId}", semesterId);
             var data = await _service.GetBySemesterIdAsync(semesterId);
-            
             return Ok(new ApiResponse<IEnumerable<GroupReadDto>>
             {
                 Code = ResponseCodes.Success,
@@ -74,7 +70,6 @@ namespace AIDefCom.API.Controllers
             var id = await _service.AddAsync(dto);
             var created = await _service.GetByIdAsync(id);
             _logger.LogInformation("Group created with ID: {Id}", id);
-            
             return CreatedAtAction(nameof(GetById), new { id }, new ApiResponse<GroupReadDto>
             {
                 Code = ResponseCodes.Created,
@@ -88,14 +83,11 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Updating group with ID: {Id}", id);
             var ok = await _service.UpdateAsync(id, dto);
-            
             if (!ok)
             {
                 _logger.LogWarning("Group with ID {Id} not found for update", id);
                 throw new KeyNotFoundException($"Group with ID {id} not found");
             }
-
-            _logger.LogInformation("Group {Id} updated successfully", id);
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
@@ -103,26 +95,20 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        /// <summary>
-        /// Update total score for a group
-        /// </summary>
         [HttpPut("{id}/total-score")]
         public async Task<IActionResult> UpdateTotalScore(string id, [FromBody] GroupTotalScoreUpdateDto dto)
         {
             _logger.LogInformation("Updating total score for group with ID: {Id}, Score: {Score}", id, dto.TotalScore);
             var ok = await _service.UpdateTotalScoreAsync(id, dto);
-            
             if (!ok)
             {
                 _logger.LogWarning("Group with ID {Id} not found for total score update", id);
                 throw new KeyNotFoundException($"Group with ID {id} not found");
             }
-
-            _logger.LogInformation("Group {Id} total score updated successfully to {Score}", id, dto.TotalScore);
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Group total score updated successfully"
+                Message = string.Format(ResponseMessages.TotalScoreUpdated, "Group")
             });
         }
 
@@ -131,15 +117,16 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Soft deleting group with ID: {Id}", id);
             var ok = await _service.SoftDeleteAsync(id);
-            
             if (!ok)
             {
                 _logger.LogWarning("Group with ID {Id} not found for deletion", id);
                 throw new KeyNotFoundException($"Group with ID {id} not found");
             }
-
-            _logger.LogInformation("Group {Id} soft deleted successfully", id);
-            return NoContent();
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.NoContent,
+                Message = string.Format(ResponseMessages.SoftDeleted, "Group")
+            });
         }
 
         [HttpPut("{id}/restore")]
@@ -147,18 +134,15 @@ namespace AIDefCom.API.Controllers
         {
             _logger.LogInformation("Restoring group with ID: {Id}", id);
             var ok = await _service.RestoreAsync(id);
-            
             if (!ok)
             {
                 _logger.LogWarning("Group with ID {Id} not found for restoration", id);
                 throw new KeyNotFoundException($"Group with ID {id} not found");
             }
-
-            _logger.LogInformation("Group {Id} restored successfully", id);
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.Success,
-                Message = "Group restored successfully"
+                Message = string.Format(ResponseMessages.Restored, "Group")
             });
         }
     }
