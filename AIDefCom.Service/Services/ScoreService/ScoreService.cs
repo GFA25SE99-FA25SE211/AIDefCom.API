@@ -158,6 +158,11 @@ namespace AIDefCom.Service.Services.ScoreService
             if (session == null)
                 throw new KeyNotFoundException($"Defense session with ID {dto.SessionId} not found");
 
+            // Prevent duplicate score for same student-session-rubric
+            var exists = await _uow.Scores.ExistsForStudentInSessionByRubricAsync(dto.StudentId, dto.SessionId, dto.RubricId);
+            if (exists)
+                throw new InvalidOperationException($"A score for student '{dto.StudentId}' with rubric {dto.RubricId} already exists in session {dto.SessionId}.");
+
             var score = _mapper.Map<Score>(dto);
             score.CreatedAt = DateTime.UtcNow;
 

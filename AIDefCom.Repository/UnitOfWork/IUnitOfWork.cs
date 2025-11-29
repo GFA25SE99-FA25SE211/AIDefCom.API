@@ -17,6 +17,7 @@ using AIDefCom.Repository.Repositories.StudentGroupRepository;
 using AIDefCom.Repository.Repositories.RecordingRepository;
 using AIDefCom.Repository.Repositories.TranscriptRepository;
 using AIDefCom.Repository.Repositories.ScoreRepository;
+using AIDefCom.Repository.Repositories.NoteRepository;
 using System;
 using System.Threading.Tasks;
 
@@ -37,6 +38,7 @@ namespace AIDefCom.Repository.UnitOfWork
         IReportRepository Reports { get; }
         IMemberNoteRepository MemberNotes { get; }
         IScoreRepository Scores { get; }
+        INoteRepository Notes { get; }
 
         // ------------------ Defense & Committee ------------------
         IDefenseSessionRepository DefenseSessions { get; }

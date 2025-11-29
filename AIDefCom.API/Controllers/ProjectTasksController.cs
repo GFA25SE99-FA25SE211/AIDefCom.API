@@ -81,6 +81,36 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        // New: tasks by assignee and session
+        [HttpGet("assignee/{assignedToId}/session/{sessionId}")]
+        public async Task<IActionResult> GetByAssigneeAndSession(string assignedToId, int sessionId)
+        {
+            _logger.LogInformation("Retrieving tasks assigned to user: {AssignedToId} in session: {SessionId}", assignedToId, sessionId);
+            var data = await _service.GetByAssigneeAndSessionAsync(assignedToId, sessionId);
+
+            return Ok(new ApiResponse<IEnumerable<ProjectTaskReadDto>>
+            {
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Tasks assigned to user in session"),
+                Data = data
+            });
+        }
+
+        // New: rubric names by assignee and session
+        [HttpGet("assignee/{assignedToId}/session/{sessionId}/rubrics")]
+        public async Task<IActionResult> GetRubricNamesByAssigneeAndSession(string assignedToId, int sessionId)
+        {
+            _logger.LogInformation("Retrieving rubric names for user: {AssignedToId} in session: {SessionId}", assignedToId, sessionId);
+            var names = await _service.GetRubricNamesByAssigneeAndSessionAsync(assignedToId, sessionId);
+
+            return Ok(new ApiResponse<IEnumerable<string>>
+            {
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Rubrics for user in session"),
+                Data = names
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] ProjectTaskCreateDto dto)
         {

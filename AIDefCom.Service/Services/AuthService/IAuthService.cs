@@ -36,6 +36,8 @@ namespace AIDefCom.Service.Services.AuthService
         Task<TokenResponseDto> GoogleSetPasswordAsync(SetPasswordDTO request, string token);
 
         Task<string> SoftDeleteAccountAsync(string username);
+
+        Task<string> DeleteAccountAsync(string username);
         
         Task<IEnumerable<AppUserListDto>> GetAllUsersAsync();
         

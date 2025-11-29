@@ -241,6 +241,19 @@ namespace AIDefCom.Service.Services.AuthService
             return "User account has been restored.";
         }
 
+        public async Task<string> DeleteAccountAsync(string email)
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+                throw new Exception("User not found.");
+
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+                throw new Exception($"Hard delete failed: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+
+            return "User account has been hard deleted.";
+        }
+
         // ------------------ TOKEN MANAGEMENT ------------------
         private async Task<TokenResponseDto> CreateTokenResponse(AppUser user)
         {

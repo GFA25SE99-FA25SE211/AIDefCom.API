@@ -63,6 +63,11 @@ namespace AIDefCom.Repository.Repositories.MajorRubricRepository
         public async Task<bool> ExistsAsync(int majorId, int rubricId)
             => await _set.Where(x => !x.IsDeleted).AnyAsync(x => x.MajorId == majorId && x.RubricId == rubricId);
 
+        public async Task<bool> ExistsByMajorAndRubricNameAsync(int majorId, string rubricName)
+            => await _set.AsNoTracking()
+                         .Include(x => x.Rubric)
+                         .AnyAsync(x => !x.IsDeleted && x.MajorId == majorId && x.Rubric != null && x.Rubric.RubricName == rubricName);
+
         public async Task AddAsync(MajorRubric entity)
             => await _set.AddAsync(entity);
 

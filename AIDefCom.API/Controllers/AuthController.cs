@@ -67,6 +67,7 @@ namespace AIDefCom.API.Controllers
         [HttpPost("register/student")]
         public async Task<IActionResult> RegisterWithRole([FromBody] AppUserDto request)
         {
+
             if (string.IsNullOrWhiteSpace(request.Email) ||
                 string.IsNullOrWhiteSpace(request.Password) ||
                 string.IsNullOrWhiteSpace(request.FullName) ||
@@ -351,33 +352,18 @@ namespace AIDefCom.API.Controllers
         // ------------------ ACCOUNT MANAGEMENT ------------------
         
         /// <summary>
-        /// Soft delete a user account
+        /// Hard delete a user account
         /// </summary>
         [HttpDelete("accounts/{email}")]
-        public async Task<IActionResult> SoftDeleteAccount(string email)
+        public async Task<IActionResult> DeleteAccount(string email)
         {
-            _logger.LogInformation("Soft deleting account: {Email}", email);
-            var result = await _authService.SoftDeleteAccountAsync(email);
+            _logger.LogInformation("Hard deleting account: {Email}", email);
+            // Call hard delete on service. If not implemented, service should be updated accordingly.
+            var result = await _authService.DeleteAccountAsync(email);
             return Ok(new ApiResponse<object>
             {
-                Code = ResponseCodes.Success,
-                Message = ResponseMessages.Updated,
-                Data = new { Result = result }
-            });
-        }
-
-        /// <summary>
-        /// Restore a soft-deleted account
-        /// </summary>
-        [HttpPut("accounts/{email}/restore")]
-        public async Task<IActionResult> RestoreAccount(string email)
-        {
-            _logger.LogInformation("Restoring account: {Email}", email);
-            var result = await _authService.RestoreAccountAsync(email);
-            return Ok(new ApiResponse<object>
-            {
-                Code = ResponseCodes.Success,
-                Message = ResponseMessages.Updated,
+                Code = ResponseCodes.NoContent,
+                Message = string.Format(ResponseMessages.Deleted, "Account"),
                 Data = new { Result = result }
             });
         }

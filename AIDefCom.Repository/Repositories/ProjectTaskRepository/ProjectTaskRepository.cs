@@ -25,6 +25,7 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
                              .Include(t => t.AssignedBy).ThenInclude(a => a.Lecturer)
                              .Include(t => t.AssignedTo).ThenInclude(a => a.Lecturer)
                              .Include(t => t.Rubric)
+                             .Include(t => t.Session)
                              .OrderByDescending(t => t.Id)
                              .ToListAsync();
         }
@@ -35,6 +36,7 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
                              .Include(t => t.AssignedBy).ThenInclude(a => a.Lecturer)
                              .Include(t => t.AssignedTo).ThenInclude(a => a.Lecturer)
                              .Include(t => t.Rubric)
+                             .Include(t => t.Session)
                              .FirstOrDefaultAsync(t => t.Id == id);
         }
 
@@ -44,6 +46,7 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
                              .Include(t => t.AssignedBy).ThenInclude(a => a.Lecturer)
                              .Include(t => t.AssignedTo).ThenInclude(a => a.Lecturer)
                              .Include(t => t.Rubric)
+                             .Include(t => t.Session)
                              .Where(t => t.AssignedById == assignedById)
                              .ToListAsync();
         }
@@ -54,8 +57,30 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
                              .Include(t => t.AssignedBy).ThenInclude(a => a.Lecturer)
                              .Include(t => t.AssignedTo).ThenInclude(a => a.Lecturer)
                              .Include(t => t.Rubric)
+                             .Include(t => t.Session)
                              .Where(t => t.AssignedToId == assignedToId)
                              .ToListAsync();
+        }
+
+        public async Task<IEnumerable<ProjectTask>> GetByAssigneeAndSessionAsync(string assignedToId, int sessionId)
+        {
+            return await _set.AsNoTracking()
+                             .Include(t => t.AssignedBy).ThenInclude(a => a.Lecturer)
+                             .Include(t => t.AssignedTo).ThenInclude(a => a.Lecturer)
+                             .Include(t => t.Rubric)
+                             .Include(t => t.Session)
+                             .Where(t => t.AssignedToId == assignedToId && t.SessionId == sessionId)
+                             .ToListAsync();
+        }
+
+        public async Task<bool> ExistsBySessionAndRubricAsync(int sessionId, int rubricId, int? excludeTaskId = null)
+        {
+            var query = _set.AsNoTracking().Where(t => t.SessionId == sessionId && t.RubricId == rubricId);
+            if (excludeTaskId.HasValue)
+            {
+                query = query.Where(t => t.Id != excludeTaskId.Value);
+            }
+            return await query.AnyAsync();
         }
 
         public async Task AddAsync(ProjectTask entity)
@@ -73,6 +98,7 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
             existing.AssignedById = entity.AssignedById;
             existing.AssignedToId = entity.AssignedToId;
             existing.RubricId = entity.RubricId;
+            existing.SessionId = entity.SessionId;
             existing.Status = entity.Status;
         }
 

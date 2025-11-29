@@ -89,10 +89,11 @@ namespace AIDefCom.Repository.Repositories.SemesterRepository
 
         public async Task<bool> ExistsByNameAsync(string name, int year, int majorId)
         {
-            // Semester không còn MajorId, chỉ check name và year
+            // Case-insensitive, trimmed comparison; ignore MajorId
+            var normalized = name.Trim().ToLower();
             return await _set
                 .Where(x => !x.IsDeleted)
-                .AnyAsync(s => s.SemesterName == name && s.Year == year);
+                .AnyAsync(s => s.Year == year && s.SemesterName != null && s.SemesterName.Trim().ToLower() == normalized);
         }
     }
 }

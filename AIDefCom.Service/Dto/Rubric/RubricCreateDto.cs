@@ -10,5 +10,6 @@ namespace AIDefCom.Service.Dto.Rubric
     {
         public string RubricName { get; set; } = string.Empty;
         public string? Description { get; set; }
+        public int MajorId { get; set; }
     }
 }

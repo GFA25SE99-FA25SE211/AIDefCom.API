@@ -14,6 +14,7 @@ using AIDefCom.Service.Dto.Semester;
 using AIDefCom.Service.Dto.Student;
 using AIDefCom.Service.Dto.Transcript;
 using AIDefCom.Service.Dto.Score;
+using AIDefCom.Service.Dto.Note;
 using AutoMapper;
 
 namespace AIDefCom.API.Mapper
@@ -122,6 +123,11 @@ namespace AIDefCom.API.Mapper
                 .ForMember(dest => dest.StudentName, opt => opt.MapFrom(src => src.Student!.FullName));
             CreateMap<ScoreCreateDto, Score>();
             CreateMap<ScoreUpdateDto, Score>();
+
+            // Note mappings
+            CreateMap<Note, NoteReadDto>();
+            CreateMap<NoteCreateDto, Note>();
+            CreateMap<NoteUpdateDto, Note>();
         }
     }
 }

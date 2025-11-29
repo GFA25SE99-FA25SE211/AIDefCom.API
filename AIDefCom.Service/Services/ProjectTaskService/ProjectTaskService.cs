@@ -57,8 +57,39 @@ namespace AIDefCom.Service.Services.ProjectTaskService
             return _mapper.Map<IEnumerable<ProjectTaskReadDto>>(list);
         }
 
+        public async Task<IEnumerable<ProjectTaskReadDto>> GetByAssigneeAndSessionAsync(string assignedToId, int sessionId)
+        {
+            var list = await _uow.ProjectTasks.GetByAssigneeAndSessionAsync(assignedToId, sessionId);
+            return _mapper.Map<IEnumerable<ProjectTaskReadDto>>(list);
+        }
+
+        public async Task<IEnumerable<string>> GetRubricNamesByAssigneeAndSessionAsync(string assignedToId, int sessionId)
+        {
+            var list = await _uow.ProjectTasks.GetByAssigneeAndSessionAsync(assignedToId, sessionId);
+            return list.Select(t => t.Rubric?.RubricName).Where(n => !string.IsNullOrEmpty(n))!.Distinct()!;
+        }
+
         public async Task<int> AddAsync(ProjectTaskCreateDto dto)
         {
+            if (dto.SessionId <= 0)
+            {
+                throw new ArgumentException("SessionId is required and must be a positive integer");
+            }
+
+            // Ensure DefenseSession exists
+            var session = await _uow.DefenseSessions.GetByIdAsync(dto.SessionId);
+            if (session == null)
+            {
+                throw new ArgumentException($"DefenseSession with ID {dto.SessionId} not found");
+            }
+
+            // Validate uniqueness: one rubric per session
+            var rubricClash = await _uow.ProjectTasks.ExistsBySessionAndRubricAsync(dto.SessionId, dto.RubricId);
+            if (rubricClash)
+            {
+                throw new InvalidOperationException($"A ProjectTask with RubricId {dto.RubricId} already exists in DefenseSession {dto.SessionId}");
+            }
+
             // ✅ Validate AssignedById - If dto contains LecturerId, find CommitteeAssignment
             var assignedByList = await _uow.CommitteeAssignments.GetByLecturerIdAsync(dto.AssignedById);
             var assignedBy = assignedByList.FirstOrDefault();
@@ -88,6 +119,7 @@ namespace AIDefCom.Service.Services.ProjectTaskService
             // ⚠️ IMPORTANT: Override with CommitteeAssignmentId (not LecturerId)
             entity.AssignedById = assignedBy.Id;
             entity.AssignedToId = assignedTo.Id;
+            entity.SessionId = dto.SessionId;
             
             try
             {
@@ -106,6 +138,23 @@ namespace AIDefCom.Service.Services.ProjectTaskService
         {
             var existing = await _uow.ProjectTasks.GetByIdAsync(id);
             if (existing == null) return false;
+
+            if (dto.SessionId <= 0)
+            {
+                throw new ArgumentException("SessionId is required and must be a positive integer");
+            }
+            var session = await _uow.DefenseSessions.GetByIdAsync(dto.SessionId);
+            if (session == null)
+            {
+                throw new ArgumentException($"DefenseSession with ID {dto.SessionId} not found");
+            }
+
+            // Validate uniqueness on update (exclude current task)
+            var rubricClash = await _uow.ProjectTasks.ExistsBySessionAndRubricAsync(dto.SessionId, dto.RubricId, id);
+            if (rubricClash)
+            {
+                throw new InvalidOperationException($"A ProjectTask with RubricId {dto.RubricId} already exists in DefenseSession {dto.SessionId}");
+            }
 
             _mapper.Map(dto, existing);
             await _uow.ProjectTasks.UpdateAsync(existing);

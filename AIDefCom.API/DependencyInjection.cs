@@ -18,6 +18,7 @@ using AIDefCom.Repository.Repositories.RecordingRepository;
 using AIDefCom.Repository.Repositories.TranscriptRepository;
 using AIDefCom.Repository.Repositories.StudentGroupRepository;
 using AIDefCom.Repository.Repositories.ScoreRepository;
+using AIDefCom.Repository.Repositories.NoteRepository;
 using AIDefCom.Repository.UnitOfWork;
 using AIDefCom.Service.Services.AuthService;
 using AIDefCom.Service.Services.CommitteeAssignmentService;
@@ -39,6 +40,7 @@ using AIDefCom.Service.Services.TranscriptAnalysisService;
 using AIDefCom.Service.Services.ScoreService;
 using AIDefCom.Service.Services.ScoreNotification;
 using AIDefCom.Service.Services.RedisCache;
+using AIDefCom.Service.Services.NoteService;
 using Microsoft.Extensions.DependencyInjection;
 using AIDefCom.Service.Services.RecordingService;
 using StackExchange.Redis;
@@ -81,6 +83,7 @@ namespace AIDefCom.API
             services.AddScoped<IRecordingRepository, RecordingRepository>();
             services.AddScoped<ITranscriptRepository, TranscriptRepository>();
             services.AddScoped<IScoreRepository, ScoreRepository>();
+            services.AddScoped<INoteRepository, NoteRepository>();
 
             // Unit of Work
             services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -112,6 +115,7 @@ namespace AIDefCom.API
             services.AddScoped<ITranscriptService, TranscriptService>();
             services.AddScoped<ITranscriptAnalysisService, TranscriptAnalysisService>();
             services.AddScoped<IScoreService, ScoreService>();
+            services.AddScoped<INoteService, NoteService>();
 
             return services;
         }

@@ -84,6 +84,16 @@ namespace AIDefCom.Repository.Repositories.ScoreRepository
                              .ToListAsync();
         }
 
+        public async Task<bool> ExistsForStudentInSessionByRubricAsync(string studentId, int sessionId, int rubricId, int? excludeScoreId = null)
+        {
+            var query = _set.AsNoTracking().Where(s => s.StudentId == studentId && s.SessionId == sessionId && s.RubricId == rubricId);
+            if (excludeScoreId.HasValue)
+            {
+                query = query.Where(s => s.Id != excludeScoreId.Value);
+            }
+            return await query.AnyAsync();
+        }
+
         public async Task AddAsync(Score score)
         {
             score.CreatedAt = DateTime.UtcNow;

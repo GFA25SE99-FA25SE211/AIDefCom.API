@@ -33,12 +33,21 @@ namespace AIDefCom.API.Swagger
             }
 
             // Rubric DTOs
-            if (context.Type.Name == "RubricCreateDto" || context.Type.Name == "RubricUpdateDto")
+            if (context.Type.Name == "RubricCreateDto")
             {
                 schema.Example = new OpenApiObject
                 {
                     ["rubricName"] = new OpenApiString("Presentation Skills"),
-                    ["description"] = new OpenApiString("Ability to present ideas clearly and effectively")
+                    ["description"] = new OpenApiString("Ability to present ideas clearly and effectively"),
+                    ["majorId"] = new OpenApiInteger(1)
+                };
+            }
+            if (context.Type.Name == "RubricUpdateDto")
+            {
+                schema.Example = new OpenApiObject
+                {
+                    ["rubricName"] = new OpenApiString("Presentation Skills (Updated)"),
+                    ["description"] = new OpenApiString("Updated description")
                 };
             }
 
@@ -49,7 +58,7 @@ namespace AIDefCom.API.Swagger
                 {
                     ["projectCode"] = new OpenApiString("FA25SE135"),
                     ["topicTitle_EN"] = new OpenApiString("AI-Based Defense Committee Management System"),
-                    ["topicTitle_VN"] = new OpenApiString("H? th?ng qu?n lý h?i ??ng b?o v? d?a trên AI"),
+                    ["topicTitle_VN"] = new OpenApiString("H? th?ng qu?n l? h?i ??ng b?o v? d?a tr?n AI"),
                     ["semesterId"] = new OpenApiInteger(1),
                     ["majorId"] = new OpenApiInteger(1),
                     ["status"] = new OpenApiString("Active")
@@ -284,6 +293,7 @@ namespace AIDefCom.API.Swagger
                     ["assignedById"] = new OpenApiString("CA-001"),
                     ["assignedToId"] = new OpenApiString("CA-002"),
                     ["rubricId"] = new OpenApiInteger(1),
+                    ["sessionId"] = new OpenApiInteger(1),
                     ["status"] = new OpenApiString("Pending")
                 };
             }
@@ -294,6 +304,7 @@ namespace AIDefCom.API.Swagger
                 {
                     ["title"] = new OpenApiString("Review Project Documentation (Updated)"),
                     ["description"] = new OpenApiString("Completed review with feedback provided"),
+                    ["sessionId"] = new OpenApiInteger(1),
                     ["status"] = new OpenApiString("Completed")
                 };
             }
