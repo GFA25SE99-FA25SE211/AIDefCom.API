@@ -17,6 +17,7 @@ using AIDefCom.Repository.Repositories.StudentGroupRepository;
 using AIDefCom.Repository.Repositories.RecordingRepository;
 using AIDefCom.Repository.Repositories.TranscriptRepository;
 using AIDefCom.Repository.Repositories.ScoreRepository;
+using AIDefCom.Repository.Repositories.NoteRepository;
 using System;
 using System.Threading.Tasks;
 
@@ -39,6 +40,7 @@ namespace AIDefCom.Repository.UnitOfWork
         public IReportRepository Reports { get; }
         public IMemberNoteRepository MemberNotes { get; }
         public IScoreRepository Scores { get; }
+        public INoteRepository Notes { get; }
 
         // ------------------ Defense & Committee ------------------
         public IDefenseSessionRepository DefenseSessions { get; }
@@ -75,7 +77,8 @@ namespace AIDefCom.Repository.UnitOfWork
             IProjectTaskRepository projectTaskRepository,
             IRecordingRepository recordingRepository,
             ITranscriptRepository transcriptRepository,
-            IScoreRepository scoreRepository)
+            IScoreRepository scoreRepository,
+            INoteRepository noteRepository)
         {
             _context = context;
 
@@ -92,6 +95,7 @@ namespace AIDefCom.Repository.UnitOfWork
             Reports = reportRepository;
             MemberNotes = memberNoteRepository;
             Scores = scoreRepository;
+            Notes = noteRepository;
 
             // Defense & Committee
             DefenseSessions = defenseSessionRepository;

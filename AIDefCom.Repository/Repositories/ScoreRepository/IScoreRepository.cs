@@ -13,6 +13,7 @@ namespace AIDefCom.Repository.Repositories.ScoreRepository
         Task<IEnumerable<Score>> GetByStudentIdAsync(string studentId);
         Task<IEnumerable<Score>> GetByEvaluatorIdAsync(string evaluatorId);
         Task<IEnumerable<Score>> GetByRubricIdAsync(int rubricId);
+        Task<bool> ExistsForStudentInSessionByRubricAsync(string studentId, int sessionId, int rubricId, int? excludeScoreId = null);
         Task AddAsync(Score score);
         Task UpdateAsync(Score score);
         Task DeleteAsync(int id);

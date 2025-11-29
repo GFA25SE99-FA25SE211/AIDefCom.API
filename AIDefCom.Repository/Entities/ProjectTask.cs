@@ -24,6 +24,10 @@ namespace AIDefCom.Repository.Entities
         public int RubricId { get; set; }
         public Rubric? Rubric { get; set; }
 
+        // Foreign Key to DefenseSession
+        public int SessionId { get; set; }
+        public DefenseSession? Session { get; set; }
+
         public string Status { get; set; } = string.Empty;
     }
 }

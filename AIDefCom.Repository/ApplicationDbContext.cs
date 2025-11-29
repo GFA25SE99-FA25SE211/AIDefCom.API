@@ -35,6 +35,7 @@ namespace AIDefCom.Repository
         public DbSet<Score> Scores { get; set; }
         public DbSet<MemberNote> MemberNotes { get; set; }
         public DbSet<Recording> Recordings { get; set; }
+        public DbSet<Note> Notes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -162,6 +163,17 @@ namespace AIDefCom.Repository
                 .HasForeignKey(t => t.RubricId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<ProjectTask>()
+                .HasOne(t => t.Session)
+                .WithMany()
+                .HasForeignKey(t => t.SessionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Unique constraint: One Rubric per DefenseSession in ProjectTask
+            modelBuilder.Entity<ProjectTask>()
+                .HasIndex(t => new { t.SessionId, t.RubricId })
+                .IsUnique();
+
             // ============================================
             // MEMBER NOTE RELATIONSHIPS
             // ============================================
@@ -257,6 +269,20 @@ namespace AIDefCom.Repository
                 .WithMany()
                 .HasForeignKey(s => s.SessionId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // ============================================
+            // NOTE RELATIONSHIPS
+            // ============================================
+            
+            modelBuilder.Entity<Note>()
+                .HasOne(n => n.Session)
+                .WithOne()
+                .HasForeignKey<Note>(n => n.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Note>()
+                .HasIndex(n => n.SessionId)
+                .IsUnique();
         }
     }
 }

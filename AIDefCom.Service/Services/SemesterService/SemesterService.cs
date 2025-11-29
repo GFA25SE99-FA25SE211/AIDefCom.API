@@ -55,8 +55,9 @@ namespace AIDefCom.Service.Services.SemesterService
 
         public async Task<int> AddAsync(SemesterCreateDto dto)
         {
+            // robust duplicate check
             if (await _uow.Semesters.ExistsByNameAsync(dto.SemesterName, dto.Year, 0))
-                throw new InvalidOperationException("This semester already exists for the year.");
+                throw new InvalidOperationException("Semester name already exists for the given year.");
 
             var entity = _mapper.Map<Semester>(dto);
             await _uow.Semesters.AddAsync(entity);

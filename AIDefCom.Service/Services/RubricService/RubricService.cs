@@ -35,13 +35,34 @@ namespace AIDefCom.Service.Services.RubricService
 
         public async Task<int> AddAsync(RubricCreateDto dto)
         {
+            // Check rubric name globally
             if (await _uow.Rubrics.ExistsByNameAsync(dto.RubricName))
                 throw new InvalidOperationException("Rubric name already exists.");
+
+            // Validate Major exists
+            var major = await _uow.Majors.GetByIdAsync(dto.MajorId);
+            if (major == null)
+                throw new ArgumentException($"Major with ID {dto.MajorId} not found");
+
+            // Ensure no rubric with same name already linked to this major
+            var nameExistsInMajor = await _uow.MajorRubrics.ExistsByMajorAndRubricNameAsync(dto.MajorId, dto.RubricName);
+            if (nameExistsInMajor)
+                throw new InvalidOperationException($"Rubric name '{dto.RubricName}' already exists in Major ID {dto.MajorId}.");
 
             var rubric = _mapper.Map<Rubric>(dto);
             rubric.CreatedAt = DateTime.UtcNow;
 
             await _uow.Rubrics.AddAsync(rubric);
+            await _uow.SaveChangesAsync();
+
+            // Create MajorRubric link
+            var majorRubric = new MajorRubric
+            {
+                MajorId = dto.MajorId,
+                RubricId = rubric.Id,
+                IsDeleted = false
+            };
+            await _uow.MajorRubrics.AddAsync(majorRubric);
             await _uow.SaveChangesAsync();
 
             return rubric.Id;

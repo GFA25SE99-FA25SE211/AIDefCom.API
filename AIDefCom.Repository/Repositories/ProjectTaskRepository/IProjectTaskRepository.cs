@@ -13,6 +13,8 @@ namespace AIDefCom.Repository.Repositories.ProjectTaskRepository
         Task<ProjectTask?> GetByIdAsync(int id);
         Task<IEnumerable<ProjectTask>> GetByAssignerAsync(string assignedById);
         Task<IEnumerable<ProjectTask>> GetByAssigneeAsync(string assignedToId);
+        Task<IEnumerable<ProjectTask>> GetByAssigneeAndSessionAsync(string assignedToId, int sessionId);
+        Task<bool> ExistsBySessionAndRubricAsync(int sessionId, int rubricId, int? excludeTaskId = null);
         Task AddAsync(ProjectTask entity);
         Task UpdateAsync(ProjectTask entity);
         Task DeleteAsync(int id);

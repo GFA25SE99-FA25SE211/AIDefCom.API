@@ -4,6 +4,7 @@ using AIDefCom.Repository;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AIDefCom.Repository.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251128185619_UniqueProjectTaskRubricPerSession")]
+    partial class UniqueProjectTaskRubricPerSession
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -360,39 +363,6 @@ namespace AIDefCom.Repository.Migrations
                     b.HasIndex("GroupId");
 
                     b.ToTable("MemberNotes");
-                });
-
-            modelBuilder.Entity("AIDefCom.Repository.Entities.Note", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("SessionId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SessionId")
-                        .IsUnique();
-
-                    b.ToTable("Notes");
                 });
 
             modelBuilder.Entity("AIDefCom.Repository.Entities.ProjectTask", b =>
@@ -963,17 +933,6 @@ namespace AIDefCom.Repository.Migrations
                     b.Navigation("CommitteeAssignment");
 
                     b.Navigation("Group");
-                });
-
-            modelBuilder.Entity("AIDefCom.Repository.Entities.Note", b =>
-                {
-                    b.HasOne("AIDefCom.Repository.Entities.DefenseSession", "Session")
-                        .WithOne()
-                        .HasForeignKey("AIDefCom.Repository.Entities.Note", "SessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Session");
                 });
 
             modelBuilder.Entity("AIDefCom.Repository.Entities.ProjectTask", b =>

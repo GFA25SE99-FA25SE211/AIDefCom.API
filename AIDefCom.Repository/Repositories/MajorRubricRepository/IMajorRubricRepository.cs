@@ -11,6 +11,7 @@ namespace AIDefCom.Repository.Repositories.MajorRubricRepository
         Task<IEnumerable<MajorRubric>> GetByMajorIdAsync(int majorId);
         Task<IEnumerable<MajorRubric>> GetByRubricIdAsync(int rubricId);
         Task<bool> ExistsAsync(int majorId, int rubricId);
+        Task<bool> ExistsByMajorAndRubricNameAsync(int majorId, string rubricName);
         Task<IEnumerable<Rubric>> GetRubricsByMajorIdAsync(int majorId);
         Task AddAsync(MajorRubric entity);
         Task UpdateAsync(MajorRubric entity);
