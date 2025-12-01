@@ -41,6 +41,7 @@ using AIDefCom.Service.Services.ScoreService;
 using AIDefCom.Service.Services.ScoreNotification;
 using AIDefCom.Service.Services.RedisCache;
 using AIDefCom.Service.Services.NoteService;
+using AIDefCom.Service.Services.DefenseReportService;
 using Microsoft.Extensions.DependencyInjection;
 using AIDefCom.Service.Services.RecordingService;
 using StackExchange.Redis;
@@ -90,6 +91,7 @@ namespace AIDefCom.API
 
             // HttpClient for AI Services
             services.AddHttpClient<ITranscriptAnalysisService, TranscriptAnalysisService>();
+            services.AddHttpClient<IDefenseReportService, DefenseReportService>();
 
             // SignalR Notification Services
             services.AddScoped<IScoreNotificationService, Services.ScoreNotificationService>();
@@ -116,6 +118,7 @@ namespace AIDefCom.API
             services.AddScoped<ITranscriptAnalysisService, TranscriptAnalysisService>();
             services.AddScoped<IScoreService, ScoreService>();
             services.AddScoped<INoteService, NoteService>();
+            services.AddScoped<IDefenseReportService, DefenseReportService>();
 
             return services;
         }
