@@ -119,6 +119,8 @@ namespace AIDefCom.API
             services.AddScoped<IScoreService, ScoreService>();
             services.AddScoped<INoteService, NoteService>();
             services.AddScoped<IDefenseReportService, DefenseReportService>();
+            services.AddScoped<AIDefCom.Service.Services.FileStorageService.IFileStorageService,
+                              AIDefCom.Service.Services.FileStorageService.AzureBlobFileStorageService>();
 
             return services;
         }
