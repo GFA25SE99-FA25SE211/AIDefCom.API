@@ -345,14 +345,14 @@ namespace AIDefCom.Service.Services.AuthService
             if (payload == null)
                 throw new Exception("Invalid Google ID token.");
 
-            // Tìm user theo email
             var user = await _userManager.FindByEmailAsync(payload.Email);
             string? firstGeneratedPassword = null;
 
             // Nếu user không tồn tại trong hệ thống, không cho phép login
             if (user == null)
             {
-                throw new Exception("Email is not registered in the system. Please contact administrator to create an account.");
+                // Return 404 instead of 500 when email not registered
+                throw new KeyNotFoundException("Email is not registered in the system. Please contact administrator to create an account.");
             }
 
             // Kiểm tra nếu tài khoản bị soft delete
@@ -374,14 +374,14 @@ namespace AIDefCom.Service.Services.AuthService
             {
                 string randomPassword = GenerateSecurePassword();
                 var addPasswordResult = await _userManager.AddPasswordAsync(user, randomPassword);
-                
+
                 if (addPasswordResult.Succeeded)
                 {
                     user.HasGeneratedPassword = true;
                     user.LastGeneratedPassword = randomPassword;
                     user.PasswordGeneratedAt = DateTime.UtcNow;
                     await _userManager.UpdateAsync(user);
-                    
+
                     firstGeneratedPassword = randomPassword;
                 }
             }
@@ -432,43 +432,39 @@ namespace AIDefCom.Service.Services.AuthService
             if (payload == null)
                 throw new Exception("Invalid Google ID token.");
 
-            // Tìm user theo email
             var user = await _userManager.FindByEmailAsync(payload.Email);
             string? firstGeneratedPassword = null;
 
-            // Nếu user không tồn tại trong hệ thống, không cho phép login
             if (user == null)
             {
-                throw new Exception("Email is not registered in the system. Please contact administrator to create an account.");
+                // Return 404 instead of 500 when email not registered for lecturer login
+                throw new KeyNotFoundException("Email is not registered in the system. Please contact administrator to create an account.");
             }
 
-            // Kiểm tra nếu tài khoản bị soft delete
             if (user.IsDelete)
             {
                 throw new Exception("This account has been deactivated. Please contact administrator.");
             }
 
-            // Cập nhật FullName từ Google nếu chưa có
             if (string.IsNullOrWhiteSpace(user.FullName) && !string.IsNullOrWhiteSpace(payload.Name))
             {
                 user.FullName = payload.Name;
                 await _userManager.UpdateAsync(user);
             }
 
-            // Nếu user chưa có password, tạo password tự động cho việc login thông thường
             bool hasPassword = await _userManager.HasPasswordAsync(user);
             if (!hasPassword)
             {
                 string randomPassword = GenerateSecurePassword();
                 var addPasswordResult = await _userManager.AddPasswordAsync(user, randomPassword);
-                
+
                 if (addPasswordResult.Succeeded)
                 {
                     user.HasGeneratedPassword = true;
                     user.LastGeneratedPassword = randomPassword;
                     user.PasswordGeneratedAt = DateTime.UtcNow;
                     await _userManager.UpdateAsync(user);
-                    
+
                     firstGeneratedPassword = randomPassword;
                 }
             }

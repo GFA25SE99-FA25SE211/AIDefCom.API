@@ -13,6 +13,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity; // Added for UserManager
 
 namespace AIDefCom.Service.Services.DefenseSessionService
 {
@@ -20,11 +21,13 @@ namespace AIDefCom.Service.Services.DefenseSessionService
     {
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
+        private readonly UserManager<AppUser> _userManager; // Inject identity user manager
 
-        public DefenseSessionService(IUnitOfWork uow, IMapper mapper)
+        public DefenseSessionService(IUnitOfWork uow, IMapper mapper, UserManager<AppUser> userManager)
         {
             _uow = uow;
             _mapper = mapper;
+            _userManager = userManager;
             ExcelHelper.ConfigureExcelPackage();
         }
 
@@ -366,11 +369,14 @@ namespace AIDefCom.Service.Services.DefenseSessionService
             {
                 if (ca.Lecturer != null)
                 {
+                    var lecturerRoles = await _userManager.GetRolesAsync(ca.Lecturer);
+                    var loginRole = lecturerRoles.FirstOrDefault();
                     result.Add(new UserReadDto
                     {
                         Id = ca.Lecturer.Id,
                         FullName = ca.Lecturer.FullName,
                         Email = ca.Lecturer.Email ?? string.Empty,
+                        //Role = loginRole ?? ca.CouncilRole?.RoleName ?? "Committee Member"
                         Role = ca.CouncilRole?.RoleName ?? "Committee Member"
                     });
                 }
@@ -385,12 +391,14 @@ namespace AIDefCom.Service.Services.DefenseSessionService
             {
                 if (sg.Student != null)
                 {
+                    var studentRoles = await _userManager.GetRolesAsync(sg.Student);
+                    var loginRole = studentRoles.FirstOrDefault(); // fallback
                     result.Add(new UserReadDto
                     {
                         Id = sg.Student.Id,
                         FullName = sg.Student.FullName,
                         Email = sg.Student.Email ?? string.Empty,
-                        Role = sg.GroupRole ?? "Student"
+                        Role = loginRole
                     });
                 }
             }

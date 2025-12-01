@@ -1,4 +1,4 @@
-using Microsoft.OpenApi.Any;
+﻿using Microsoft.OpenApi.Any;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using System;
@@ -11,7 +11,7 @@ namespace AIDefCom.API.Swagger
         public void Apply(OpenApiSchema schema, SchemaFilterContext context)
         {
             if (context.Type == null) return;
-
+            
             // Major DTOs
             if (context.Type.Name == "MajorCreateDto" || context.Type.Name == "MajorUpdateDto")
             {
@@ -58,7 +58,7 @@ namespace AIDefCom.API.Swagger
                 {
                     ["projectCode"] = new OpenApiString("FA25SE135"),
                     ["topicTitle_EN"] = new OpenApiString("AI-Based Defense Committee Management System"),
-                    ["topicTitle_VN"] = new OpenApiString("H? th?ng qu?n l? h?i ??ng b?o v? d?a tr?n AI"),
+                    ["topicTitle_VN"] = new OpenApiString("H? th?ng qu?n l� h?i ??ng b?o v? d?a tr�n AI"),
                     ["semesterId"] = new OpenApiInteger(1),
                     ["majorId"] = new OpenApiInteger(1),
                     ["status"] = new OpenApiString("Active")
@@ -122,8 +122,8 @@ namespace AIDefCom.API.Swagger
             {
                 schema.Example = new OpenApiObject
                 {
-                    ["userName"] = new OpenApiString("admin"),
-                    ["password"] = new OpenApiString("Admin@123")
+                    ["Email"] = new OpenApiString("admin"),
+                    ["Password"] = new OpenApiString("Admin@123")
                 };
             }
 
@@ -248,8 +248,6 @@ namespace AIDefCom.API.Swagger
                 {
                     ["sessionId"] = new OpenApiInteger(1),
                     ["transcriptText"] = new OpenApiString("This is the defense session transcript..."),
-                    ["audio"] = new OpenApiString("https://storage.blob.core.windows.net/audio/session1.mp3"),
-                    ["status"] = new OpenApiString("Pending"),
                     ["isApproved"] = new OpenApiBoolean(false)
                 };
             }
