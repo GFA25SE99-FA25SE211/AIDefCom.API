@@ -69,6 +69,16 @@ namespace AIDefCom.Service.Services.DefenseSessionService
             return _mapper.Map<IEnumerable<DefenseSessionReadDto>>(list);
         }
 
+        public async Task<IEnumerable<DefenseSessionReadDto>> GetByStudentIdAsync(string studentId)
+        {
+            // Validate StudentId
+            if (string.IsNullOrWhiteSpace(studentId))
+                throw new ArgumentException("Student ID cannot be null or empty", nameof(studentId));
+
+            var list = await _uow.DefenseSessions.GetByStudentIdAsync(studentId);
+            return _mapper.Map<IEnumerable<DefenseSessionReadDto>>(list);
+        }
+
         public async Task<string?> GetLecturerRoleInDefenseSessionAsync(string lecturerId, int defenseSessionId)
         {
             // Validate parameters
