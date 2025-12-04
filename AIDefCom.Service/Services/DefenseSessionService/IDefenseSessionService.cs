@@ -15,6 +15,7 @@ namespace AIDefCom.Service.Services.DefenseSessionService
         Task<DefenseSessionReadDto?> GetByIdAsync(int id);
         Task<IEnumerable<DefenseSessionReadDto>> GetByGroupIdAsync(string groupId);
         Task<IEnumerable<DefenseSessionReadDto>> GetByLecturerIdAsync(string lecturerId);
+        Task<IEnumerable<DefenseSessionReadDto>> GetByStudentIdAsync(string studentId);
         Task<string?> GetLecturerRoleInDefenseSessionAsync(string lecturerId, int defenseSessionId);
         Task<int> AddAsync(DefenseSessionCreateDto dto);
         Task<bool> UpdateAsync(int id, DefenseSessionUpdateDto dto);

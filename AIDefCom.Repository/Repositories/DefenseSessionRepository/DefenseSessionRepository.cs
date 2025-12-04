@@ -70,6 +70,24 @@ namespace AIDefCom.Repository.Repositories.DefenseSessionRepository
                              .ToListAsync();
         }
 
+        public async Task<IEnumerable<DefenseSession>> GetByStudentIdAsync(string studentId)
+        {
+            // Get all GroupIds where the student is a member
+            var groupIds = await _context.StudentGroups
+                .Where(sg => sg.UserId == studentId && !sg.IsDeleted)
+                .Select(sg => sg.GroupId)
+                .Distinct()
+                .ToListAsync();
+
+            // Get all defense sessions for those groups
+            return await _set.AsNoTracking()
+                             .Include(x => x.Group)
+                             .Include(x => x.Council)
+                             .Where(x => groupIds.Contains(x.GroupId) && !x.IsDeleted)
+                             .OrderByDescending(x => x.DefenseDate)
+                             .ToListAsync();
+        }
+
         public async Task<string?> GetLecturerRoleInDefenseSessionAsync(string lecturerId, int defenseSessionId)
         {
             // Get the defense session to find its CouncilId

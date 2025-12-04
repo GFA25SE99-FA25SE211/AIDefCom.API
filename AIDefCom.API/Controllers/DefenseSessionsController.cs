@@ -95,6 +95,23 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
+        /// Get defense sessions by student ID
+        /// </summary>
+        [HttpGet("student/{studentId}")]
+        public async Task<IActionResult> GetByStudentId(string studentId)
+        {
+            _logger.LogInformation("Retrieving defense sessions for student ID: {StudentId}", studentId);
+            var data = await _service.GetByStudentIdAsync(studentId);
+            
+            return Ok(new ApiResponse<IEnumerable<DefenseSessionReadDto>>
+            {
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.ListRetrieved, "Defense sessions by student"),
+                Data = data
+            });
+        }
+
+        /// <summary>
         /// Get lecturer's role in a specific defense session
         /// </summary>
         [HttpGet("{defenseSessionId}/lecturer/{lecturerId}/role")]
