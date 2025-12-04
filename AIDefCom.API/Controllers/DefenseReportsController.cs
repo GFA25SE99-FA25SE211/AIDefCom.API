@@ -1,4 +1,4 @@
-using AIDefCom.Service.Constants;
+﻿using AIDefCom.Service.Constants;
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.DefenseReport;
 using AIDefCom.Service.Services.DefenseReportService;
@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace AIDefCom.API.Controllers
 {
     /// <summary>
-    /// Controller for generating defense reports (Bi�n b?n b?o v?)
+    /// Controller for generating defense reports (Biên b?n b?o v?)
     /// </summary>
     [Route("api/defense-reports")]
     [ApiController]
@@ -32,18 +32,18 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Generate defense report from transcript ID
+        /// Generate defense report from defense session ID
         /// </summary>
-        /// <param name="request">Request containing transcript ID</param>
+        /// <param name="request">Request containing defense session ID</param>
         /// <returns>Defense report with council info, session info, project info, and AI-analyzed defense progress</returns>
         [HttpPost("generate")]
         public async Task<IActionResult> GenerateDefenseReport([FromBody] DefenseReportRequestDto request)
         {
-            _logger.LogInformation("?? Generating defense report for transcript ID: {TranscriptId}", request.TranscriptId);
+            _logger.LogInformation("?? Generating defense report for defense session ID: {DefenseSessionId}", request.DefenseSessionId);
             
             var result = await _reportService.GenerateDefenseReportAsync(request);
             
-            _logger.LogInformation("? Defense report generated successfully for transcript ID: {TranscriptId}", request.TranscriptId);
+            _logger.LogInformation("? Defense report generated successfully for defense session ID: {DefenseSessionId}", request.DefenseSessionId);
 
             return Ok(new ApiResponse<DefenseReportResponseDto>
             {

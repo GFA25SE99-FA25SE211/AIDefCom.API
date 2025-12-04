@@ -38,24 +38,26 @@ namespace AIDefCom.Service.Services.DefenseReportService
         {
             try
             {
-                _logger.LogInformation("🔵 Starting defense report generation for transcript ID: {TranscriptId}", request.TranscriptId);
+                _logger.LogInformation("🔵 Starting defense report generation for defense session ID: {DefenseSessionId}", request.DefenseSessionId);
 
-                // 📝 BUOC 1: Lay transcript tu database
-                var transcript = await _uow.Transcripts.GetByIdAsync(request.TranscriptId);
-                if (transcript == null)
-                    throw new KeyNotFoundException($"Transcript with ID {request.TranscriptId} not found");
-
-                if (string.IsNullOrWhiteSpace(transcript.TranscriptText))
-                    throw new InvalidOperationException($"Transcript {request.TranscriptId} has no text content");
-
-                _logger.LogInformation("✅ Retrieved transcript: {Length} characters", transcript.TranscriptText.Length);
-
-                // 📝 BUOC 2: Lay defense session
-                var session = await _uow.DefenseSessions.GetByIdAsync(transcript.SessionId);
+                // 📝 BUOC 1: Lay defense session
+                var session = await _uow.DefenseSessions.GetByIdAsync(request.DefenseSessionId);
                 if (session == null)
-                    throw new KeyNotFoundException($"Defense session with ID {transcript.SessionId} not found");
+                    throw new KeyNotFoundException($"Defense session with ID {request.DefenseSessionId} not found");
 
                 _logger.LogInformation("✅ Retrieved defense session: {SessionId}", session.Id);
+
+                // 📝 BUOC 2: Lay transcript tu session
+                var transcripts = await _uow.Transcripts.GetBySessionIdAsync(session.Id);
+                var transcript = transcripts.FirstOrDefault();
+                
+                if (transcript == null)
+                    throw new KeyNotFoundException($"No transcript found for defense session {request.DefenseSessionId}");
+
+                if (string.IsNullOrWhiteSpace(transcript.TranscriptText))
+                    throw new InvalidOperationException($"Transcript {transcript.Id} has no text content");
+
+                _logger.LogInformation("✅ Retrieved transcript ID {TranscriptId}: {Length} characters", transcript.Id, transcript.TranscriptText.Length);
 
                 // 📝 BUOC 3: Lay council
                 var council = await _uow.Councils.GetByIdAsync(session.CouncilId);
@@ -148,12 +150,12 @@ namespace AIDefCom.Service.Services.DefenseReportService
                     DefenseProgress = aiAnalysis
                 };
 
-                _logger.LogInformation("🎉 Defense report generated successfully for transcript ID: {TranscriptId}", request.TranscriptId);
+                _logger.LogInformation("🎉 Defense report generated successfully for defense session ID: {DefenseSessionId}", request.DefenseSessionId);
                 return report;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Error generating defense report for transcript ID: {TranscriptId}", request.TranscriptId);
+                _logger.LogError(ex, "❌ Error generating defense report for defense session ID: {DefenseSessionId}", request.DefenseSessionId);
                 throw;
             }
         }

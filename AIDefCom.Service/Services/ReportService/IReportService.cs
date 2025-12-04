@@ -18,5 +18,10 @@ namespace AIDefCom.Service.Services.ReportService
         Task<bool> DeleteAsync(int id);
         Task<bool> ApproveAsync(int id);
         Task<bool> RejectAsync(int id);
+        
+        // File path management
+        Task<bool> SaveReportFilePathAsync(int reportId, string filePath);
+        Task<string?> GetReportFilePathByIdAsync(int reportId);
+        Task<ReportFilePathDto?> GetReportFilePathWithSessionAsync(int reportId);
     }
 }
