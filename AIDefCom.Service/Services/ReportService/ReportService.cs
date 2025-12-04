@@ -99,5 +99,42 @@ namespace AIDefCom.Service.Services.ReportService
             await _uow.SaveChangesAsync();
             return true;
         }
+
+        public async Task<bool> SaveReportFilePathAsync(int reportId, string filePath)
+        {
+            var entity = await _uow.Reports.GetByIdAsync(reportId);
+            if (entity == null) return false;
+
+            entity.FilePath = filePath;
+            await _uow.Reports.UpdateAsync(entity);
+            await _uow.SaveChangesAsync();
+            return true;
+        }
+
+        public async Task<string?> GetReportFilePathByIdAsync(int reportId)
+        {
+            var entity = await _uow.Reports.GetByIdAsync(reportId);
+            return entity?.FilePath;
+        }
+
+        public async Task<ReportFilePathDto?> GetReportFilePathWithSessionAsync(int reportId)
+        {
+            var entity = await _uow.Reports.GetByIdAsync(reportId);
+            if (entity == null || entity.Session == null) return null;
+
+            return new ReportFilePathDto
+            {
+                ReportId = entity.Id,
+                FilePath = entity.FilePath,
+                SessionId = entity.SessionId,
+                SessionLocation = entity.Session.Location,
+                DefenseDate = entity.Session.DefenseDate,
+                StartTime = entity.Session.StartTime,
+                EndTime = entity.Session.EndTime,
+                SessionStatus = entity.Session.Status,
+                GroupId = entity.Session.GroupId,
+                CouncilId = entity.Session.CouncilId
+            };
+        }
     }
 }

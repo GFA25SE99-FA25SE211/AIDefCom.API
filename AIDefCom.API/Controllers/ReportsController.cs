@@ -158,5 +158,71 @@ namespace AIDefCom.API.Controllers
                 Message = string.Format(ResponseMessages.Rejected, "Report")
             });
         }
+
+        /// <summary>
+        /// Lưu đường link PDF vào report
+        /// </summary>
+        /// <param name="id">Report ID</param>
+        /// <param name="request">Object chứa file path</param>
+        [HttpPut("{id}/filepath")]
+        public async Task<IActionResult> SaveFilePath(int id, [FromBody] SaveFilePathRequest request)
+        {
+            _logger.LogInformation("Saving file path for report ID: {Id}", id);
+            
+            if (string.IsNullOrWhiteSpace(request.FilePath))
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = "File path cannot be empty"
+                });
+            }
+
+            var success = await _service.SaveReportFilePathAsync(id, request.FilePath);
+            if (!success)
+            {
+                _logger.LogWarning("Report with ID {Id} not found", id);
+                throw new KeyNotFoundException($"Report with ID {id} not found");
+            }
+
+            _logger.LogInformation("File path saved successfully for report ID: {Id}", id);
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.Success,
+                Message = "File path saved successfully"
+            });
+        }
+
+        /// <summary>
+        /// Lấy đường link PDF của report kèm thông tin Defense Session
+        /// </summary>
+        /// <param name="id">Report ID</param>
+        [HttpGet("{id}/filepath")]
+        public async Task<IActionResult> GetFilePath(int id)
+        {
+            _logger.LogInformation("Retrieving file path with session info for report ID: {Id}", id);
+            
+            var filePathData = await _service.GetReportFilePathWithSessionAsync(id);
+            if (filePathData == null)
+            {
+                _logger.LogWarning("Report with ID {Id} not found or has no file path", id);
+                throw new KeyNotFoundException($"Report with ID {id} not found or has no file path");
+            }
+
+            return Ok(new ApiResponse<ReportFilePathDto>
+            {
+                Code = ResponseCodes.Success,
+                Message = "File path retrieved successfully with session information",
+                Data = filePathData
+            });
+        }
+    }
+
+    /// <summary>
+    /// Request model để lưu file path
+    /// </summary>
+    public class SaveFilePathRequest
+    {
+        public string FilePath { get; set; } = string.Empty;
     }
 }
