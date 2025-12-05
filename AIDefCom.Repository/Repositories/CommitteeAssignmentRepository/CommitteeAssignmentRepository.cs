@@ -80,6 +80,26 @@ namespace AIDefCom.Repository.Repositories.CommitteeAssignmentRepository
                              .ToListAsync();
         }
 
+        public async Task<CommitteeAssignment?> GetByLecturerIdAndSessionIdAsync(string lecturerId, int sessionId)
+        {
+            // Get CouncilId from DefenseSession
+            var session = await _context.DefenseSessions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(ds => ds.Id == sessionId && !ds.IsDeleted);
+
+            if (session == null)
+                return null;
+
+            // Get CommitteeAssignment by LecturerId and CouncilId
+            return await _set.AsNoTracking()
+                             .Include(x => x.Lecturer)
+                             .Include(x => x.Council)
+                             .Include(x => x.CouncilRole)
+                             .FirstOrDefaultAsync(x => x.LecturerId == lecturerId 
+                                                    && x.CouncilId == session.CouncilId 
+                                                    && !x.IsDeleted);
+        }
+
         public async Task AddAsync(CommitteeAssignment entity)
         {
             await _set.AddAsync(entity);

@@ -69,6 +69,21 @@ namespace AIDefCom.Service.Services.ProjectTaskService
             return list.Select(t => t.Rubric?.RubricName).Where(n => !string.IsNullOrEmpty(n))!.Distinct()!;
         }
 
+        public async Task<IEnumerable<string>> GetRubricNamesByLecturerAndSessionAsync(string lecturerId, int sessionId)
+        {
+            // Convert LecturerId to CommitteeAssignmentId
+            var committeeAssignmentId = await _uow.CommitteeAssignments.GetByLecturerIdAndSessionIdAsync(lecturerId, sessionId);
+            
+            if (committeeAssignmentId == null)
+            {
+                throw new KeyNotFoundException($"No committee assignment found for lecturer '{lecturerId}' in session {sessionId}");
+            }
+
+            // Use the CommitteeAssignmentId to get rubric names
+            var list = await _uow.ProjectTasks.GetByAssigneeAndSessionAsync(committeeAssignmentId.Id, sessionId);
+            return list.Select(t => t.Rubric?.RubricName).Where(n => !string.IsNullOrEmpty(n))!.Distinct()!;
+        }
+
         public async Task<int> AddAsync(ProjectTaskCreateDto dto)
         {
             if (dto.SessionId <= 0)

@@ -14,6 +14,7 @@ namespace AIDefCom.Repository.Repositories.CommitteeAssignmentRepository
         Task<IEnumerable<CommitteeAssignment>> GetByCouncilIdAsync(int councilId);
         Task<IEnumerable<CommitteeAssignment>> GetBySessionIdAsync(int sessionId);
         Task<IEnumerable<CommitteeAssignment>> GetByLecturerIdAsync(string lecturerId);
+        Task<CommitteeAssignment?> GetByLecturerIdAndSessionIdAsync(string lecturerId, int sessionId);
         Task AddAsync(CommitteeAssignment entity);
         Task UpdateAsync(CommitteeAssignment entity);
         Task DeleteAsync(string id);
