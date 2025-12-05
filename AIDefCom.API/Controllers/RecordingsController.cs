@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using AIDefCom.Service.Constants;
 using AIDefCom.Service.Dto.Common;
@@ -51,11 +51,11 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        public record FinalizeRequest(int DurationSec, long SizeBytes, string? Notes);
+        public record FinalizeRequest(int DurationSec, long SizeBytes, string? Notes, int TranscriptId);
 
         /// <summary>
         /// Finalize a recording after upload
-        /// - Returns 204 No Content on success
+        /// - Returns 200 OK on success
         /// - Returns 400 Bad Request if the request body is null, or if DurationSec or SizeBytes are negative
         /// </summary>
         [HttpPost("{id:guid}/finalize")]
@@ -71,8 +71,14 @@ namespace AIDefCom.API.Controllers
                 throw new ArgumentException("DurationSec and SizeBytes must be non-negative");
             }
 
-            _logger.LogInformation("Finalizing recording {RecordingId} with duration {Duration}s and size {Size} bytes", id, request.DurationSec, request.SizeBytes);
-            await _recordingService.FinalizeAsync(id, request.DurationSec, request.SizeBytes, request.Notes);
+            if (request.TranscriptId <= 0)
+            {
+                throw new ArgumentException("TranscriptId must be positive");
+            }
+
+            _logger.LogInformation("Finalizing recording {RecordingId} with duration {Duration}s, size {Size} bytes, and transcriptId {TranscriptId}", 
+                id, request.DurationSec, request.SizeBytes, request.TranscriptId);
+            await _recordingService.FinalizeAsync(id, request.DurationSec, request.SizeBytes, request.Notes, request.TranscriptId);
             _logger.LogInformation("Recording {RecordingId} finalized successfully", id);
             
             return Ok(new ApiResponse<object>
