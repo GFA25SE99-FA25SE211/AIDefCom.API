@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using AIDefCom.Repository.Entities;
 using AIDefCom.Repository.Repositories.RecordingRepository;
@@ -43,12 +43,16 @@ namespace AIDefCom.Service.Services.RecordingService
             return (entity.Id, uploadUri, blobUrl, blobPath);
         }
 
-        public async Task FinalizeAsync(Guid recordingId, int durationSec, long sizeBytes, string? notes)
+        public async Task FinalizeAsync(Guid recordingId, int durationSec, long sizeBytes, string? notes, int transcriptId)
         {
+            if (transcriptId <= 0) throw new ArgumentException("transcriptId must be positive", nameof(transcriptId));
+            
             var rec = await _recordings.GetByIdAsync(recordingId) ?? throw new InvalidOperationException("Recording not found");
             rec.DurationSeconds = durationSec;
             rec.SizeBytes = sizeBytes;
             rec.Notes = notes;
+            rec.TranscriptId = transcriptId;
+            
             _recordings.Update(rec);
             await _uow.CompleteAsync();
         }
