@@ -98,7 +98,6 @@ namespace AIDefCom.API.Swagger
                     ["defenseDate"] = new OpenApiString("2024-12-15"),
                     ["startTime"] = new OpenApiString("14:00:00"),
                     ["endTime"] = new OpenApiString("16:00:00"),
-                    ["status"] = new OpenApiString("Scheduled"),
                     ["councilId"] = new OpenApiInteger(1)
                 };
             }
@@ -122,8 +121,8 @@ namespace AIDefCom.API.Swagger
             {
                 schema.Example = new OpenApiObject
                 {
-                    ["Email"] = new OpenApiString("admin"),
-                    ["Password"] = new OpenApiString("Admin@123")
+                    ["email"] = new OpenApiString("admin@fpt.edu.vn"),
+                    ["password"] = new OpenApiString("Admin@123")
                 };
             }
 
@@ -131,11 +130,11 @@ namespace AIDefCom.API.Swagger
             {
                 schema.Example = new OpenApiObject
                 {
-                    ["userName"] = new OpenApiString("john.doe"),
-                    ["email"] = new OpenApiString("john.doe@university.edu.vn"),
-                    ["fullName"] = new OpenApiString("John Doe"),
-                    ["password"] = new OpenApiString("SecurePass123!"),
-                    ["role"] = new OpenApiString("Student")
+                    ["id"] = new OpenApiString("SE173501"),
+                    ["fullName"] = new OpenApiString("Nguyen Van A"),
+                    ["email"] = new OpenApiString("SE173501@fpt.edu.vn"),
+                    ["phoneNumber"] = new OpenApiString("0123456789"),
+                    ["password"] = new OpenApiString("SecurePass123!")
                 };
             }
 
@@ -144,7 +143,8 @@ namespace AIDefCom.API.Swagger
                 schema.Example = new OpenApiObject
                 {
                     ["currentPassword"] = new OpenApiString("OldPass123!"),
-                    ["newPassword"] = new OpenApiString("NewPass123!")
+                    ["newPassword"] = new OpenApiString("NewPass123!"),
+                    ["confirmNewPassword"] = new OpenApiString("NewPass123!")
                 };
             }
 
@@ -157,32 +157,57 @@ namespace AIDefCom.API.Swagger
             }
 
             // Student DTOs
-            if (context.Type.Name == "StudentCreateDto" || context.Type.Name == "StudentUpdateDto")
+            if (context.Type.Name == "StudentCreateDto")
             {
                 schema.Example = new OpenApiObject
                 {
-                    ["userName"] = new OpenApiString("SE173501"),
-                    ["email"] = new OpenApiString("student@fpt.edu.vn"),
-                    ["fullName"] = new OpenApiString("Nguyen Van A"),
+                    ["userId"] = new OpenApiString("SE173501"),
+                    ["groupId"] = new OpenApiString("GFA25SE01"),
                     ["dateOfBirth"] = new OpenApiString("2002-01-15"),
                     ["gender"] = new OpenApiString("Male"),
-                    ["phoneNumber"] = new OpenApiString("0123456789")
+                    ["role"] = new OpenApiString("Leader")
+                };
+            }
+
+            if (context.Type.Name == "StudentUpdateDto")
+            {
+                schema.Example = new OpenApiObject
+                {
+                    ["groupId"] = new OpenApiString("GFA25SE02"),
+                    ["dateOfBirth"] = new OpenApiString("2002-01-15"),
+                    ["gender"] = new OpenApiString("Male"),
+                    ["role"] = new OpenApiString("Member")
                 };
             }
 
             // Lecturer DTOs
-            if (context.Type.Name == "LecturerCreateDto" || context.Type.Name == "LecturerUpdateDto")
+            if (context.Type.Name == "LecturerCreateDto")
             {
                 schema.Example = new OpenApiObject
                 {
-                    ["userName"] = new OpenApiString("TaiNT51"),
-                    ["email"] = new OpenApiString("TaiNT51@fe.edu.vn"),
+                    ["id"] = new OpenApiString("TaiNT51"),
                     ["fullName"] = new OpenApiString("Nguyen Trong Tai"),
+                    ["email"] = new OpenApiString("TaiNT51@fe.edu.vn"),
+                    ["phoneNumber"] = new OpenApiString("0987654321"),
                     ["dateOfBirth"] = new OpenApiString("1980-05-20"),
                     ["gender"] = new OpenApiString("Male"),
-                    ["phoneNumber"] = new OpenApiString("0987654321"),
                     ["department"] = new OpenApiString("Software Engineering"),
                     ["academicRank"] = new OpenApiString("Associate Professor"),
+                    ["degree"] = new OpenApiString("Ph.D.")
+                };
+            }
+
+            if (context.Type.Name == "LecturerUpdateDto")
+            {
+                schema.Example = new OpenApiObject
+                {
+                    ["fullName"] = new OpenApiString("Nguyen Trong Tai (Updated)"),
+                    ["email"] = new OpenApiString("TaiNT51@fe.edu.vn"),
+                    ["phoneNumber"] = new OpenApiString("0987654321"),
+                    ["dateOfBirth"] = new OpenApiString("1980-05-20"),
+                    ["gender"] = new OpenApiString("Male"),
+                    ["department"] = new OpenApiString("Software Engineering"),
+                    ["academicRank"] = new OpenApiString("Professor"),
                     ["degree"] = new OpenApiString("Ph.D.")
                 };
             }
@@ -231,16 +256,6 @@ namespace AIDefCom.API.Swagger
                 };
             }
 
-            // CouncilRole DTOs
-            if (context.Type.Name == "CouncilRoleCreateDto" || context.Type.Name == "CouncilRoleUpdateDto")
-            {
-                schema.Example = new OpenApiObject
-                {
-                    ["roleName"] = new OpenApiString("Ch? t?ch H?"),
-                    ["description"] = new OpenApiString("Chairperson of the defense council")
-                };
-            }
-
             // Transcript DTOs
             if (context.Type.Name == "TranscriptCreateDto")
             {
@@ -257,32 +272,13 @@ namespace AIDefCom.API.Swagger
                 schema.Example = new OpenApiObject
                 {
                     ["transcriptText"] = new OpenApiString("Updated transcript with corrections..."),
-                    ["status"] = new OpenApiString("Approved"),
-                    ["isApproved"] = new OpenApiBoolean(true)
-                };
-            }
-
-            // StudentGroup DTOs
-            if (context.Type.Name == "StudentGroupCreateDto")
-            {
-                schema.Example = new OpenApiObject
-                {
-                    ["userId"] = new OpenApiString("SE173501"),
-                    ["groupId"] = new OpenApiString("GFA25SE01"),
-                    ["groupRole"] = new OpenApiString("Leader")
-                };
-            }
-
-            if (context.Type.Name == "StudentGroupUpdateDto")
-            {
-                schema.Example = new OpenApiObject
-                {
-                    ["groupRole"] = new OpenApiString("Member")
+                    ["isApproved"] = new OpenApiBoolean(true),
+                    ["status"] = new OpenApiString("Approved")
                 };
             }
 
             // ProjectTask DTOs
-            if (context.Type.Name == "AssignTaskDto" || context.Type.Name == "ProjectTaskCreateDto")
+            if (context.Type.Name == "ProjectTaskCreateDto")
             {
                 schema.Example = new OpenApiObject
                 {
@@ -302,6 +298,9 @@ namespace AIDefCom.API.Swagger
                 {
                     ["title"] = new OpenApiString("Review Project Documentation (Updated)"),
                     ["description"] = new OpenApiString("Completed review with feedback provided"),
+                    ["assignedById"] = new OpenApiString("CA-001"),
+                    ["assignedToId"] = new OpenApiString("CA-002"),
+                    ["rubricId"] = new OpenApiInteger(1),
                     ["sessionId"] = new OpenApiInteger(1),
                     ["status"] = new OpenApiString("Completed")
                 };
@@ -323,6 +322,8 @@ namespace AIDefCom.API.Swagger
             {
                 schema.Example = new OpenApiObject
                 {
+                    ["sessionId"] = new OpenApiInteger(1),
+                    ["filePath"] = new OpenApiString("/reports/defense-session-1-report-updated.pdf"),
                     ["summaryText"] = new OpenApiString("Updated report with final scores and recommendations"),
                     ["status"] = new OpenApiString("Finalized")
                 };

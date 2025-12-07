@@ -37,10 +37,9 @@ namespace AIDefCom.API.Controllers
             if (string.IsNullOrWhiteSpace(request.Id) ||
                 string.IsNullOrWhiteSpace(request.Email) ||
                 string.IsNullOrWhiteSpace(request.Password) ||
-                string.IsNullOrWhiteSpace(request.FullName) ||
-                string.IsNullOrWhiteSpace(request.PhoneNumber))
+                string.IsNullOrWhiteSpace(request.FullName))
             {
-                throw new ArgumentNullException(nameof(request), "All fields (Id, Email, Password, FullName, PhoneNumber) are required");
+                throw new ArgumentNullException(nameof(request), "Id, Email, Password, and FullName are required");
             }
 
             _logger.LogInformation("Creating new account: {Email} with ID: {Id}", request.Email, request.Id);
