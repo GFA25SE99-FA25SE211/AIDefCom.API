@@ -47,17 +47,29 @@ namespace AIDefCom.Service.Services.DefenseReportService
 
                 _logger.LogInformation("✅ Retrieved defense session: {SessionId}", session.Id);
 
-                // 📝 BUOC 2: Lay transcript tu session
+                // 📝 BUOC 2: Lay TAT CA transcript tu session
                 var transcripts = await _uow.Transcripts.GetBySessionIdAsync(session.Id);
-                var transcript = transcripts.FirstOrDefault();
                 
-                if (transcript == null)
+                if (transcripts == null || !transcripts.Any())
                     throw new KeyNotFoundException($"No transcript found for defense session {request.DefenseSessionId}");
 
-                if (string.IsNullOrWhiteSpace(transcript.TranscriptText))
-                    throw new InvalidOperationException($"Transcript {transcript.Id} has no text content");
+                // Loc chi lay nhung transcript co noi dung
+                var validTranscripts = transcripts
+                    .Where(t => !string.IsNullOrWhiteSpace(t.TranscriptText))
+                    .ToList();
 
-                _logger.LogInformation("✅ Retrieved transcript ID {TranscriptId}: {Length} characters", transcript.Id, transcript.TranscriptText.Length);
+                if (!validTranscripts.Any())
+                    throw new InvalidOperationException($"No valid transcript content found for defense session {request.DefenseSessionId}");
+
+                _logger.LogInformation("✅ Retrieved {Count} transcript(s) for defense session {SessionId}", 
+                    validTranscripts.Count, session.Id);
+
+                // Gop tat ca transcript text thanh 1 chuoi de phan tich
+                var combinedTranscriptText = string.Join("\n\n--- TRANSCRIPT TIẾP THEO ---\n\n", 
+                    validTranscripts.Select(t => t.TranscriptText));
+
+                _logger.LogInformation("✅ Combined transcript total length: {Length} characters", 
+                    combinedTranscriptText.Length);
 
                 // 📝 BUOC 3: Lay council
                 var council = await _uow.Councils.GetByIdAsync(session.CouncilId);
@@ -115,8 +127,8 @@ namespace AIDefCom.Service.Services.DefenseReportService
 
                 _logger.LogInformation("✅ Retrieved {Count} students", students.Count);
 
-                // 🤖 BUOC 9: Goi AI de phan tich transcript
-                var aiAnalysis = await AnalyzeTranscriptWithAIAsync(transcript.TranscriptText, councilMembers, students);
+                // 🤖 BUOC 9: Goi AI de phan tich TAT CA transcript
+                var aiAnalysis = await AnalyzeTranscriptWithAIAsync(combinedTranscriptText, councilMembers, students);
 
                 _logger.LogInformation("✅ AI analysis completed");
 
@@ -161,10 +173,10 @@ namespace AIDefCom.Service.Services.DefenseReportService
         }
 
         /// <summary>
-        /// Goi AI de phan tich transcript va tao phan "Dien bien qua trinh bao ve"
+        /// Goi AI de phan tich TAT CA transcript va tao phan "Dien bien qua trinh bao ve"
         /// </summary>
         private async Task<DefenseProgressDto> AnalyzeTranscriptWithAIAsync(
-            string transcriptText, 
+            string combinedTranscriptText, 
             List<CouncilMemberDto> councilMembers,
             List<StudentInfoDto> students)
         {
@@ -179,7 +191,7 @@ namespace AIDefCom.Service.Services.DefenseReportService
                 var studentNames = string.Join(", ", students.Select(s => $"{s.FullName} ({s.GroupRole ?? "Member"})"));
 
                 // Tao prompt cho AI
-                var prompt = BuildDefenseReportPrompt(transcriptText, lecturerNames, studentNames);
+                var prompt = BuildDefenseReportPrompt(combinedTranscriptText, lecturerNames, studentNames);
 
                 // Chuan bi HttpClient
                 _httpClient.DefaultRequestHeaders.Clear();
@@ -190,18 +202,22 @@ namespace AIDefCom.Service.Services.DefenseReportService
                 var model = _config["AI:Model"] ?? "gpt-4o-mini";
 
                 // Gioi han do dai transcript de tranh vuot token limit
-                var trimmedTranscript = transcriptText.Length > 8000
-                    ? transcriptText.Substring(0, 8000)
-                    : transcriptText;
+                // Tang gioi han len 20000 vi co the co nhieu transcript
+                var trimmedTranscript = combinedTranscriptText.Length > 20000
+                    ? combinedTranscriptText.Substring(0, 20000)
+                    : combinedTranscriptText;
+
+                _logger.LogInformation("📊 Analyzing combined transcript: Original={OriginalLength}, Trimmed={TrimmedLength} characters", 
+                    combinedTranscriptText.Length, trimmedTranscript.Length);
 
                 var payload = new
                 {
                     model,
                     messages = new[]
                     {
-                        new { role = "system", content = "Bạn là AI chuyên phân tích biên bản bảo vệ đồ án tốt nghiệp. Hãy phân tích transcript và tạo báo cáo chi tiết." },
+                        new { role = "system", content = "Bạn là AI chuyên phân tích biên bản bảo vệ đồ án tốt nghiệp. Hãy phân tích TOÀN BỘ transcript (có thể gồm nhiều đoạn) và tạo báo cáo chi tiết tổng hợp." },
                         new { role = "user", content = prompt },
-                        new { role = "user", content = $"Transcript:\n{trimmedTranscript}" }
+                        new { role = "user", content = $"TOÀN BỘ TRANSCRIPT (có thể gồm nhiều phần):\n\n{trimmedTranscript}" }
                     },
                     max_tokens = 16384,
                     temperature = 0.3,
@@ -227,7 +243,7 @@ namespace AIDefCom.Service.Services.DefenseReportService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Error analyzing transcript with AI");
+                _logger.LogError(ex, "❌ Error analyzing combined transcript with AI");
                 
                 // Tra ve default response neu AI fail
                 return new DefenseProgressDto
@@ -242,63 +258,83 @@ namespace AIDefCom.Service.Services.DefenseReportService
         }
 
         /// <summary>
-        /// Tao prompt cho AI de phan tich transcript
+        /// Tao prompt cho AI de phan tich TAT CA transcript
         /// </summary>
-        private string BuildDefenseReportPrompt(string transcript, string lecturerNames, string studentNames)
+        private string BuildDefenseReportPrompt(string combinedTranscript, string lecturerNames, string studentNames)
         {
             return $@"
-Hãy phân tích transcript buổi bảo vệ đồ án dưới đây và tạo báo cáo chi tiết theo định dạng JSON.
+Hãy phân tích TOÀN BỘ transcript buổi bảo vệ đồ án dưới đây (có thể gồm NHIỀU ĐOẠN transcript được gộp lại) và tạo báo cáo chi tiết TỔNG HỢP theo định dạng JSON.
 
 **THÔNG TIN NGỮ CẢNH:**
 - Giảng viên trong hội đồng: {lecturerNames}
-- Sinh viên thực hiện: {studentNames}
+- Sinh viên trong nhóm: {studentNames}
+
+**NGUYÊN TẮC PHÂN TÍCH QUAN TRỌNG:**
+⚠️ Đây là TOÀN BỘ transcript của buổi bảo vệ, có thể gồm NHIỀU PHẦN được gộp lại
+⚠️ Hãy đọc và phân tích TOÀN BỘ nội dung, KHÔNG BỎ SÓT bất kỳ phần nào
+⚠️ CHỈ phân tích và ghi nhận thông tin của sinh viên NÀO THỰC SỰ THAM GIA trình bày hoặc trả lời câu hỏi trong TOÀN BỘ transcript
+⚠️ KHÔNG được tự động tạo thông tin cho sinh viên không xuất hiện trong transcript
+⚠️ Nếu sinh viên KHÔNG có phản hồi hoặc KHÔNG được đề cập trong TOÀN BỘ transcript, GHI RÕ: ""Không nhận được phản hồi từ sinh viên này trong transcript""
+⚠️ Nếu KHÔNG XÁC ĐỊNH được sinh viên nào trả lời, ghi ""Nhóm"" hoặc ""Không xác định được""
+⚠️ Tổng hợp thông tin từ TẤT CẢ các phần transcript để có cái nhìn toàn diện
 
 **YÊU CẦU PHÂN TÍCH CHI TIẾT:**
 
 1. **Thời gian thực tế**: 
-   - Xác định thời gian bắt đầu và kết thúc chính xác từ transcript
+   - Xác định thời gian bắt đầu và kết thúc chính xác từ TOÀN BỘ transcript
+   - Nếu có nhiều phần transcript, lấy thời gian bắt đầu sớm nhất và kết thúc muộn nhất
    - Nếu không có thông tin rõ ràng, ghi ""N/A""
 
-2. **Phần trình bày của nhóm/sinh viên** (phân tích kỹ từng sinh viên):
-   - Xác định rõ sinh viên nào trình bày phần nào
-   - Liệt kê các nội dung chính họ trình bày (công nghệ, tính năng, kiến trúc, demo...)
+2. **Phần trình bày của sinh viên** (CHỈ phân tích sinh viên THỰC SỰ TRÌNH BÀY trong TOÀN BỘ transcript):
+   - XÁC ĐỊNH RÕ sinh viên nào trình bày phần nào DựA VÀO TOÀN BỘ TRANSCRIPT
+   - TỔNG HỢP tất cả nội dung họ trình bày từ TẤT CẢ các phần transcript (công nghệ, tính năng, kiến trúc, demo...)
    - Đánh giá độ mạch lạc, rõ ràng của phần trình bày
    - Ghi chú các điểm nổi bật hoặc thiếu sót trong cách trình bày
+   - ❌ KHÔNG tạo thông tin trình bày cho sinh viên không xuất hiện trong TOÀN BỘ transcript
+   - ✅ Nếu sinh viên nào KHÔNG trình bày trong TOÀN BỘ transcript, KHÔNG thêm vào danh sách ""studentPresentations""
 
-3. **Câu hỏi và câu trả lời** (phân tích CHI TIẾT):
+3. **Câu hỏi và câu trả lời** (phân tích CHI TIẾT DựA VÀO TOÀN BỘ TRANSCRIPT):
    
-   Với MỖI CÂU HỎI từ giảng viên, hãy ghi chú:
+   Với MỖI CÂU HỎI từ giảng viên trong TOÀN BỘ transcript, hãy ghi chú:
    a) **Nội dung câu hỏi**: Tóm tắt câu hỏi ngắn gọn nhưng đầy đủ
-   b) **Sinh viên nào trả lời**: Nếu xác định được tên, ghi tên; nếu không thì ghi ""Nhóm""
+   b) **Sinh viên nào trả lời**: 
+      - Nếu XÁC ĐỊNH ĐƯỢC TÊN từ transcript, ghi tên cụ thể
+      - Nếu KHÔNG XÁC ĐỊNH được, ghi ""Nhóm"" hoặc ""Không xác định được""
+      - ❌ KHÔNG GÁN tên sinh viên nếu không chắc chắn
    c) **Chất lượng câu trả lời**:
       - ""Trả lời tốt"": Câu trả lời đầy đủ, rõ ràng, chính xác, có dẫn chứng
       - ""Trả lời khá"": Câu trả lời đúng nhưng chưa đầy đủ hoặc thiếu chi tiết
       - ""Trả lời yếu"": Câu trả lời mơ hồ, không rõ ràng, hoặc không đúng trọng tâm
       - ""Không trả lời được"": Sinh viên không biết hoặc không trả lời
       - ""Trả lời sau khi được gợi ý"": Cần giảng viên hỗ trợ mới trả lời được
-   d) **Chi tiết câu trả lời**: Tóm tắt nội dung chính sinh viên đã trả lời
-   e) **Thái độ khi trả lời**: 
+      - ""Không nhận được phản hồi"": Không có câu trả lời trong TOÀN BỘ transcript
+   d) **Chi tiết câu trả lời**: 
+      - Tóm tắt nội dung chính sinh viên ĐÃ TRẢ LỜI trong transcript
+      - Nếu KHÔNG CÓ câu trả lời trong TOÀN BỘ transcript, ghi ""Không có phản hồi trong transcript""
+   e) **Thái độ khi trả lời** (CHỈ ghi nếu CÓ THÔNG TIN từ transcript): 
       - Tự tin, lưu loát
       - Do dự, ngập ngừng
       - Cần suy nghĩ lâu
       - Không chắc chắn
-   f) **Nếu trả lời không tốt**: Ghi chú lý do (không hiểu rõ, thiếu kiến thức, không chuẩn bị kỹ...)
+      - ""N/A"" nếu không xác định được
+   f) **Nếu trả lời không tốt**: Ghi chú lý do DựA VÀO TRANSCRIPT (không hiểu rõ, thiếu kiến thức, không chuẩn bị kỹ...)
 
-4. **Tóm tắt tổng quan** (3-5 câu):
-   - Đánh giá chung về buổi bảo vệ
-   - Điểm mạnh của nhóm
-   - Điểm yếu hoặc vấn đề gặp phải
-   - Kết quả dự kiến (nếu có thông tin)
+4. **Tóm tắt tổng quan** (3-5 câu - TỔNG HỢP từ TOÀN BỘ TRANSCRIPT):
+   - Đánh giá chung về buổi bảo vệ DựA VÀO TOÀN BỘ TRANSCRIPT
+   - Điểm mạnh của nhóm (CHỈ ghi những gì THỰC SỰ XUẤT HIỆN trong TOÀN BỘ transcript)
+   - Điểm yếu hoặc vấn đề gặp phải (CHỈ ghi những gì THỰC SỰ XUẤT HIỆN trong TOÀN BỘ transcript)
+   - Kết quả dự kiến (nếu có thông tin trong transcript)
 
-5. **Đánh giá phong thái và kỹ năng trình bày**:
+5. **Đánh giá phong thái và kỹ năng trình bày** (CHỈ DựA VÀO TOÀN BỘ TRANSCRIPT):
    - Cách thức trình bày (slide, demo, giải thích...)
    - Sự tự tin, rõ ràng khi trình bày
    - Khả năng giao tiếp và trả lời câu hỏi
-   - Sự phối hợp giữa các thành viên
+   - Sự phối hợp giữa các thành viên (nếu có thông tin)
    - Kỹ năng xử lý tình huống khó
+   - ❌ KHÔNG đánh giá sinh viên không xuất hiện trong TOÀN BỘ transcript
 
-6. **Các chủ đề trọng tâm được thảo luận**:
-   - Liệt kê các vấn đề chính mà hội đồng quan tâm
+6. **Các chủ đề trọng tâm được thảo luận** (CHỈ DựA VÀO TOÀN BỘ TRANSCRIPT):
+   - TỔNG HỢP tất cả các vấn đề chính mà hội đồng quan tâm từ TẤT CẢ các phần transcript
    - Các câu hỏi về công nghệ, kiến trúc, thiết kế
    - Các câu hỏi về tính thực tiễn, khả năng ứng dụng
    - Các góp ý, đề xuất cải tiến từ hội đồng
@@ -309,42 +345,53 @@ Hãy phân tích transcript buổi bảo vệ đồ án dưới đây và tạo 
   ""actualEndTime"": ""HH:mm hoặc N/A"",
   ""studentPresentations"": [
     {{
-      ""studentName"": ""Tên sinh viên hoặc vai trò (Leader/Member)"",
+      ""studentName"": ""Tên sinh viên THỰC SỰ TRÌNH BÀY (từ TOÀN BỘ transcript) hoặc vai trò nếu không xác định được tên"",
       ""presentationContent"": [
-        ""Giới thiệu tổng quan về dự án"",
-        ""Trình bày công nghệ sử dụng: React, Node.js...""
-        ""Demo tính năng chính...""
-        ""Giải thích kiến trúc hệ thống""
+        ""TỔNG HỢP nội dung THỰC SỰ ĐƯỢC TRÌNH BÀY từ TẤT CẢ các phần transcript"",
+        ""Ví dụ: Giới thiệu tổng quan về dự án"",
+        ""Ví dụ: Trình bày công nghệ sử dụng: React, Node.js...""
       ],
-      ""presentationQuality"": ""Đánh giá: Rõ ràng/Khá tốt/Cần cải thiện"",
-      ""notes"": ""Ghi chú đặc biệt về phần trình bày (nếu có)""
+      ""presentationQuality"": ""Đánh giá DựA VÀO TOÀN BỘ TRANSCRIPT: Rõ ràng/Khá tốt/Cần cải thiện"",
+      ""notes"": ""Ghi chú đặc biệt DựA VÀO TOÀN BỘ TRANSCRIPT (nếu có)""
     }}
   ],
   ""questionsAndAnswers"": [
     {{
-      ""lecturer"": ""Tên/vai trò giảng viên (Chủ tịch HĐ, Thư ký, Ủy viên...)""
-      ""question"": ""Nội dung câu hỏi cụ thể"",
-      ""respondent"": ""Tên sinh viên trả lời hoặc 'Nhóm'"",
-      ""answerQuality"": ""Trả lời tốt/Trả lời khá/Trả lời yếu/Không trả lời được/Trả lời sau khi được gợi ý"",
-      ""answerContent"": ""Tóm tắt nội dung câu trả lời của sinh viên"",
-      ""answerAttitude"": ""Tự tin, lưu loát/Do dự, ngập ngừng/Cần suy nghĩ lâu/Không chắc chắn"",
-      ""additionalNotes"": ""Ghi chú thêm (nếu có): ví dụ 'Cần giảng viên gợi ý mới trả lời được', 'Trả lời không đúng trọng tâm'...""
+      ""lecturer"": ""Tên/vai trò giảng viên (từ transcript hoặc 'Giảng viên' nếu không xác định)"",
+      ""question"": ""Nội dung câu hỏi cụ thể từ TOÀN BỘ transcript"",
+      ""respondent"": ""Tên sinh viên THỰC SỰ TRẢ LỜI (từ transcript) hoặc 'Nhóm'/'Không xác định được'"",
+      ""answerQuality"": ""Trả lời tốt/Trả lời khá/Trả lời yếu/Không trả lời được/Trả lời sau khi được gợi ý/Không nhận được phản hồi"",
+      ""answerContent"": ""Tóm tắt nội dung câu trả lời THỰC SỰ XUẤT HIỆN trong transcript hoặc 'Không có phản hồi trong transcript'"",
+      ""answerAttitude"": ""Tự tin, lưu loát/Do dự, ngập ngừng/Cần suy nghĩ lâu/Không chắc chắn/N/A"",
+      ""additionalNotes"": ""Ghi chú thêm DựA VÀO TRANSCRIPT (nếu có): ví dụ 'Cần giảng viên gợi ý mới trả lời được', 'Trả lời không đúng trọng tâm'...""
     }}
   ],
-  ""overallSummary"": ""Tóm tắt 3-5 câu: Buổi bảo vệ diễn ra..., nhóm đã..., điểm mạnh là..., điểm yếu là..."",
-  ""studentPerformance"": ""Đánh giá chi tiết: Sinh viên trình bày [tốt/khá/yếu], phong thái [tự tin/lo lắng], khả năng trả lời câu hỏi [tốt/khá/cần cải thiện], kỹ năng giao tiếp [rõ ràng/chưa rõ ràng]..."",
-  ""discussionFocus"": ""Các chủ đề chính: 1) Công nghệ và kiến trúc hệ thống, 2) Tính năng và khả năng mở rộng, 3) Testing và security, 4) Tính thực tiễn và khả năng triển khai...""
+  ""overallSummary"": ""Tóm tắt 3-5 câu TỔNG HỢP DựA VÀO TOÀN BỘ TRANSCRIPT: Buổi bảo vệ diễn ra..., nhóm đã..., điểm mạnh là..., điểm yếu là..."",
+  ""studentPerformance"": ""Đánh giá chi tiết TỔNG HỢP CHỈ DựA VÀO TOÀN BỘ TRANSCRIPT: Sinh viên trình bày [tốt/khá/yếu], phong thái [tự tin/lo lắng], khả năng trả lời câu hỏi [tốt/khá/cần cải thiện], kỹ năng giao tiếp [rõ ràng/chưa rõ ràng]..."",
+  ""discussionFocus"": ""Các chủ đề chính TỔNG HỢP DựA VÀO TOÀN BỘ TRANSCRIPT: 1) Công nghệ và kiến trúc hệ thống, 2) Tính năng và khả năng mở rộng, 3) Testing và security, 4) Tính thực tiễn và khả năng triển khai...""
 }}
 
-**LƯU Ý QUAN TRỌNG:**
-- Phân tích KỸ LƯỠNG từng câu hỏi và câu trả lời, không bỏ sót
-- Ghi chú RÕ RÀNG chất lượng câu trả lời của sinh viên (tốt/khá/yếu)
-- Chú ý THÁI ĐỘ và PHONG CÁCH trả lời (tự tin, do dự, không chắc chắn...)
-- Nếu sinh viên trả lời SAI hoặc KHÔNG ĐẦY ĐỦ, phải ghi chú cụ thể
-- Nếu giảng viên phải GỢI Ý hoặc HỖ TRỢ, phải ghi rõ
-- Phân biệt rõ câu trả lời TỐT và câu trả lời YẾU
-- Trả về JSON hợp lệ, KHÔNG thêm markdown formatting (không có ```json)
-- Nếu không xác định được thông tin, ghi ""N/A"" hoặc ""Không xác định được từ transcript""
+**LƯU Ý QUAN TRỌNG - ĐỌC KỸ:**
+✅ ĐỌC và PHÂN TÍCH TOÀN BỘ transcript (có thể gồm NHIỀU PHẦN)
+✅ TỔNG HỢP thông tin từ TẤT CẢ các phần transcript
+✅ CHỈ phân tích những gì THỰC SỰ XUẤT HIỆN trong TOÀN BỘ transcript
+✅ CHỈ ghi nhận thông tin của sinh viên NÀO THỰC SỰ THAM GIA trình bày hoặc trả lời trong TOÀN BỘ transcript
+✅ Nếu sinh viên KHÔNG xuất hiện trong TOÀN BỘ transcript, KHÔNG thêm vào danh sách
+✅ Nếu KHÔNG XÁC ĐỊNH được sinh viên nào trả lời, ghi ""Nhóm"" hoặc ""Không xác định được""
+✅ Nếu KHÔNG CÓ câu trả lời cho câu hỏi trong TOÀN BỘ transcript, ghi ""Không nhận được phản hồi"" hoặc ""Không có phản hồi trong transcript""
+✅ Ghi chú RÕ RÀNG chất lượng câu trả lời DựA VÀO TOÀN BỘ TRANSCRIPT (tốt/khá/yếu)
+✅ Chú ý THÁI ĐỘ và PHONG CÁCH trả lời DựA VÀO TOÀN BỘ TRANSCRIPT (tự tin, do dự, không chắc chắn...)
+✅ Nếu sinh viên trả lời SAI hoặc KHÔNG ĐẦY ĐỦ, phải ghi chú cụ thể DựA VÀO TOÀN BỘ TRANSCRIPT
+✅ Nếu giảng viên phải GỢI Ý hoặc HỖ TRỢ, phải ghi rõ (nếu có trong transcript)
+✅ Phân biệt rõ câu trả lời TỐT và câu trả lời YẾU DựA VÀO TOÀN BỘ TRANSCRIPT
+✅ Trả về JSON hợp lệ, KHÔNG thêm markdown formatting (không có ```json)
+✅ Nếu không xác định được thông tin từ TOÀN BỘ transcript, ghi ""N/A"" hoặc ""Không xác định được từ transcript""
+
+❌ KHÔNG bỏ sót bất kỳ phần transcript nào
+❌ KHÔNG tự động tạo thông tin cho sinh viên không xuất hiện trong TOÀN BỘ transcript
+❌ KHÔNG đoán mò hoặc suy đoán thông tin không có trong TOÀN BỘ transcript
+❌ KHÔNG gán tên sinh viên nếu không chắc chắn
+❌ KHÔNG tạo câu trả lời giả định cho sinh viên
 ";
         }
 
