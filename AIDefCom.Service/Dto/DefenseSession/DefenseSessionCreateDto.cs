@@ -26,11 +26,6 @@ namespace AIDefCom.Service.Dto.DefenseSession
         [Required(ErrorMessage = "End time is required")]
         public TimeSpan EndTime { get; set; }
 
-        [Required(ErrorMessage = "Status is required")]
-        [RegularExpression(@"^(Scheduled|InProgress|Completed|Cancelled|Postponed)$",
-            ErrorMessage = "Status must be one of: Scheduled, InProgress, Completed, Cancelled, Postponed")]
-        public string Status { get; set; } = string.Empty;
-
         [Required(ErrorMessage = "Council ID is required")]
         [Range(1, int.MaxValue, ErrorMessage = "Council ID must be greater than 0")]
         public int CouncilId { get; set; }

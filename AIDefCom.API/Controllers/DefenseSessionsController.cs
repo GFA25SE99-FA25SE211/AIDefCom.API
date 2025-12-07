@@ -239,6 +239,52 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
+        /// Change defense session status to InProgress
+        /// </summary>
+        [HttpPut("{id}/start")]
+        public async Task<IActionResult> StartSession(int id)
+        {
+            _logger.LogInformation("Starting defense session with ID: {Id}", id);
+            var ok = await _service.ChangeStatusAsync(id, "InProgress");
+            
+            if (!ok)
+            {
+                throw new KeyNotFoundException($"Defense session with ID {id} not found");
+            }
+
+            var updated = await _service.GetByIdAsync(id);
+            return Ok(new ApiResponse<DefenseSessionReadDto>
+            {
+                Code = ResponseCodes.Success,
+                Message = "Defense session started successfully",
+                Data = updated
+            });
+        }
+
+        /// <summary>
+        /// Change defense session status to Completed
+        /// </summary>
+        [HttpPut("{id}/complete")]
+        public async Task<IActionResult> CompleteSession(int id)
+        {
+            _logger.LogInformation("Completing defense session with ID: {Id}", id);
+            var ok = await _service.ChangeStatusAsync(id, "Completed");
+            
+            if (!ok)
+            {
+                throw new KeyNotFoundException($"Defense session with ID {id} not found");
+            }
+
+            var updated = await _service.GetByIdAsync(id);
+            return Ok(new ApiResponse<DefenseSessionReadDto>
+            {
+                Code = ResponseCodes.Success,
+                Message = "Defense session completed successfully",
+                Data = updated
+            });
+        }
+
+        /// <summary>
         /// Import defense sessions from Excel file
         /// </summary>
         [HttpPost("import")]

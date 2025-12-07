@@ -175,6 +175,7 @@ namespace AIDefCom.Service.Services.DefenseSessionService
             var entity = _mapper.Map<DefenseSession>(dto);
             entity.CreatedAt = DateTime.UtcNow;
             entity.IsDeleted = false;
+            entity.Status = "Scheduled"; // Auto-set status to Scheduled
 
             await _uow.DefenseSessions.AddAsync(entity);
             await _uow.SaveChangesAsync();
@@ -318,6 +319,10 @@ namespace AIDefCom.Service.Services.DefenseSessionService
 
             if (reports.Any())
                 throw new InvalidOperationException($"Cannot delete defense session because it has {reports.Count()} report(s). Please remove reports first.");
+
+            // Change status to Cancelled before soft delete
+            existing.Status = "Cancelled";
+            await _uow.DefenseSessions.UpdateAsync(existing);
 
             await _uow.DefenseSessions.SoftDeleteAsync(id);
             await _uow.SaveChangesAsync();
@@ -821,6 +826,57 @@ namespace AIDefCom.Service.Services.DefenseSessionService
         private bool TimeRangesOverlap(TimeSpan start1, TimeSpan end1, TimeSpan start2, TimeSpan end2)
         {
             return start1 < end2 && end1 > start2;
+        }
+
+        /// <summary>
+        /// Change defense session status (only allows Scheduled -> InProgress -> Completed)
+        /// </summary>
+        public async Task<bool> ChangeStatusAsync(int id, string newStatus)
+        {
+            // Validate ID
+            if (id <= 0)
+                throw new ArgumentException("Defense session ID must be greater than 0", nameof(id));
+
+            // Validate new status
+            if (string.IsNullOrWhiteSpace(newStatus))
+                throw new ArgumentException("New status cannot be empty", nameof(newStatus));
+
+            var validStatuses = new[] { "Scheduled", "InProgress", "Completed" };
+            if (!validStatuses.Contains(newStatus))
+                throw new ArgumentException($"Invalid status. Only {string.Join(", ", validStatuses)} are allowed for status change.");
+
+            // Get existing session
+            var existing = await _uow.DefenseSessions.GetByIdAsync(id);
+            if (existing == null)
+                return false;
+
+            // Validate status transition (only forward progression allowed)
+            var allowedTransitions = new Dictionary<string, string[]>
+            {
+                ["Scheduled"] = new[] { "InProgress" },
+                ["InProgress"] = new[] { "Completed" },
+                ["Completed"] = new string[] { }, // Cannot change from Completed
+                ["Cancelled"] = new string[] { }, // Cannot change from Cancelled
+                ["Postponed"] = new string[] { }  // Cannot change from Postponed (use Update API instead)
+            };
+
+            if (!allowedTransitions.ContainsKey(existing.Status))
+                throw new InvalidOperationException($"Unknown current status: {existing.Status}");
+
+            if (!allowedTransitions[existing.Status].Contains(newStatus))
+            {
+                var allowed = allowedTransitions[existing.Status].Length > 0 
+                    ? string.Join(", ", allowedTransitions[existing.Status]) 
+                    : "none";
+                throw new InvalidOperationException(
+                    $"Invalid status transition from '{existing.Status}' to '{newStatus}'. Allowed transitions: {allowed}");
+            }
+
+            // Update status
+            existing.Status = newStatus;
+            await _uow.DefenseSessions.UpdateAsync(existing);
+            await _uow.SaveChangesAsync();
+            return true;
         }
     }
 }
