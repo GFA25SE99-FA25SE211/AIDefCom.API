@@ -56,14 +56,14 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
                 // 📝 B1: Lấy transcript từ Redis cache với validation toàn diện
                 var transcriptKey = $"transcript:defense:{request.DefenseSessionId}";
                 _logger.LogInformation("🔍 Fetching transcript from Redis with key: {Key}", transcriptKey);
-                
+
                 var transcript = await _redisCache.GetAsync(transcriptKey);
-                
+
                 // ❌ Kiểm tra transcript có tồn tại không
                 if (string.IsNullOrWhiteSpace(transcript))
                 {
                     _logger.LogWarning("⚠️ Transcript not found in Redis cache for session {SessionId}", request.DefenseSessionId);
-                    return CreateNotFoundResponse(request.DefenseSessionId, 
+                    return CreateNotFoundResponse(request.DefenseSessionId,
                         "Transcript chưa có trong hệ thống. Vui lòng đảm bảo buổi bảo vệ đã được ghi âm và transcript đã được tạo.");
                 }
 
@@ -72,21 +72,21 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
                 // ❌ Kiểm tra độ dài transcript có hợp lệ không (tối thiểu 100 ký tự để có nội dung phân tích)
                 if (transcript.Length < 100)
                 {
-                    _logger.LogWarning("⚠️ Transcript too short ({Length} chars) for analysis. Session: {SessionId}", 
+                    _logger.LogWarning("⚠️ Transcript too short ({Length} chars) for analysis. Session: {SessionId}",
                         transcript.Length, request.DefenseSessionId);
-                    return CreateInvalidContentResponse(request.DefenseSessionId, 
+                    return CreateInvalidContentResponse(request.DefenseSessionId,
                         $"Transcript quá ngắn ({transcript.Length} ký tự) để phân tích. Có thể buổi bảo vệ chưa diễn ra hoặc ghi âm bị lỗi.");
                 }
 
                 // ❌ Kiểm tra transcript có chứa nội dung có ý nghĩa không (không phải chỉ toàn ký tự đặc biệt)
                 var meaningfulChars = transcript.Count(c => char.IsLetterOrDigit(c));
                 var meaningfulRatio = (double)meaningfulChars / transcript.Length;
-                
+
                 if (meaningfulRatio < 0.3)
                 {
-                    _logger.LogWarning("⚠️ Transcript contains too few meaningful characters ({Ratio:P}) for session {SessionId}", 
+                    _logger.LogWarning("⚠️ Transcript contains too few meaningful characters ({Ratio:P}) for session {SessionId}",
                         meaningfulRatio, request.DefenseSessionId);
-                    return CreateInvalidContentResponse(request.DefenseSessionId, 
+                    return CreateInvalidContentResponse(request.DefenseSessionId,
                         "Transcript có nội dung không hợp lệ (quá nhiều ký tự đặc biệt hoặc nhiễu). Vui lòng kiểm tra lại file ghi âm.");
                 }
 
@@ -94,7 +94,7 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
                 var hasRelevantContent = ContainsDefenseRelatedKeywords(transcript);
                 if (!hasRelevantContent)
                 {
-                    _logger.LogWarning("⚠️ Transcript does not contain defense-related keywords. Possible incorrect content. Session: {SessionId}", 
+                    _logger.LogWarning("⚠️ Transcript does not contain defense-related keywords. Possible incorrect content. Session: {SessionId}",
                         request.DefenseSessionId);
                     // Không return lỗi, chỉ warning vì có thể là buổi bảo vệ đặc biệt
                 }
@@ -111,7 +111,7 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
                 var council = await _uow.Councils.GetByIdAsync(defense.CouncilId);
                 if (council == null)
                 {
-                    _logger.LogWarning("⚠️ Council {CouncilId} not found for session {SessionId}", 
+                    _logger.LogWarning("⚠️ Council {CouncilId} not found for session {SessionId}",
                         defense.CouncilId, request.DefenseSessionId);
                     throw new KeyNotFoundException($"Council {defense.CouncilId} not found.");
                 }
@@ -161,7 +161,7 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
                     top_p = 0.9
                 };
 
-                _logger.LogInformation("🤖 Calling AI model: {Model} | URL: {ApiUrl} | Transcript length: {Length} chars", 
+                _logger.LogInformation("🤖 Calling AI model: {Model} | URL: {ApiUrl} | Transcript length: {Length} chars",
                     _aiModel, _openRouterUrl, trimmedTranscript.Length);
 
                 var response = await _httpClient.PostAsJsonAsync(_openRouterUrl, payload);
@@ -176,10 +176,10 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
                 _logger.LogDebug("🔍 Raw AI Response: {Response}", responseContent);
 
                 var result = ParseAIResponse(responseContent);
-                
+
                 // 📊 Tính điểm trung bình tổng thể
                 CalculateOverallAverages(result);
-                
+
                 _logger.LogInformation("✅ Transcript analysis completed successfully for session {SessionId}", request.DefenseSessionId);
                 return result;
             }
@@ -208,13 +208,13 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
             var keywords = new[]
             {
                 // Tiếng Việt
-                "bảo vệ", "đồ án", "dự án", "trình bày", "hội đồng", "giảng viên", 
+                "bảo vệ", "đồ án", "dự án", "trình bày", "hội đồng", "giảng viên",
                 "sinh viên", "câu hỏi", "giải thích", "chủ tịch", "ủy viên", "thư ký",
                 "đánh giá", "nhận xét", "phản biện", "demo", "tính năng", "hệ thống",
                 "công nghệ", "thiết kế", "kiến trúc", "code", "database", "testing",
                 
                 // Tiếng Anh (trường hợp transcript bằng tiếng Anh)
-                "defense", "project", "presentation", "committee", "lecturer", 
+                "defense", "project", "presentation", "committee", "lecturer",
                 "student", "question", "explain", "chairman", "member", "secretary",
                 "evaluation", "feedback", "review", "demo", "feature", "system",
                 "technology", "design", "architecture", "database"
@@ -247,8 +247,8 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
                         Lecturer = "System",
                         MainComments = reason,
                         PositivePoints = new List<string> { "Không có dữ liệu" },
-                        ImprovementPoints = new List<string> 
-                        { 
+                        ImprovementPoints = new List<string>
+                        {
                             "Đảm bảo buổi bảo vệ đã được ghi âm",
                             "Kiểm tra transcript đã được tạo và lưu vào Redis",
                             "Liên hệ quản trị viên nếu vấn đề vẫn tiếp diễn"
@@ -291,8 +291,8 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
                         Lecturer = "System",
                         MainComments = reason,
                         PositivePoints = new List<string> { "Không có dữ liệu hợp lệ" },
-                        ImprovementPoints = new List<string> 
-                        { 
+                        ImprovementPoints = new List<string>
+                        {
                             "Kiểm tra chất lượng file ghi âm (âm thanh rõ ràng, không nhiễu)",
                             "Đảm bảo buổi bảo vệ đủ dài (tối thiểu 10-15 phút)",
                             "Kiểm tra cấu hình Azure Speech Service",
@@ -336,8 +336,8 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
                         Lecturer = "System",
                         MainComments = reason,
                         PositivePoints = new List<string> { "Không có tiêu chí đánh giá" },
-                        ImprovementPoints = new List<string> 
-                        { 
+                        ImprovementPoints = new List<string>
+                        {
                             $"Cấu hình rubric cho ngành (Major ID: {majorId})",
                             "Liên kết rubric với ngành thông qua MajorRubric",
                             "Đảm bảo mỗi ngành có ít nhất 3-5 tiêu chí đánh giá"
@@ -365,7 +365,7 @@ namespace AIDefCom.Service.Services.TranscriptAnalysisService
         /// </summary>
         private string BuildAdvancedAnalysisPrompt(IEnumerable<dynamic> rubricDetails)
         {
-            var rubricDescriptions = string.Join("\n", rubricDetails.Select((r, index) => 
+            var rubricDescriptions = string.Join("\n", rubricDetails.Select((r, index) =>
                 $"{index + 1}. **{r.RubricName}**: {r.Description ?? "Không có mô tả"}"));
 
             return $@"
@@ -381,66 +381,132 @@ Bạn sẽ nhận được transcript (bản ghi văn bản) của một buổi 
 
 ---
 
-## 🔍 YÊU CẦU PHÂN TÍCH CHI TIẾT
+## ⚠️ QUY TẮC PHÂN TÍCH TRANSCRIPT
+
+### 🔴 **BƯỚC 1: PHÂN BIỆT VAI TRÒ TRONG TRANSCRIPT**
+Trước tiên, hãy PHÂN TÍCH KỸ LƯỠNG transcript để xác định:
+
+1. **Ai là GIẢNG VIÊN / HỘI ĐỒNG?**
+   - Thường được gọi: ""Chủ tịch"", ""Thư ký"", ""Ủy viên"", ""Phản biện"", ""Giảng viên"", ""Thầy"", ""Cô"", ""Tiến sĩ"", ""TS."", ""PGS."", ""GS.""
+   - Người đặt câu hỏi, yêu cầu giải thích
+   - Người nhận xét, đánh giá, góp ý
+
+2. **Ai là SINH VIÊN?**
+   - Thường được gọi: ""Em"", ""Nhóm em"", ""Sinh viên"", tên cụ thể (VD: ""Nguyễn Văn A"")
+   - Người trả lời câu hỏi
+   - Người trình bày, demo dự án
+   - Người giải thích, bảo vệ quan điểm
+
+### 🔴 **BƯỚC 2: KIỂM TRA CHẤT LƯỢNG TRANSCRIPT**
+Nếu transcript có các đặc điểm sau, **BẮT BUỘC TRẢ VỀ JSON LỖI**:
+
+❌ **Trường hợp 1: Transcript LAN MAN, KHÔNG RÕ RÀNG**
+- Không phân biệt được ai là giảng viên, ai là sinh viên
+- Nội dung lộn xộn, không có cấu trúc câu hỏi - trả lời
+- Nhiều câu vô nghĩa, bị cắt ngang liên tục
+
+❌ **Trường hợp 2: CÂU HỎI KHÔNG LIÊN QUAN ĐẾN DỰ ÁN**
+- Hội đồng hỏi về chuyện cá nhân, gia đình
+- Câu hỏi chung chung không liên quan đến công nghệ, kỹ thuật
+- Nội dung chủ yếu là trò chuyện phiếm, không có tính học thuật
+
+❌ **Trường hợp 3: THIẾU THÔNG TIN QUAN TRỌNG**
+- Không có phần trình bày dự án
+- Không có câu hỏi từ hội đồng
+- Không có câu trả lời từ sinh viên
+
+**📌 Khi gặp các trường hợp trên, TRẢ VỀ JSON LỖI như sau:**
+{{
+  ""summary"": {{
+    ""overallSummary"": ""⚠️ Transcript không đủ điều kiện phân tích. [NÊU RÕ LÝ DO: lan man/không liên quan/thiếu thông tin]"",
+    ""studentPerformance"": ""Không thể đánh giá do transcript không hợp lệ."",
+    ""discussionFocus"": ""N/A""
+  }},
+  ""lecturerFeedbacks"": [
+    {{
+      ""lecturer"": ""System"",
+      ""mainComments"": ""Transcript không đủ rõ ràng để phân tích. Vui lòng kiểm tra lại file ghi âm hoặc hệ thống chuyển đổi speech-to-text."",
+      ""positivePoints"": [""Không có dữ liệu hợp lệ""],
+      ""improvementPoints"": [""Cải thiện chất lượng ghi âm"", ""Đảm bảo buổi bảo vệ có cấu trúc rõ ràng""],
+      ""rubricScores"": {{}}
+    }}
+  ],
+  ""aiInsight"": {{
+    ""analysis"": ""Không thể phân tích do transcript không đạt chuẩn. [NÊU RÕ VẤN ĐỀ CỤ THỂ]"",
+    ""rubricAverages"": {{}},
+    ""toneAnalysis"": ""N/A""
+  }},
+  ""aiSuggestion"": {{
+    ""forStudent"": ""Đảm bảo buổi bảo vệ được tổ chức chuyên nghiệp với cấu trúc rõ ràng"",
+    ""forAdvisor"": ""Hướng dẫn sinh viên chuẩn bị kỹ lưỡng cho buổi bảo vệ"",
+    ""forSystem"": ""Cải thiện chất lượng ghi âm và hệ thống nhận diện giọng nói""
+  }}
+}}
+
+---
+
+## 🔍 YÊU CẦU PHÂN TÍCH CHI TIẾT (CHỈ KHI TRANSCRIPT HỢP LỆ)
 
 ### **1. TÓM TẮT TỔNG QUAN (Summary)**
-Hãy đọc toàn bộ transcript và viết:
 - **overallSummary**: Tóm tắt 4-6 câu về diễn biến buổi bảo vệ:
   - Nhóm sinh viên trình bày về dự án gì?
   - Công nghệ chính được sử dụng là gì?
   - Hội đồng đặt những câu hỏi về lĩnh vực nào (công nghệ, thiết kế, tính năng, bảo mật...)?
   - Kết quả chung: buổi bảo vệ diễn ra tốt/khá/cần cải thiện?
 
-- **studentPerformance**: Đánh giá chi tiết (5-7 câu):
+- **studentPerformance**: Đánh giá chi tiết (5-7 câu) **DỰA TRÊN CÂU TRẢ LỜI CỦA SINH VIÊN**:
   - Sinh viên trình bày rõ ràng, tự tin hay chưa?
   - Sinh viên trả lời câu hỏi nhanh nhạy, chính xác hay lúng túng?
   - Kiến thức nền tảng (lý thuyết) có vững không?
   - Kỹ năng thực hành (code, demo, giải quyết vấn đề)?
   - Thái độ: cởi mở, tiếp thu góp ý hay phòng thủ?
 
-- **discussionFocus**: Liệt kê 5-7 chủ đề chính mà hội đồng quan tâm:
-  - VD: ""1) Kiến trúc hệ thống và scalability, 2) Xử lý bảo mật và authentication, 3) Testing strategy và code quality, 4) Tính thực tiễn của dự án, 5) Công nghệ AI/ML được áp dụng, 6) Hiệu năng và tối ưu hóa, 7) Quy trình triển khai (deployment)""
+- **discussionFocus**: Liệt kê 5-7 chủ đề chính mà hội đồng quan tâm (CHỈ LIỆT KÊ CÂU HỎI TỪ GIẢNG VIÊN/HỘI ĐỒNG):
+  - VD: ""1) Kiến trúc hệ thống và scalability, 2) Xử lý bảo mật và authentication, 3) Testing strategy và code quality, 4) Tính thực tiễn của dự án, 5) Công nghệ AI/ML được áp dụng""
 
 ---
 
 ### **2. ĐÁNH GIÁ TỪ TỪNG GIẢNG VIÊN (LecturerFeedbacks)**
 
-Với MỖI GIẢNG VIÊN trong hội đồng (Chủ tịch, Thư ký, Ủy viên, Phản biện...), hãy phân tích:
+⚠️ **CHỈ PHÂN TÍCH GIẢNG VIÊN, KHÔNG BAO GỒM SINH VIÊN**
 
-#### **a) Thông tin giảng viên**
-- **lecturer**: Tên hoặc vai trò giảng viên (VD: ""TS. Nguyễn Văn A - Chủ tịch HĐ"")
+Với MỖI GIẢNG VIÊN trong hội đồng (Chủ tịch, Thư ký, Ủy viên, Phản biện...), hãy:
 
-#### **b) Nhận xét tổng quát**
-- **mainComments**: Tóm tắt 3-5 câu về ý kiến chính của giảng viên này:
+#### **a) Xác định giảng viên**
+- **lecturer**: Tên hoặc vai trò (VD: ""TS. Nguyễn Văn A - Chủ tịch HĐ"", ""PGS. Trần Thị B - Phản biện"")
+
+#### **b) Phân tích câu hỏi của giảng viên**
+- **mainComments**: Tóm tắt 3-5 câu về câu hỏi/nhận xét của giảng viên này:
   - Giảng viên tập trung vào khía cạnh nào của dự án?
-  - Giảng viên hỏi nhiều hay ít? Phong cách hỏi như thế nào?
+  - Câu hỏi có chất lượng không? Có liên quan đến tiêu chí rubric không?
+  - Phong cách đánh giá: khắt khe, khích lệ, trung lập?
 
-#### **c) Điểm mạnh sinh viên thể hiện**
-- **positivePoints**: Liệt kê ít nhất 3-4 điểm mạnh mà giảng viên này đánh giá cao:
-  - VD: ""Trình bày rõ ràng, có cấu trúc"", ""Demo sản phẩm mượt mà"", ""Hiểu rõ công nghệ đang dùng"", ""Trả lời câu hỏi tự tin""
+#### **c) Đánh giá dựa trên câu TRẢ LỜI của SINH VIÊN**
+- **positivePoints**: Liệt kê 3-4 điểm mạnh **DỰA VÀO CÂU TRẢ LỜI CỦA SINH VIÊN** cho câu hỏi của giảng viên này:
+  - VD: ""Trả lời rõ ràng về kiến trúc hệ thống"", ""Demo thành công tính năng bảo mật"", ""Giải thích thuật toán logic và thuyết phục""
 
-#### **d) Điểm cần cải thiện**
-- **improvementPoints**: Liệt kê ít nhất 3-4 điểm yếu hoặc lời khuyên:
-  - VD: ""Thiếu unit test"", ""Chưa xử lý edge case"", ""Giải thích thuật toán chưa rõ"", ""Cần tìm hiểu thêm về security""
+- **improvementPoints**: Liệt kê 3-4 điểm yếu **DỰA VÀO CÂU TRẢ LỜI CỦA SINH VIÊN**:
+  - VD: ""Không trả lời được về unit test"", ""Giải thích chưa rõ về caching strategy"", ""Lúng túng khi hỏi về edge case""
 
-#### **e) Chấm điểm theo từng tiêu chí Rubric**
-- **rubricScores**: Đối với MỖI rubric, hãy đưa ra điểm số (số thực) dựa trên:
-  - Câu trả lời của sinh viên có liên quan đến tiêu chí này không?
-  - Sinh viên trả lời tốt → điểm cao (8-10)
-  - Sinh viên trả lời khá → điểm trung bình (6-7.5)
-  - Sinh viên trả lời yếu hoặc không trả lời được → điểm thấp (4-5.5)
-  - Không có thông tin đánh giá tiêu chí này → ghi null
+#### **d) Chấm điểm theo Rubric**
+- **rubricScores**: **CHỈ CHẤM DỰA VÀO CÂU TRẢ LỜI CỦA SINH VIÊN**
+
+🔴 **QUY TẮC CHẤM ĐIỂM:**
+1. **ĐỌC KỸ DESCRIPTION CỦA TỪNG RUBRIC** (đã cung cấp ở trên)
+2. **SO SÁNH câu trả lời của sinh viên với yêu cầu trong Description**
+3. **Sinh viên trả lời XUẤT SẮC** (đáp ứng đầy đủ Description) → 8.5 - 10.0
+4. **Sinh viên trả lời TốT** (đáp ứng phần lớn Description) → 7.0 - 8.4
+5. **Sinh viên trả lời KHÁ** (đáp ứng một phần Description) → 6.0 - 6.9
+6. **Sinh viên trả lời YẾU** (không đáp ứng Description) → 4.0 - 5.9
+7. **Không có thông tin liên quan** → null
 
 **Ví dụ:**
-```json
 ""rubricScores"": {{
-  ""Kiến thức lý thuyết"": 8.5,
-  ""Kỹ năng lập trình"": 9.0,
-  ""Thiết kế hệ thống"": 7.0,
-  ""Testing & Quality Assurance"": 6.5,
-  ""Tính sáng tạo"": 8.0
+  ""Kiến thức lý thuyết"": 8.5,    // Sinh viên giải thích rõ ràng các khái niệm
+  ""Kỹ năng lập trình"": 9.0,      // Demo code chạy tốt, logic rõ ràng
+  ""Thiết kế hệ thống"": 7.0,      // Vẽ được diagram nhưng thiếu chi tiết
+  ""Testing & QA"": null           // Không có câu hỏi/trả lời về testing
 }}
-```
 
 ---
 
@@ -449,27 +515,16 @@ Với MỖI GIẢNG VIÊN trong hội đồng (Chủ tịch, Thư ký, Ủy viê
 #### **a) Phân tích tổng hợp**
 - **analysis**: Viết 5-7 câu phân tích sâu:
   - So sánh đánh giá của các giảng viên (có thống nhất không?)
-  - Điểm mạnh NỔI BẬT nhất của nhóm sinh viên
+  - Điểm mạnh NỔI BẬT nhất của sinh viên
   - Điểm yếu NGHIÊM TRỌNG nhất cần khắc phục
   - Xu hướng chung: dự án thiên về lý thuyết hay thực hành?
 
-#### **b) Điểm trung bình theo từng Rubric**
+#### **b) Điểm trung bình theo Rubric**
 - **rubricAverages**: Tính điểm trung bình của TẤT CẢ giảng viên cho từng rubric:
   - Lấy điểm từ tất cả giảng viên → tính trung bình cộng
   - Nếu rubric nào không ai chấm → ghi null
 
-**Ví dụ:**
-```json
-""rubricAverages"": {{
-  ""Kiến thức lý thuyết"": 8.2,
-  ""Kỹ năng lập trình"": 8.8,
-  ""Thiết kế hệ thống"": 7.3,
-  ""Testing & Quality Assurance"": 6.8,
-  ""Tính sáng tạo"": 7.5
-}}
-```
-
-#### **c) Phân tích giọng điệu và thái độ**
+#### **c) Phân tích giọng điệu**
 - **toneAnalysis**: Đánh giá thái độ của hội đồng và sinh viên:
   - Hội đồng: khắt khe, ủng hộ, trung lập, thân thiện?
   - Sinh viên: tự tin, lo lắng, phòng thủ, cầu thị?
@@ -477,53 +532,39 @@ Với MỖI GIẢNG VIÊN trong hội đồng (Chủ tịch, Thư ký, Ủy viê
 
 ---
 
-### **4. GỢI Ý CẢI THIỆN VÀ CÂU HỎI BỔ SUNG (AiSuggestion)**
+### **4. GỢI Ý CẢI THIỆN (AiSuggestion)**
 
 #### **a) Gợi ý cho Sinh viên**
-- **forStudent**: Đưa ra 5-7 lời khuyên CỤ THỂ để cải thiện:
-  - VD: ""Tìm hiểu thêm về design pattern (Factory, Singleton, Observer) để giải thích kiến trúc rõ hơn""
-  - VD: ""Viết thêm unit test với code coverage > 70% để chứng minh chất lượng code""
-  - VD: ""Học thêm về JWT, OAuth2, OWASP Top 10 để cải thiện bảo mật""
+- **forStudent**: Đưa ra 5-7 lời khuyên CỤ THỂ dựa trên điểm yếu đã phát hiện:
+  - VD: ""Tìm hiểu thêm về design pattern (Factory, Singleton) để giải thích kiến trúc rõ hơn""
+  - VD: ""Viết thêm unit test với code coverage > 70%""
 
 #### **b) Gợi ý cho Giảng viên hướng dẫn**
-- **forAdvisor**: Đề xuất 3-5 hướng dẫn thêm cho GVHD:
-  - VD: ""Hướng dẫn sinh viên tìm hiểu về CI/CD pipeline (GitHub Actions, Docker)""
+- **forAdvisor**: Đề xuất 3-5 hướng dẫn thêm:
+  - VD: ""Hướng dẫn sinh viên tìm hiểu về CI/CD pipeline""
   - VD: ""Đề xuất sinh viên refactor code để cải thiện maintainability""
 
-#### **c) Gợi ý câu hỏi bổ sung cho Hội đồng**
-- **forSystem**: Đề xuất 7-10 câu hỏi MỚI mà hội đồng CÓ THỂ HỎI THÊM để đánh giá sâu hơn:
-  
-**Ví dụ:**
-```
-1. ""Nếu hệ thống có 10,000 người dùng đồng thời, bạn sẽ xử lý như thế nào? (Scalability)""
-2. ""Giải thích sự khác biệt giữa SQL Injection và XSS, và cách bạn phòng chống? (Security)""
-3. ""Tại sao bạn chọn MongoDB thay vì PostgreSQL cho dự án này? (Architecture decision)""
-4. ""Nếu API bị lỗi 500, bạn sẽ debug như thế nào? (Troubleshooting)""
-5. ""Code coverage của project là bao nhiêu? Unit test đã cover những case nào? (Testing)""
-6. ""Nếu phải deploy lên AWS/Azure, bạn sẽ dùng service nào? (Cloud deployment)""
-7. ""Giải thích cách bạn implement caching strategy? (Performance optimization)""
-8. ""Code của bạn có tuân theo SOLID principles không? Cho ví dụ. (Code quality)""
-9. ""Nếu yêu cầu thêm tính năng X, bạn sẽ thiết kế database schema như thế nào? (Extensibility)""
-10. ""So sánh REST API và GraphQL, tại sao bạn chọn REST? (Technology choice)""
-```
+#### **c) Gợi ý câu hỏi bổ sung**
+- **forSystem**: Đề xuất 7-10 câu hỏi MỚI dựa trên nội dung dự án:
+  - VD: ""Nếu hệ thống có 10,000 người dùng đồng thời, bạn sẽ xử lý như thế nào?""
+  - VD: ""Giải thích sự khác biệt giữa SQL Injection và XSS, và cách phòng chống?""
 
 ---
 
 ## ✅ FORMAT JSON TRẢ VỀ
 
-```json
 {{
   ""summary"": {{
-    ""overallSummary"": ""Tóm tắt 4-6 câu về buổi bảo vệ..."",
-    ""studentPerformance"": ""Đánh giá chi tiết 5-7 câu..."",
-    ""discussionFocus"": ""1) Chủ đề 1, 2) Chủ đề 2, 3) Chủ đề 3...""
+    ""overallSummary"": ""Tóm tắt 4-6 câu..."",
+    ""studentPerformance"": ""Đánh giá 5-7 câu dựa trên câu trả lời..."",
+    ""discussionFocus"": ""1) Chủ đề 1, 2) Chủ đề 2...""
   }},
   ""lecturerFeedbacks"": [
     {{
       ""lecturer"": ""Tên/vai trò giảng viên"",
-      ""mainComments"": ""Nhận xét 3-5 câu"",
-      ""positivePoints"": [""Điểm mạnh 1"", ""Điểm mạnh 2"", ""Điểm mạnh 3""],
-      ""improvementPoints"": [""Cần cải thiện 1"", ""Cần cải thiện 2"", ""Cần cải thiện 3""],
+      ""mainComments"": ""Phân tích câu hỏi của giảng viên..."",
+      ""positivePoints"": [""Điểm mạnh dựa trên câu trả lời của SV""],
+      ""improvementPoints"": [""Điểm yếu dựa trên câu trả lời của SV""],
       ""rubricScores"": {{
         ""Rubric 1"": 8.5,
         ""Rubric 2"": 7.0,
@@ -532,31 +573,31 @@ Với MỖI GIẢNG VIÊN trong hội đồng (Chủ tịch, Thư ký, Ủy viê
     }}
   ],
   ""aiInsight"": {{
-    ""analysis"": ""Phân tích tổng hợp 5-7 câu..."",
+    ""analysis"": ""Phân tích tổng hợp..."",
     ""rubricAverages"": {{
       ""Rubric 1"": 8.2,
       ""Rubric 2"": 7.5
     }},
-    ""toneAnalysis"": ""Đánh giá thái độ và không khí buổi bảo vệ...""
+    ""toneAnalysis"": ""Đánh giá thái độ...""
   }},
   ""aiSuggestion"": {{
-    ""forStudent"": ""1) Gợi ý 1, 2) Gợi ý 2, 3) Gợi ý 3..."",
+    ""forStudent"": ""1) Gợi ý 1, 2) Gợi ý 2..."",
     ""forAdvisor"": ""1) Đề xuất 1, 2) Đề xuất 2..."",
-    ""forSystem"": ""1) Câu hỏi gợi ý 1?\n2) Câu hỏi gợi ý 2?\n3) Câu hỏi gợi ý 3?...""
+    ""forSystem"": ""1) Câu hỏi 1?\n2) Câu hỏi 2?...""
   }}
 }}
-```
 
 ---
 
 ## ⚠️ LƯU Ý QUAN TRỌNG
 
-1. ✅ **Trả về JSON HỢP LỆ**, KHÔNG thêm markdown formatting (```json)
-2. ✅ **Chấm điểm KHÁCH QUAN** dựa trên transcript, không đoán mò
-3. ✅ **Nếu không có thông tin** về rubric nào → ghi **null** trong rubricScores
-4. ✅ **Phân tích KỸ LƯỠNG** từng câu hỏi và câu trả lời trong transcript
-5. ✅ **Gợi ý câu hỏi** phải LIÊN QUAN đến nội dung dự án (không hỏi chung chung)
-6. ✅ **Điểm số** phải hợp lý (4.0 - 10.0), không chấm quá cao hoặc quá thấp vô căn cứ
+1. ✅ **Trả về JSON HỢP LỆ**, KHÔNG thêm markdown (```json)
+2. ✅ **PHÂN BIỆT RÕ vai trò**: Giảng viên (người hỏi) vs Sinh viên (người trả lời)
+3. ✅ **CHỈ CHẤM ĐIỂM dựa trên CÂU TRẢ LỜI CỦA SINH VIÊN**
+4. ✅ **ĐỌC KỸ Description của Rubric** trước khi chấm điểm
+5. ✅ **NẾU transcript LAN MAN, KHÔNG RÕ RÀNG** → Trả về JSON lỗi như hướng dẫn
+6. ✅ **NẾU câu hỏi KHÔNG LIÊN QUAN đến dự án** → Trả về JSON lỗi
+7. ✅ **Điểm số phải hợp lý** (4.0 - 10.0), dựa trên Description của Rubric
 
 Hãy bắt đầu phân tích transcript bên dưới! 🚀
 ";
@@ -659,7 +700,7 @@ Hãy bắt đầu phân tích transcript bên dưới! 🚀
                 {
                     var average = Math.Round(scores.Average(), 2);
                     dto.AiInsight.RubricAverages[rubricName] = average;
-                    _logger.LogInformation("📊 Rubric '{Rubric}': Average = {Average} (from {Count} scores)", 
+                    _logger.LogInformation("📊 Rubric '{Rubric}': Average = {Average} (from {Count} scores)",
                         rubricName, average, scores.Count);
                 }
                 else
@@ -684,7 +725,7 @@ Hãy bắt đầu phân tích transcript bên dưới! 🚀
             };
 
             dto.LecturerFeedbacks ??= new List<LecturerFeedbackDto>();
-            
+
             if (!dto.LecturerFeedbacks.Any())
             {
                 dto.LecturerFeedbacks.Add(new LecturerFeedbackDto

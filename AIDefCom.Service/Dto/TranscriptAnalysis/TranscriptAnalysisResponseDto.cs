@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+Ôªøusing System.Collections.Generic;
 using System.Text.Json.Serialization;
 
 namespace AIDefCom.Service.Dto.TranscriptAnalysis
@@ -44,7 +44,7 @@ namespace AIDefCom.Service.Dto.TranscriptAnalysis
         [JsonPropertyName("improvementPoints")]
         public List<string> ImprovementPoints { get; set; } = new();
 
-        // ? Gi? nguyÍn nh?ng ??i double -> double? ?? tr·nh l?i khi AI tr? null
+        // ? Gi? nguy√™n nh?ng ??i double -> double? ?? tr√°nh l?i khi AI tr? null
         [JsonPropertyName("rubricScores")]
         public Dictionary<string, double?> RubricScores { get; set; } = new();
     }
