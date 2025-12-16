@@ -16,6 +16,7 @@ namespace AIDefCom.Service.Services.ProjectTaskService
         Task<IEnumerable<ProjectTaskReadDto>> GetByAssigneeAndSessionAsync(string assignedToId, int sessionId);
         Task<IEnumerable<string>> GetRubricNamesByAssigneeAndSessionAsync(string assignedToId, int sessionId);
         Task<IEnumerable<string>> GetRubricNamesByLecturerAndSessionAsync(string lecturerId, int sessionId);
+        Task<int?> GetRubricIdByNameAsync(string rubricName);
         Task<int> AddAsync(ProjectTaskCreateDto dto);
         Task<bool> UpdateAsync(int id, ProjectTaskUpdateDto dto);
         Task<bool> DeleteAsync(int id);
