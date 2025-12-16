@@ -92,6 +92,37 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Get CommitteeAssignment ID by Lecturer ID and Defense Session ID
+        /// </summary>
+        /// <param name="lecturerId">The Lecturer ID</param>
+        /// <param name="sessionId">The Defense Session ID</param>
+        /// <returns>CommitteeAssignment ID or null if not found</returns>
+        [HttpGet("lecturer/{lecturerId}/session/{sessionId}/id")]
+        public async Task<IActionResult> GetIdByLecturerIdAndSessionId(string lecturerId, int sessionId)
+        {
+            _logger.LogInformation("Retrieving committee assignment ID for lecturer {LecturerId} in session {SessionId}", lecturerId, sessionId);
+            var id = await _service.GetIdByLecturerIdAndSessionIdAsync(lecturerId, sessionId);
+            
+            if (id == null)
+            {
+                _logger.LogWarning("Committee assignment not found for lecturer {LecturerId} in session {SessionId}", lecturerId, sessionId);
+                return NotFound(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.NotFound,
+                    Message = $"No committee assignment found for lecturer '{lecturerId}' in session {sessionId}",
+                    Data = null
+                });
+            }
+
+            return Ok(new ApiResponse<string>
+            {
+                Code = ResponseCodes.Success,
+                Message = "Committee assignment ID retrieved successfully",
+                Data = id
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] CommitteeAssignmentCreateDto dto)
         {

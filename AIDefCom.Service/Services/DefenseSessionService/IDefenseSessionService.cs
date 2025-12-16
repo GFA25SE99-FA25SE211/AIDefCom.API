@@ -24,6 +24,9 @@ namespace AIDefCom.Service.Services.DefenseSessionService
         Task<bool> RestoreAsync(int id);
         Task<IEnumerable<UserReadDto>> GetUsersByDefenseSessionIdAsync(int defenseSessionId);
         
+        // Status management
+        Task<bool> ChangeStatusAsync(int id, string newStatus);
+        
         // Import methods
         Task<DefenseSessionImportResultDto> ImportDefenseSessionsAsync(IFormFile file);
         byte[] GenerateDefenseSessionTemplate();

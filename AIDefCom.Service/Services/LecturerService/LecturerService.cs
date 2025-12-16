@@ -1,11 +1,14 @@
-using AIDefCom.Repository.Entities;
+﻿using AIDefCom.Repository.Entities;
 using AIDefCom.Repository.UnitOfWork;
+using AIDefCom.Service.Dto.Account;
 using AIDefCom.Service.Dto.Import;
 using AIDefCom.Service.Dto.Lecturer;
 using AIDefCom.Service.Helpers;
+using AIDefCom.Service.Services.EmailService;
 using AutoMapper;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Logging;
 using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
@@ -21,12 +24,21 @@ namespace AIDefCom.Service.Services.LecturerService
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
         private readonly UserManager<AppUser> _userManager;
+        private readonly IEmailService _emailService;
+        private readonly ILogger<LecturerService> _logger;
 
-        public LecturerService(IUnitOfWork uow, IMapper mapper, UserManager<AppUser> userManager)
+        public LecturerService(
+            IUnitOfWork uow, 
+            IMapper mapper, 
+            UserManager<AppUser> userManager,
+            IEmailService emailService,
+            ILogger<LecturerService> logger)
         {
             _uow = uow;
             _mapper = mapper;
             _userManager = userManager;
+            _emailService = emailService;
+            _logger = logger;
             ExcelHelper.ConfigureExcelPackage();
         }
 
@@ -240,6 +252,19 @@ namespace AIDefCom.Service.Services.LecturerService
                         await _userManager.AddToRoleAsync(lecturer, "Lecturer");
                         result.SuccessCount++;
                         result.CreatedUserIds.Add(lecturer.Id);
+
+                        // 📧 Gửi email thông báo tài khoản và mật khẩu
+                        try
+                        {
+                            await SendWelcomeEmail(lecturer.Email, lecturer.UserName, password, lecturer.FullName);
+                            _logger.LogInformation("✅ Sent welcome email to {Email}", lecturer.Email);
+                        }
+                        catch (Exception emailEx)
+                        {
+                            _logger.LogWarning("⚠️ Failed to send welcome email to {Email}: {Error}", 
+                                lecturer.Email, emailEx.Message);
+                            // Không fail import nếu gửi email lỗi, chỉ log warning
+                        }
                     }
                     else
                     {
@@ -317,6 +342,94 @@ namespace AIDefCom.Service.Services.LecturerService
             const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
             var random = new Random();
             return new string(Enumerable.Repeat(chars, 8).Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
+        /// <summary>
+        /// Gửi email chào mừng với thông tin đăng nhập (cho Giảng viên)
+        /// </summary>
+        private async Task SendWelcomeEmail(string email, string username, string password, string fullName)
+        {
+            var message = new MessageOTP(
+                new string[] { email },
+                "🎓 Tài Khoản Hệ Thống AIDefCom - Thông Tin Đăng Nhập (Giảng Viên)",
+                $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset=""UTF-8"">
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }}
+        .header {{ background-color: #2196F3; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0; }}
+        .content {{ background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }}
+        .credentials {{ background-color: #f0f8ff; padding: 15px; border-left: 4px solid #2196F3; margin: 20px 0; }}
+        .credentials strong {{ color: #2196F3; }}
+        .warning {{ background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; }}
+        .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #777; }}
+        .button {{ display: inline-block; padding: 12px 24px; background-color: #2196F3; color: white; text-decoration: none; border-radius: 4px; margin-top: 15px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>🎓 Chào Mừng Giảng Viên - AIDefCom</h1>
+        </div>
+        <div class=""content"">
+            <p>Kính chào <strong>{fullName}</strong>,</p>
+            
+            <p>Tài khoản của Quý Thầy/Cô đã được tạo thành công trong hệ thống <strong>AIDefCom</strong> (Hệ thống Quản lý Bảo vệ Đồ án Tốt nghiệp).</p>
+            
+            <div class=""credentials"">
+                <h3>📧 Thông Tin Đăng Nhập</h3>
+                <p><strong>Email/Tên đăng nhập:</strong> {username}</p>
+                <p><strong>Mật khẩu tạm thời:</strong> <span style=""font-size: 18px; color: #e74c3c; font-weight: bold;"">{password}</span></p>
+                <p><strong>URL đăng nhập:</strong> <a href=""https://aidefcom.io.vn"">https://aidefcom.io.vn</a></p>
+                <p><strong>Vai trò:</strong> <span style=""color: #2196F3; font-weight: bold;"">Giảng viên</span></p>
+            </div>
+            
+            <div class=""warning"">
+                <h3>⚠️ Lưu Ý Quan Trọng</h3>
+                <ul>
+                    <li><strong>Đổi mật khẩu ngay</strong> sau lần đăng nhập đầu tiên để bảo mật tài khoản</li>
+                    <li><strong>KHÔNG chia sẻ</strong> mật khẩu với bất kỳ ai, kể cả sinh viên</li>
+                    <li>Mật khẩu trên <strong>CHỈ SỬ DỤNG MỘT LẦN</strong>, vui lòng đổi sang mật khẩu mạnh hơn</li>
+                    <li>Nếu quên mật khẩu, sử dụng chức năng ""Quên mật khẩu"" trên trang đăng nhập</li>
+                    <li>Quý Thầy/Cô có thể sử dụng Google Login với email này</li>
+                </ul>
+            </div>
+            
+            <p><strong>Hướng dẫn đăng nhập:</strong></p>
+            <ol>
+                <li>Truy cập <a href=""https://aidefcom.io.vn"">https://aidefcom.io.vn</a></li>
+                <li>Nhập email: <strong>{username}</strong></li>
+                <li>Nhập mật khẩu: <strong>{password}</strong></li>
+                <li>Nhấn ""Đăng nhập"" (hoặc chọn ""Google Login"")</li>
+                <li>Sau khi đăng nhập thành công, vào <strong>Cài đặt → Đổi mật khẩu</strong></li>
+            </ol>
+            
+            <p><strong>Các tính năng dành cho Giảng viên:</strong></p>
+            <ul>
+                <li>📋 Quản lý hội đồng bảo vệ</li>
+                <li>📊 Chấm điểm và đánh giá sinh viên</li>
+                <li>📝 Xem transcript và phân tích AI</li>
+                <li>📧 Gửi thông báo đến sinh viên</li>
+            </ul>
+            
+            <a href=""https://aidefcom.io.vn/login"" class=""button"">🔐 Đăng Nhập Ngay</a>
+        </div>
+        <div class=""footer"">
+            <p>Email này được gửi tự động từ hệ thống AIDefCom</p>
+            <p>Nếu Quý Thầy/Cô có thắc mắc, vui lòng liên hệ quản trị viên hệ thống</p>
+            <p>&copy; {DateTime.Now.Year} AIDefCom. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+"
+            );
+
+            _emailService.SendEmail(message);
+            await Task.CompletedTask;
         }
     }
 }

@@ -75,6 +75,20 @@ namespace AIDefCom.Service.Services.CommitteeAssignmentService
             return _mapper.Map<IEnumerable<CommitteeAssignmentReadDto>>(list);
         }
 
+        public async Task<string?> GetIdByLecturerIdAndSessionIdAsync(string lecturerId, int sessionId)
+        {
+            // Validate LecturerId
+            if (string.IsNullOrWhiteSpace(lecturerId))
+                throw new ArgumentException("Lecturer ID cannot be null or empty", nameof(lecturerId));
+
+            // Validate SessionId
+            if (sessionId <= 0)
+                throw new ArgumentException("Session ID must be greater than 0", nameof(sessionId));
+
+            var assignment = await _uow.CommitteeAssignments.GetByLecturerIdAndSessionIdAsync(lecturerId, sessionId);
+            return assignment?.Id;
+        }
+
         public async Task<string> AddAsync(CommitteeAssignmentCreateDto dto)
         {
             // Validate LecturerId not empty/whitespace

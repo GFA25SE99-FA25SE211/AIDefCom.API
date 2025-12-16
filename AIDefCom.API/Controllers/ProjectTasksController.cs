@@ -96,17 +96,17 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        // New: rubric names by assignee and session
-        [HttpGet("assignee/{assignedToId}/session/{sessionId}/rubrics")]
-        public async Task<IActionResult> GetRubricNamesByAssigneeAndSession(string assignedToId, int sessionId)
+        // New: rubric names by lecturer and session (converts LecturerId to CommitteeAssignmentId)
+        [HttpGet("lecturer/{lecturerId}/session/{sessionId}/rubrics")]
+        public async Task<IActionResult> GetRubricNamesByLecturerAndSession(string lecturerId, int sessionId)
         {
-            _logger.LogInformation("Retrieving rubric names for user: {AssignedToId} in session: {SessionId}", assignedToId, sessionId);
-            var names = await _service.GetRubricNamesByAssigneeAndSessionAsync(assignedToId, sessionId);
+            _logger.LogInformation("Retrieving rubric names for lecturer: {LecturerId} in session: {SessionId}", lecturerId, sessionId);
+            var names = await _service.GetRubricNamesByLecturerAndSessionAsync(lecturerId, sessionId);
 
             return Ok(new ApiResponse<IEnumerable<string>>
             {
                 Code = ResponseCodes.Success,
-                Message = string.Format(ResponseMessages.ListRetrieved, "Rubrics for user in session"),
+                Message = string.Format(ResponseMessages.ListRetrieved, "Rubrics for lecturer in session"),
                 Data = names
             });
         }

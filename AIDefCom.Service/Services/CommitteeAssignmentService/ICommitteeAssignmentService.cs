@@ -14,6 +14,7 @@ namespace AIDefCom.Service.Services.CommitteeAssignmentService
         Task<IEnumerable<CommitteeAssignmentReadDto>> GetByCouncilIdAsync(int councilId);
         Task<IEnumerable<CommitteeAssignmentReadDto>> GetBySessionIdAsync(int sessionId);
         Task<IEnumerable<CommitteeAssignmentReadDto>> GetByLecturerIdAsync(string lecturerId);
+        Task<string?> GetIdByLecturerIdAndSessionIdAsync(string lecturerId, int sessionId);
         Task<string> AddAsync(CommitteeAssignmentCreateDto dto);
         Task<bool> UpdateAsync(string id, CommitteeAssignmentUpdateDto dto);
         Task<bool> DeleteAsync(string id);
