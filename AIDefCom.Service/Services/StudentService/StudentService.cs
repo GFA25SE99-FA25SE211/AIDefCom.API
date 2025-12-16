@@ -45,13 +45,18 @@ namespace AIDefCom.Service.Services.StudentService
         public async Task<IEnumerable<StudentReadDto>> GetAllAsync()
         {
             var list = await _uow.Students.GetAllAsync();
+            
+            // Lấy tất cả StudentGroup để mapping GroupId
+            var allStudentGroups = await _uow.StudentGroups.GetAllAsync();
+            
             return list.Select(s => new StudentReadDto
             {
                 Id = s.Id,
                 UserName = s.FullName,
                 Email = s.Email,
                 DateOfBirth = s.DateOfBirth,
-                Gender = s.Gender
+                Gender = s.Gender,
+                GroupId = allStudentGroups.FirstOrDefault(sg => sg.UserId == s.Id)?.GroupId
             });
         }
 
@@ -589,9 +594,38 @@ namespace AIDefCom.Service.Services.StudentService
 
         private string GenerateRandomPassword()
         {
-            const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+            // Tạo password đủ mạnh theo yêu cầu: 8-16 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt
             var random = new Random();
-            return new string(Enumerable.Repeat(chars, 8).Select(s => s[random.Next(s.Length)]).ToArray());
+            var password = new StringBuilder();
+            
+            // Đảm bảo có ít nhất 1 chữ hoa
+            password.Append("ABCDEFGHJKLMNPQRSTUVWXYZ"[random.Next(23)]);
+            
+            // Đảm bảo có ít nhất 1 chữ thường
+            password.Append("abcdefghjkmnpqrstuvwxyz"[random.Next(23)]);
+            
+            // Đảm bảo có ít nhất 1 số
+            password.Append("23456789"[random.Next(8)]);
+            
+            // Đảm bảo có ít nhất 1 ký tự đặc biệt
+            password.Append("!@#$%^&*"[random.Next(8)]);
+            
+            // Thêm các ký tự ngẫu nhiên để đủ 12 ký tự
+            const string allChars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*";
+            for (int i = 0; i < 8; i++)
+            {
+                password.Append(allChars[random.Next(allChars.Length)]);
+            }
+            
+            // Shuffle password
+            var passwordChars = password.ToString().ToCharArray();
+            for (int i = passwordChars.Length - 1; i > 0; i--)
+            {
+                int j = random.Next(i + 1);
+                (passwordChars[i], passwordChars[j]) = (passwordChars[j], passwordChars[i]);
+            }
+            
+            return new string(passwordChars);
         }
 
         /// <summary>
@@ -641,7 +675,8 @@ namespace AIDefCom.Service.Services.StudentService
                 <ul>
                     <li><strong>Đổi mật khẩu ngay</strong> sau lần đăng nhập đầu tiên</li>
                     <li><strong>KHÔNG chia sẻ</strong> mật khẩu với bất kỳ ai</li>
-                    <li>Mật khẩu trên <strong>CHỈ SỬ DỤNG MỘT LẦN</strong>, vui lòng đổi sang mật khẩu mạnh hơn</li>
+                    <li>Mật khẩu mới phải có <strong>8-16 ký tự</strong></li>
+                    <li>Bao gồm <strong>ít nhất 1 chữ hoa, 1 chữ thường, 1 số và 1 ký tự đặc biệt</strong></li>
                     <li>Nếu quên mật khẩu, sử dụng chức năng ""Quên mật khẩu"" trên trang đăng nhập</li>
                 </ul>
             </div>

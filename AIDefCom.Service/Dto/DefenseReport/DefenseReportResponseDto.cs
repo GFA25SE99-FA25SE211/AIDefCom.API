@@ -198,25 +198,42 @@ namespace AIDefCom.Service.Dto.DefenseReport
         [JsonPropertyName("respondent")]
         public string Respondent { get; set; } = string.Empty; // Student name or "Group"
 
+        [JsonPropertyName("answerContent")]
+        public string AnswerContent { get; set; } = string.Empty; // Full summary of answer with arguments and evidence
+
+        [JsonPropertyName("councilDiscussion")]
+        public string? CouncilDiscussion { get; set; } // Council's reaction and discussion about the answer
+
+        [JsonPropertyName("lecturerFollowUp")]
+        public string? LecturerFollowUp { get; set; } // Follow-up from lecturer: explanation, correction, hints, or next question
+
         [JsonPropertyName("answerQuality")]
         public string AnswerQuality { get; set; } = string.Empty;
-        // "Good answer"
-        // "Fair answer"
-        // "Weak answer"
-        // "Unable to answer"
-        // "Answered after hints"
-
-        [JsonPropertyName("answerContent")]
-        public string AnswerContent { get; set; } = string.Empty; // Summary of answer
+        // "Trả lời xuất sắc" - Excellent answer
+        // "Trả lời tốt" - Good answer
+        // "Trả lời khá" - Fair answer
+        // "Trả lời yếu" - Weak answer
+        // "Trả lời sai" - Wrong answer
+        // "Không trả lời được" - Unable to answer
+        // "Trả lời sau khi được gợi ý" - Answered after hints
+        // "Không nhận được phản hồi" - No response received
 
         [JsonPropertyName("answerAttitude")]
         public string? AnswerAttitude { get; set; }
-        // "Confident, fluent"
-        // "Hesitant, stammering"
-        // "Needed time to think"
-        // "Not confident"
+        // "Tự tin, lưu loát" - Confident, fluent
+        // "Do dự, ngập ngừng" - Hesitant, stammering
+        // "Cần suy nghĩ lâu" - Needed time to think
+        // "Không chắc chắn" - Not confident
+        // "N/A" - Not applicable
+
+        [JsonPropertyName("finalOutcome")]
+        public string? FinalOutcome { get; set; }
+        // "Câu trả lời được chấp nhận" - Answer accepted
+        // "Cần bổ sung thêm" - Needs more information
+        // "Chưa thỏa đáng" - Not satisfactory
+        // "Vấn đề vẫn còn tồn đọng" - Issue still pending
 
         [JsonPropertyName("additionalNotes")]
-        public string? AdditionalNotes { get; set; } // Extra notes if answer was not good
+        public string? AdditionalNotes { get; set; } // Extra notes based on transcript
     }
 }
