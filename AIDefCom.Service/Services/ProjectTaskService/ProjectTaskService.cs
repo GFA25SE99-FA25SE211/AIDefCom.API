@@ -84,6 +84,17 @@ namespace AIDefCom.Service.Services.ProjectTaskService
             return list.Select(t => t.Rubric?.RubricName).Where(n => !string.IsNullOrEmpty(n))!.Distinct()!;
         }
 
+        public async Task<int?> GetRubricIdByNameAsync(string rubricName)
+        {
+            if (string.IsNullOrWhiteSpace(rubricName))
+            {
+                throw new ArgumentException("rubricName is required", nameof(rubricName));
+            }
+
+            var rubric = await _uow.Rubrics.GetByNameAsync(rubricName);
+            return rubric?.Id;
+        }
+
         public async Task<int> AddAsync(ProjectTaskCreateDto dto)
         {
             if (dto.SessionId <= 0)

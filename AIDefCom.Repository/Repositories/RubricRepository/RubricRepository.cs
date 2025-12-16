@@ -39,6 +39,16 @@ namespace AIDefCom.Repository.Repositories.RubricRepository
             return await query.FirstOrDefaultAsync(x => x.Id == id);
         }
 
+        public async Task<Rubric?> GetByNameAsync(string rubricName, bool includeDeleted = false)
+        {
+            var query = _set.AsNoTracking();
+            
+            if (!includeDeleted)
+                query = query.Where(x => !x.IsDeleted);
+            
+            return await query.FirstOrDefaultAsync(x => x.RubricName == rubricName);
+        }
+
         public async Task AddAsync(Rubric rubric)
         {
             rubric.CreatedAt = DateTime.UtcNow;
