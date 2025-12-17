@@ -11,6 +11,7 @@ namespace AIDefCom.Repository.Repositories.RubricRepository
     {
         Task<IEnumerable<Rubric>> GetAllAsync(bool includeDeleted = false);
         Task<Rubric?> GetByIdAsync(int id, bool includeDeleted = false);
+        Task<Rubric?> GetByNameAsync(string rubricName, bool includeDeleted = false);
         Task AddAsync(Rubric rubric);
         Task UpdateAsync(Rubric rubric);
         Task DeleteAsync(int id);

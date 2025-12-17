@@ -111,6 +111,31 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Get Rubric ID by Rubric Name
+        /// - Returns 200 OK with the Rubric ID if found
+        /// - Returns 404 Not Found if the rubric does not exist
+        /// </summary>
+        [HttpGet("rubric/by-name/{rubricName}")]
+        public async Task<IActionResult> GetRubricIdByName(string rubricName)
+        {
+            _logger.LogInformation("Retrieving rubric ID for rubric name: {RubricName}", rubricName);
+            var rubricId = await _service.GetRubricIdByNameAsync(rubricName);
+
+            if (!rubricId.HasValue)
+            {
+                _logger.LogWarning("Rubric with name '{RubricName}' not found", rubricName);
+                throw new KeyNotFoundException($"Rubric with name '{rubricName}' not found");
+            }
+
+            return Ok(new ApiResponse<int>
+            {
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Retrieved, "Rubric ID"),
+                Data = rubricId.Value
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] ProjectTaskCreateDto dto)
         {

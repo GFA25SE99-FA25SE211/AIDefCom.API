@@ -28,4 +28,8 @@
     <ProjectReference Include="..\AIDefCom.Repository\AIDefCom.Repository.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Docs\" />
+  </ItemGroup>
+
 </Project>
