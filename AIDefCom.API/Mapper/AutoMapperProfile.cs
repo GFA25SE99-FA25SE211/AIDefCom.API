@@ -1,6 +1,7 @@
 ﻿using AIDefCom.Repository.Entities;
 using AIDefCom.Service.Dto.CommitteeAssignment;
 using AIDefCom.Service.Dto.Council;
+using AIDefCom.Service.Dto.CouncilRole;
 using AIDefCom.Service.Dto.DefenseSession;
 using AIDefCom.Service.Dto.Group;
 using AIDefCom.Service.Dto.Lecturer;
@@ -84,6 +85,11 @@ namespace AIDefCom.API.Mapper
                 .ForMember(dest => dest.MajorName, opt => opt.MapFrom(src => src.Major!.MajorName));
             CreateMap<CouncilCreateDto, Council>();
             CreateMap<CouncilUpdateDto, Council>();
+
+            // CouncilRole mappings
+            CreateMap<CouncilRole, CouncilRoleReadDto>();
+            CreateMap<CouncilRoleCreateDto, CouncilRole>();
+            CreateMap<CouncilRoleUpdateDto, CouncilRole>();
 
             // CommitteeAssignment - có CouncilRole
             CreateMap<CommitteeAssignment, CommitteeAssignmentReadDto>()

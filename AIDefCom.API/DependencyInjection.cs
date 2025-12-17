@@ -23,6 +23,7 @@ using AIDefCom.Repository.UnitOfWork;
 using AIDefCom.Service.Services.AuthService;
 using AIDefCom.Service.Services.CommitteeAssignmentService;
 using AIDefCom.Service.Services.CouncilService;
+using AIDefCom.Service.Services.CouncilRoleService;
 using AIDefCom.Service.Services.DefenseSessionService;
 using AIDefCom.Service.Services.EmailService;
 using AIDefCom.Service.Services.GroupService;
@@ -110,6 +111,7 @@ namespace AIDefCom.API
             services.AddScoped<IDefenseSessionService, DefenseSessionService>();
             services.AddScoped<IMemberNoteService, MemberNoteService>();
             services.AddScoped<ICouncilService, CouncilService>();
+            services.AddScoped<ICouncilRoleService, CouncilRoleService>();
             services.AddScoped<ICommitteeAssignmentService, CommitteeAssignmentService>();
             services.AddScoped<IProjectTaskService, ProjectTaskService>();
             services.AddScoped<RecordingStorageService>();
