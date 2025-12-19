@@ -127,6 +127,7 @@ namespace AIDefCom.Repository.Repositories.DefenseSessionRepository
             existing.EndTime = session.EndTime;
             existing.Status = session.Status;
             existing.CouncilId = session.CouncilId;
+            existing.TotalScore = session.TotalScore; // ✅ FIXED: Add TotalScore update
         }
 
         public async Task DeleteAsync(int id)
