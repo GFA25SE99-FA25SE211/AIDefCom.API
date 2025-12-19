@@ -95,28 +95,11 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [HttpPut("{id}/total-score")]
-        public async Task<IActionResult> UpdateTotalScore(string id, [FromBody] GroupTotalScoreUpdateDto dto)
-        {
-            _logger.LogInformation("Updating total score for group with ID: {Id}, Score: {Score}", id, dto.TotalScore);
-            var ok = await _service.UpdateTotalScoreAsync(id, dto);
-            if (!ok)
-            {
-                _logger.LogWarning("Group with ID {Id} not found for total score update", id);
-                throw new KeyNotFoundException($"Group with ID {id} not found");
-            }
-            return Ok(new ApiResponse<object>
-            {
-                Code = ResponseCodes.Success,
-                Message = string.Format(ResponseMessages.TotalScoreUpdated, "Group")
-            });
-        }
-
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
-            _logger.LogInformation("Soft deleting group with ID: {Id}", id);
-            var ok = await _service.SoftDeleteAsync(id);
+            _logger.LogInformation("Deleting group with ID: {Id}", id);
+            var ok = await _service.DeleteAsync(id);
             if (!ok)
             {
                 _logger.LogWarning("Group with ID {Id} not found for deletion", id);
@@ -125,7 +108,7 @@ namespace AIDefCom.API.Controllers
             return Ok(new ApiResponse<object>
             {
                 Code = ResponseCodes.NoContent,
-                Message = string.Format(ResponseMessages.SoftDeleted, "Group")
+                Message = string.Format(ResponseMessages.Deleted, "Group")
             });
         }
 

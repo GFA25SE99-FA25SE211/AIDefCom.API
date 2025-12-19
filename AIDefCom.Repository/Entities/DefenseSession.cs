@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -26,7 +26,17 @@ namespace AIDefCom.Repository.Entities
         
         public DateTime CreatedAt { get; set; }
         
+        // Total Score for the defense session
+        public double? TotalScore { get; set; }
+        
         // Soft Delete
         public bool IsDeleted { get; set; } = false;
+
+        // Navigation properties for 1-1 relationships
+        public Report? Report { get; set; }
+        public Transcript? Transcript { get; set; }
+        
+        // Navigation property for 1-Many relationship
+        public ICollection<MemberNote> MemberNotes { get; set; } = new List<MemberNote>();
     }
 }

@@ -1,4 +1,4 @@
-namespace AIDefCom.Service.Constants
+﻿namespace AIDefCom.Service.Constants
 {
     /// <summary>
     /// Unified response codes for all API operations (both success and errors)
@@ -23,6 +23,12 @@ namespace AIDefCom.Service.Constants
         /// Operation completed successfully, no content to return (DELETE)
         /// </summary>
         public const string NoContent = "DEF204";
+        
+        /// <summary>
+        /// Multi-Status - Partial success (some operations succeeded, some failed)
+        /// Used for batch operations like imports where individual items may succeed or fail
+        /// </summary>
+        public const string MultiStatus = "DEF207";
 
         // ==================== CLIENT ERROR RESPONSES (DEF4xx) ====================
         

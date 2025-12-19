@@ -53,16 +53,16 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [HttpGet("group/{groupId}")]
-        public async Task<IActionResult> GetByGroupId(string groupId)
+        [HttpGet("session/{sessionId}")]
+        public async Task<IActionResult> GetBySessionId(int sessionId)
         {
-            _logger.LogInformation("Retrieving member notes for group ID: {GroupId}", groupId);
-            var data = await _service.GetByGroupIdAsync(groupId);
+            _logger.LogInformation("Retrieving member notes for session ID: {SessionId}", sessionId);
+            var data = await _service.GetBySessionIdAsync(sessionId);
             
             return Ok(new ApiResponse<IEnumerable<MemberNoteReadDto>>
             {
                 Code = ResponseCodes.Success,
-                Message = string.Format(ResponseMessages.ListRetrieved, "Member notes by group"),
+                Message = string.Format(ResponseMessages.ListRetrieved, "Member notes by session"),
                 Data = data
             });
         }
@@ -84,7 +84,7 @@ namespace AIDefCom.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] MemberNoteCreateDto dto)
         {
-            _logger.LogInformation("Creating new member note for group {GroupId} by committee assignment {CommitteeAssignmentId}", dto.GroupId, dto.CommitteeAssignmentId);
+            _logger.LogInformation("Creating new member note for session {SessionId} by committee assignment {CommitteeAssignmentId}", dto.SessionId, dto.CommitteeAssignmentId);
             var id = await _service.AddAsync(dto);
             var created = await _service.GetByIdAsync(id);
             _logger.LogInformation("Member note created with ID: {Id}", id);

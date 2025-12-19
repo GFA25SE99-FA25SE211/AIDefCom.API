@@ -17,6 +17,7 @@ namespace AIDefCom.Service.Dto.DefenseSession
         public string Status { get; set; } = string.Empty;
         public int CouncilId { get; set; }
         public DateTime CreatedAt { get; set; }
+        public double? TotalScore { get; set; }
     }
 
 }

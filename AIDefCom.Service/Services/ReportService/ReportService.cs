@@ -47,9 +47,37 @@ namespace AIDefCom.Service.Services.ReportService
 
         public async Task<int> AddAsync(ReportCreateDto dto)
         {
+            // ✅ VALIDATE 1: Kiểm tra DefenseSession tồn tại
+            var session = await _uow.DefenseSessions.GetByIdAsync(dto.SessionId);
+            if (session == null)
+                throw new KeyNotFoundException($"Defense session with ID {dto.SessionId} not found");
+
+            // ✅ VALIDATE 2: Kiểm tra DefenseSession đã hoàn thành chưa
+            if (session.Status != "Completed")
+                throw new InvalidOperationException($"Cannot create report for defense session with status '{session.Status}'. Only 'Completed' defense sessions can have reports.");
+
+            // ✅ VALIDATE 3: Kiểm tra đã tồn tại Report cho session này chưa (vì quan hệ 1-1)
+            var existingReports = await _uow.Reports.GetBySessionIdAsync(dto.SessionId);
+            if (existingReports.Any())
+                throw new InvalidOperationException($"Defense session {dto.SessionId} already has a report. Each defense session can only have one report (1-1 relationship).");
+
+            // ✅ VALIDATE 4: Kiểm tra FilePath hợp lệ (nếu được cung cấp)
+            if (!string.IsNullOrWhiteSpace(dto.FilePath))
+            {
+                dto.FilePath = dto.FilePath.Trim();
+                if (dto.FilePath.Length < 5)
+                    throw new ArgumentException("File path must be at least 5 characters long");
+            }
+
+            // ✅ VALIDATE 5: Kiểm tra Status hợp lệ
+            var validStatuses = new[] { "Pending", "Draft", "Approved", "Rejected" };
+            if (!string.IsNullOrWhiteSpace(dto.Status) && !validStatuses.Contains(dto.Status))
+                throw new ArgumentException($"Invalid status '{dto.Status}'. Valid statuses are: {string.Join(", ", validStatuses)}");
+
             var entity = _mapper.Map<Report>(dto);
             entity.GeneratedDate = DateTime.UtcNow;
-            entity.Status = "Pending"; // Set default status to Pending
+            entity.Status = string.IsNullOrWhiteSpace(dto.Status) ? "Pending" : dto.Status; // Set default status to Pending if not provided
+            
             await _uow.Reports.AddAsync(entity);
             await _uow.SaveChangesAsync();
             return entity.Id;

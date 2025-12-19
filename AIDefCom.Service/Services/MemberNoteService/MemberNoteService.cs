@@ -29,7 +29,7 @@ namespace AIDefCom.Service.Services.MemberNoteService
                 Id = n.Id,
                 CommitteeAssignmentId = n.CommitteeAssignmentId,
                 UserName = n.CommitteeAssignment?.Lecturer?.FullName,
-                GroupId = n.GroupId,
+                SessionId = n.SessionId,
                 NoteContent = n.NoteContent,
                 CreatedAt = n.CreatedAt
             });
@@ -41,9 +41,9 @@ namespace AIDefCom.Service.Services.MemberNoteService
             return note == null ? null : _mapper.Map<MemberNoteReadDto>(note);
         }
 
-        public async Task<IEnumerable<MemberNoteReadDto>> GetByGroupIdAsync(string groupId)
+        public async Task<IEnumerable<MemberNoteReadDto>> GetBySessionIdAsync(int sessionId)
         {
-            var list = await _uow.MemberNotes.GetByGroupIdAsync(groupId);
+            var list = await _uow.MemberNotes.GetBySessionIdAsync(sessionId);
             return _mapper.Map<IEnumerable<MemberNoteReadDto>>(list);
         }
 

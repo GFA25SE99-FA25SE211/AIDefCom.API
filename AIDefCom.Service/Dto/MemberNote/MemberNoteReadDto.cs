@@ -11,7 +11,7 @@ namespace AIDefCom.Service.Dto.MemberNote
         public int Id { get; set; }
         public string CommitteeAssignmentId { get; set; } = string.Empty;
         public string? UserName { get; set; }
-        public string GroupId { get; set; } = string.Empty;
+        public int SessionId { get; set; }
         public string? NoteContent { get; set; }
         public DateTime CreatedAt { get; set; }
     }

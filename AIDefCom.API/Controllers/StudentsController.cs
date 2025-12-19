@@ -134,12 +134,41 @@ namespace AIDefCom.API.Controllers
             _logger.LogInformation("Student import completed. Success: {Success}, Failures: {Failures}", result.SuccessCount, result.FailureCount);
             var msg = $"Import completed. {result.SuccessCount} students created successfully, {result.FailureCount} failed.";
 
-            return Ok(new ApiResponse<ImportResultDto>
+            // ✅ Return different HTTP status codes based on import results
+            // HTTP 200: All success
+            // HTTP 207: Partial success (some rows succeeded, some failed)
+            // HTTP 400: All failed
+
+            if (result.FailureCount == 0)
             {
-                Code = ResponseCodes.Success,
-                Message = msg,
-                Data = result
-            });
+                // All rows succeeded
+                return Ok(new ApiResponse<ImportResultDto>
+                {
+                    Code = ResponseCodes.Success,
+                    Message = msg,
+                    Data = result
+                });
+            }
+            else if (result.SuccessCount > 0)
+            {
+                // Partial success - return HTTP 207 Multi-Status
+                return StatusCode(207, new ApiResponse<ImportResultDto>
+                {
+                    Code = ResponseCodes.MultiStatus,
+                    Message = msg,
+                    Data = result
+                });
+            }
+            else
+            {
+                // All failed - return HTTP 400 Bad Request
+                return BadRequest(new ApiResponse<ImportResultDto>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = msg,
+                    Data = result
+                });
+            }
         }
 
         /// <summary>
@@ -189,12 +218,41 @@ namespace AIDefCom.API.Controllers
             _logger.LogInformation("Student-group import completed. Success: {Success}, Failures: {Failures}, Students: {Students}, Groups: {Groups}", result.SuccessCount, result.FailureCount, result.CreatedStudentIds.Count, result.CreatedGroupIds.Count);
             var msg = result.Message; // from StudentGroupImportResultDto (has Message)
 
-            return Ok(new ApiResponse<StudentGroupImportResultDto>
+            // ✅ Return different HTTP status codes based on import results
+            // HTTP 200: All success
+            // HTTP 207: Partial success (some rows succeeded, some failed)
+            // HTTP 400: All failed
+
+            if (result.FailureCount == 0)
             {
-                Code = ResponseCodes.Success,
-                Message = msg,
-                Data = result
-            });
+                // All rows succeeded
+                return Ok(new ApiResponse<StudentGroupImportResultDto>
+                {
+                    Code = ResponseCodes.Success,
+                    Message = msg,
+                    Data = result
+                });
+            }
+            else if (result.SuccessCount > 0)
+            {
+                // Partial success - return HTTP 207 Multi-Status
+                return StatusCode(207, new ApiResponse<StudentGroupImportResultDto>
+                {
+                    Code = ResponseCodes.MultiStatus,
+                    Message = msg,
+                    Data = result
+                });
+            }
+            else
+            {
+                // All failed - return HTTP 400 Bad Request
+                return BadRequest(new ApiResponse<StudentGroupImportResultDto>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = msg,
+                    Data = result
+                });
+            }
         }
     }
 }

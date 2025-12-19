@@ -185,29 +185,29 @@ namespace AIDefCom.Repository
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<MemberNote>()
-                .HasOne(mn => mn.Group)
-                .WithMany()
-                .HasForeignKey(mn => mn.GroupId)
+                .HasOne(mn => mn.Session)
+                .WithMany(s => s.MemberNotes)
+                .HasForeignKey(mn => mn.SessionId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // ============================================
-            // TRANSCRIPT RELATIONSHIPS
+            // TRANSCRIPT RELATIONSHIPS (1-1 with DefenseSession)
             // ============================================
             
             modelBuilder.Entity<Transcript>()
                 .HasOne(t => t.Session)
-                .WithMany()
-                .HasForeignKey(t => t.SessionId)
+                .WithOne(s => s.Transcript)
+                .HasForeignKey<Transcript>(t => t.SessionId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // ============================================
-            // RECORDING RELATIONSHIPS
+            // RECORDING RELATIONSHIPS (1-1 with Transcript)
             // ============================================
             
             modelBuilder.Entity<Recording>()
                 .HasOne(r => r.Transcript)
-                .WithMany()
-                .HasForeignKey(r => r.TranscriptId)
+                .WithOne()
+                .HasForeignKey<Recording>(r => r.TranscriptId)
                 .OnDelete(DeleteBehavior.SetNull);
 
             modelBuilder.Entity<Recording>()
@@ -217,13 +217,13 @@ namespace AIDefCom.Repository
                 .OnDelete(DeleteBehavior.Restrict);
 
             // ============================================
-            // REPORT RELATIONSHIPS
+            // REPORT RELATIONSHIPS (1-1 with DefenseSession)
             // ============================================
             
             modelBuilder.Entity<Report>()
                 .HasOne(r => r.Session)
-                .WithMany()
-                .HasForeignKey(r => r.SessionId)
+                .WithOne(s => s.Report)
+                .HasForeignKey<Report>(r => r.SessionId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // ============================================

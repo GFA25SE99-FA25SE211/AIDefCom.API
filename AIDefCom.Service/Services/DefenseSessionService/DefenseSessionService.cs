@@ -426,82 +426,182 @@ namespace AIDefCom.Service.Services.DefenseSessionService
         {
             var result = new DefenseSessionImportResultDto();
 
-            if (file == null || file.Length == 0)
-                throw new ArgumentException("File is empty or null");
+            try
+            {
+                // ✅ VALIDATION 1: File null check
+                if (file == null || file.Length == 0)
+                    throw new ArgumentException("File cannot be null or empty. Please upload a valid Excel file.");
 
-            if (!file.FileName.EndsWith(".xlsx") && !file.FileName.EndsWith(".xls"))
-                throw new ArgumentException("File must be an Excel file (.xlsx or .xls)");
+                // ✅ VALIDATION 2: File size check (max 10MB)
+                const long maxFileSize = 10 * 1024 * 1024;
+                if (file.Length > maxFileSize)
+                    throw new ArgumentException($"File size exceeds the maximum allowed size of {maxFileSize / (1024 * 1024)}MB. Current file size: {file.Length / (1024.0 * 1024):F2}MB");
 
-            using var stream = new MemoryStream();
-            await file.CopyToAsync(stream);
-            
-            using var package = new ExcelPackage(stream);
-            var worksheet = package.Workbook.Worksheets[0];
-            
-            if (worksheet == null)
-                throw new ArgumentException("Excel file has no worksheets");
+                // ✅ VALIDATION 3: File extension check
+                var allowedExtensions = new[] { ".xlsx", ".xls" };
+                var fileExtension = Path.GetExtension(file.FileName)?.ToLowerInvariant();
+                if (string.IsNullOrEmpty(fileExtension) || !allowedExtensions.Contains(fileExtension))
+                    throw new ArgumentException($"Invalid file type. Only Excel files (.xlsx, .xls) are allowed. Current file type: {fileExtension}");
 
-            // Expected headers based on Excel template
-            var expectedHeaders = new[] { "Mã đề tài", "Tên đề tài Tiếng Anh/ Tiếng Nhật", "Tên đề tài Tiếng Việt", "GVHD", "Ngày BVKL", "Giờ", "Hội đồng", "Địa điểm", "Nhiệm vụ TVHĐ", "Họ và tên TVHĐ", "Email" };
-            var actualHeaders = new List<string>();
-            
-            for (int col = 1; col <= 11; col++)
-                actualHeaders.Add(worksheet.Cells[1, col].Text?.Trim() ?? "");
+                // ✅ VALIDATION 4: File name security check
+                if (file.FileName.Contains("..") || file.FileName.Contains("/") || file.FileName.Contains("\\"))
+                    throw new ArgumentException("Invalid file name. File name cannot contain special characters (/, \\, ..)");
 
-            if (!expectedHeaders.SequenceEqual(actualHeaders))
-                throw new ArgumentException($"Invalid Excel template. Expected headers: {string.Join(", ", expectedHeaders)}");
+                using var stream = new MemoryStream();
+                await file.CopyToAsync(stream);
+                
+                // ✅ VALIDATION 5: Stream content check
+                if (stream.Length == 0)
+                    throw new ArgumentException("File content is empty. Unable to read file data.");
 
-            int rowCount = worksheet.Dimension?.Rows ?? 0;
-            result.TotalRows = rowCount - 1;
+                stream.Position = 0;
+                
+                ExcelPackage package;
+                try
+                {
+                    package = new ExcelPackage(stream);
+                }
+                catch (Exception ex)
+                {
+                    throw new ArgumentException($"Unable to read Excel file. Please ensure the file is a valid Excel document. Details: {ex.Message}");
+                }
 
-            // Dictionary để track defense sessions đã tạo (key: projectCode + date + time)
+                using (package)
+                {
+                    // ✅ VALIDATION 6: Worksheet existence check
+                    if (package.Workbook.Worksheets.Count == 0)
+                        throw new ArgumentException("Excel file contains no worksheets. Please use the standard template.");
+
+                    var worksheet = package.Workbook.Worksheets[0];
+                    
+                    if (worksheet == null)
+                        throw new ArgumentException("Unable to read the first worksheet in the Excel file.");
+
+                    // ✅ VALIDATION 7: Worksheet has data check
+                    if (worksheet.Dimension == null || worksheet.Dimension.Rows < 2)
+                        throw new ArgumentException("Excel file contains no data. At least 1 header row and 1 data row are required.");
+
+                    // ✅ VALIDATION 8: Headers validation
+                    var expectedHeaders = new[] { "Mã đề tài", "Tên đề tài Tiếng Anh/ Tiếng Nhật", "Tên đề tài Tiếng Việt", "GVHD", "Ngày BVKL", "Giờ", "Hội đồng", "Địa điểm", "Nhiệm vụ TVHĐ", "Họ và tên TVHĐ", "Email" };
+                    var actualHeaders = new List<string>();
+                    
+                    for (int col = 1; col <= 11; col++)
+                    {
+                        var headerValue = worksheet.Cells[1, col].Text?.Trim() ?? "";
+                        actualHeaders.Add(headerValue);
+                    }
+
+                    if (!expectedHeaders.SequenceEqual(actualHeaders))
+                    {
+                        var missingHeaders = expectedHeaders.Except(actualHeaders).ToList();
+                        var extraHeaders = actualHeaders.Except(expectedHeaders).Where(h => !string.IsNullOrEmpty(h)).ToList();
+                        
+                        var errorMsg = "Invalid Excel template.\n";
+                        if (missingHeaders.Any())
+                            errorMsg += $"Missing columns: {string.Join(", ", missingHeaders)}\n";
+                        if (extraHeaders.Any())
+                            errorMsg += $"Unexpected columns: {string.Join(", ", extraHeaders)}\n";
+                        errorMsg += $"Expected columns: {string.Join(", ", expectedHeaders)}";
+                        
+                        throw new ArgumentException(errorMsg);
+                    }
+
+                    // ✅ VALIDATION 9: Row count check
+                    int rowCount = worksheet.Dimension.Rows;
+                    const int maxRows = 1000;
+                    if (rowCount > maxRows + 1)
+                        throw new ArgumentException($"File exceeds the maximum allowed rows ({maxRows} data rows). Current file has {rowCount - 1} data rows.");
+
+                    result.TotalRows = rowCount - 1;
+
+                    // ✅ VALIDATION 10: Minimum data rows check
+                    if (rowCount < 2)
+                        throw new ArgumentException("Excel file contains no data rows. At least 1 data row is required after the header.");
+
+                    return await ProcessDefenseSessionImportRows(worksheet, rowCount, result);
+                }
+            }
+            catch (ArgumentException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"An unexpected error occurred during import: {ex.Message}", ex);
+            }
+        }
+
+        private async Task<DefenseSessionImportResultDto> ProcessDefenseSessionImportRows(
+            ExcelWorksheet worksheet, int rowCount, DefenseSessionImportResultDto result)
+        {
             var createdSessions = new Dictionary<string, int>();
-            var createdCouncils = new Dictionary<int, bool>(); // Track councils đã tồn tại
+            var createdCouncils = new Dictionary<int, bool>();
+            
+            // ✅ Track schedule conflicts within the file for each council
+            var councilSchedules = new Dictionary<int, List<(DateTime date, TimeSpan startTime, TimeSpan endTime, string projectCode, int row)>>();
 
             for (int row = 2; row <= rowCount; row++)
             {
                 try
                 {
-                    var projectCode = worksheet.Cells[row, 1].Text?.Trim(); // Mã đề tài
-                    var defenseDate = worksheet.Cells[row, 5].Text?.Trim(); // Ngày BVKL
-                    var timeRange = worksheet.Cells[row, 6].Text?.Trim(); // Giờ
-                    var councilIdStr = worksheet.Cells[row, 7].Text?.Trim(); // Hội đồng
-                    var location = worksheet.Cells[row, 8].Text?.Trim(); // Địa điểm
-                    var memberRole = worksheet.Cells[row, 9].Text?.Trim(); // Nhiệm vụ TVHĐ
-                    var memberName = worksheet.Cells[row, 10].Text?.Trim(); // Họ và tên TVHĐ
-                    var memberEmail = worksheet.Cells[row, 11].Text?.Trim(); // Email
+                    var projectCode = worksheet.Cells[row, 1].Text?.Trim();
+                    var defenseDate = worksheet.Cells[row, 5].Text?.Trim();
+                    var timeRange = worksheet.Cells[row, 6].Text?.Trim();
+                    var councilIdStr = worksheet.Cells[row, 7].Text?.Trim();
+                    var location = worksheet.Cells[row, 8].Text?.Trim();
+                    var memberRole = worksheet.Cells[row, 9].Text?.Trim();
+                    var memberName = worksheet.Cells[row, 10].Text?.Trim();
+                    var memberEmail = worksheet.Cells[row, 11].Text?.Trim();
 
-                    // Validate required fields for defense session
-                    if (string.IsNullOrEmpty(projectCode) || string.IsNullOrEmpty(defenseDate) || 
-                        string.IsNullOrEmpty(timeRange) || string.IsNullOrEmpty(councilIdStr) || 
-                        string.IsNullOrEmpty(location))
+                    // ✅ VALIDATION: Required fields
+                    var missingFields = new List<string>();
+                    if (string.IsNullOrEmpty(projectCode)) missingFields.Add("Mã đề tài");
+                    if (string.IsNullOrEmpty(defenseDate)) missingFields.Add("Ngày BVKL");
+                    if (string.IsNullOrEmpty(timeRange)) missingFields.Add("Giờ");
+                    if (string.IsNullOrEmpty(councilIdStr)) missingFields.Add("Hội đồng");
+                    if (string.IsNullOrEmpty(location)) missingFields.Add("Địa điểm");
+
+                    if (missingFields.Any())
                     {
                         result.Errors.Add(new ImportErrorDto
                         {
                             Row = row,
-                            Field = "Required",
-                            ErrorMessage = "Project Code, Defense Date, Time, Council, and Location are required",
+                            Field = string.Join(", ", missingFields),
+                            ErrorMessage = $"Required field(s) missing: {string.Join(", ", missingFields)}",
                             Value = ""
                         });
                         result.FailureCount++;
                         continue;
                     }
 
-                    // Parse Council ID
+                    // ✅ VALIDATION: Council ID format
                     if (!int.TryParse(councilIdStr, out int councilId))
                     {
                         result.Errors.Add(new ImportErrorDto
                         {
                             Row = row,
-                            Field = "CouncilId",
-                            ErrorMessage = "Invalid Council ID format",
+                            Field = "Hội đồng",
+                            ErrorMessage = $"Invalid Council ID format. Must be a number. Current value: '{councilIdStr}'",
                             Value = councilIdStr
                         });
                         result.FailureCount++;
                         continue;
                     }
 
-                    // Check if Council exists (cache result)
+                    if (councilId <= 0)
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "Hội đồng",
+                            ErrorMessage = "Council ID must be greater than 0",
+                            Value = councilIdStr
+                        });
+                        result.FailureCount++;
+                        continue;
+                    }
+
+                    // ✅ VALIDATION: Check if Council exists (cache result)
                     if (!createdCouncils.ContainsKey(councilId))
                     {
                         var council = await _uow.Councils.GetByIdAsync(councilId);
@@ -510,94 +610,202 @@ namespace AIDefCom.Service.Services.DefenseSessionService
                             result.Errors.Add(new ImportErrorDto
                             {
                                 Row = row,
-                                Field = "CouncilId",
-                                ErrorMessage = "DEF404: Council not found",
+                                Field = "Hội đồng",
+                                ErrorMessage = $"Council with ID {councilId} not found in the system",
                                 Value = councilIdStr
                             });
                             result.FailureCount++;
                             continue;
                         }
+
+                        // ✅ VALIDATION: Check if Council is active
+                        if (!council.IsActive)
+                        {
+                            result.Errors.Add(new ImportErrorDto
+                            {
+                                Row = row,
+                                Field = "Hội đồng",
+                                ErrorMessage = $"Council with ID {councilId} is not active. Only active councils can conduct defense sessions",
+                                Value = councilIdStr
+                            });
+                            result.FailureCount++;
+                            continue;
+                        }
+
                         createdCouncils[councilId] = true;
                     }
 
-                    // Create unique key for this defense session
+                    // ✅ VALIDATION: Parse and validate date
+                    DateTime parsedDate;
+                    var dateFormats = new[] { "dd/MM/yyyy", "d/M/yyyy", "MM/dd/yyyy", "M/d/yyyy", "yyyy-MM-dd", "dd-MM-yyyy" };
+
+                    if (!DateTime.TryParseExact(defenseDate, dateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate))
+                    {
+                        if (!DateTime.TryParse(defenseDate, out parsedDate))
+                        {
+                            result.Errors.Add(new ImportErrorDto
+                            {
+                                Row = row,
+                                Field = "Ngày BVKL",
+                                ErrorMessage = "Invalid date format. Use dd/MM/yyyy (e.g., 10/03/2025) or MM/dd/yyyy (e.g., 03/10/2025)",
+                                Value = defenseDate
+                            });
+                            result.FailureCount++;
+                            continue;
+                        }
+                    }
+
+                    // ✅ VALIDATION: Date must not be in the past
+                    if (parsedDate.Date < DateTime.UtcNow.Date)
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "Ngày BVKL",
+                            ErrorMessage = $"Defense date cannot be in the past. Date: {parsedDate:dd/MM/yyyy}",
+                            Value = defenseDate
+                        });
+                        result.FailureCount++;
+                        continue;
+                    }
+
+                    // ✅ VALIDATION: Parse Time Range
+                    TimeSpan startTime, endTime;
+                    if (!TryParseTimeRange(timeRange, out startTime, out endTime))
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "Giờ",
+                            ErrorMessage = "Invalid time format. Use format like '17h30-19h00' or '17:30-19:00'",
+                            Value = timeRange
+                        });
+                        result.FailureCount++;
+                        continue;
+                    }
+
+                    // ✅ VALIDATION: Time range validation
+                    if (startTime >= endTime)
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "Giờ",
+                            ErrorMessage = "Start time must be before end time",
+                            Value = timeRange
+                        });
+                        result.FailureCount++;
+                        continue;
+                    }
+
+                    var duration = endTime - startTime;
+                    if (duration.TotalMinutes < 30)
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "Giờ",
+                            ErrorMessage = "Defense session must be at least 30 minutes long",
+                            Value = timeRange
+                        });
+                        result.FailureCount++;
+                        continue;
+                    }
+
+                    if (duration.TotalHours > 8)
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "Giờ",
+                            ErrorMessage = "Defense session cannot exceed 8 hours",
+                            Value = timeRange
+                        });
+                        result.FailureCount++;
+                        continue;
+                    }
+
+                    // ✅ VALIDATION: Location
+                    if (location.Length < 5)
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "Địa điểm",
+                            ErrorMessage = "Location must be at least 5 characters long",
+                            Value = location
+                        });
+                        result.FailureCount++;
+                        continue;
+                    }
+
+                    if (location.Length > 500)
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "Địa điểm",
+                            ErrorMessage = "Location cannot exceed 500 characters",
+                            Value = location
+                        });
+                        result.FailureCount++;
+                        continue;
+                    }
+
                     string sessionKey = $"{projectCode}_{defenseDate}_{timeRange}";
 
                     // Check if defense session already created for this row group
                     int defenseSessionId;
                     if (createdSessions.ContainsKey(sessionKey))
                     {
-                        // Defense session already exists, just get the ID
                         defenseSessionId = createdSessions[sessionKey];
                     }
                     else
                     {
-                        // Create new defense session
-
-                        // Get Group by ProjectCode
+                        // ✅ VALIDATION: Check if Group exists
                         var group = await _uow.Groups.GetByProjectCodeAsync(projectCode);
                         if (group == null)
                         {
                             result.Errors.Add(new ImportErrorDto
                             {
                                 Row = row,
-                                Field = "ProjectCode",
-                                ErrorMessage = "DEF404: Group not found with this project code",
+                                Field = "Mã đề tài",
+                                ErrorMessage = $"Group with project code '{projectCode}' not found in the system",
                                 Value = projectCode
                             });
                             result.FailureCount++;
                             continue;
                         }
 
-                        // Parse Defense Date
-                        DateTime parsedDate;
-                        var dateFormats = new[]
-                        {
-                            "dd/MM/yyyy", "d/M/yyyy", "MM/dd/yyyy", "M/d/yyyy",
-                            "yyyy-MM-dd", "dd-MM-yyyy"
-                        };
+                        // ✅ VALIDATION: Check if group already has active defense session
+                        var existingGroupSessions = await _uow.DefenseSessions.GetByGroupIdAsync(group.Id);
+                        var hasActiveSession = existingGroupSessions.Any(s => 
+                            s.Status != "Completed" && 
+                            s.Status != "Cancelled" && 
+                            !s.IsDeleted);
 
-                        if (!DateTime.TryParseExact(defenseDate, dateFormats, 
-                            CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate))
-                        {
-                            if (!DateTime.TryParse(defenseDate, out parsedDate))
-                            {
-                                result.Errors.Add(new ImportErrorDto
-                                {
-                                    Row = row,
-                                    Field = "DefenseDate",
-                                    ErrorMessage = "Invalid date format. Use dd/MM/yyyy (e.g., 10/3/2025)",
-                                    Value = defenseDate
-                                });
-                                result.FailureCount++;
-                                continue;
-                            }
-                        }
-
-                        // Parse Time Range (e.g., "17h30-19h00")
-                        TimeSpan startTime, endTime;
-                        if (!TryParseTimeRange(timeRange, out startTime, out endTime))
+                        if (hasActiveSession)
                         {
                             result.Errors.Add(new ImportErrorDto
                             {
                                 Row = row,
-                                Field = "Time",
-                                ErrorMessage = "Invalid time format. Use format like '17h30-19h00'",
-                                Value = timeRange
+                                Field = "Mã đề tài",
+                                ErrorMessage = $"Group '{projectCode}' already has an active defense session. Please complete or cancel the existing session first",
+                                Value = projectCode
                             });
                             result.FailureCount++;
                             continue;
                         }
 
-                        // Validate DefenseDate with Semester
+                        // ✅ VALIDATION: Validate DefenseDate with Semester
                         var semester = await _uow.Semesters.GetByIdAsync(group.SemesterId);
                         if (semester == null)
                         {
                             result.Errors.Add(new ImportErrorDto
                             {
                                 Row = row,
-                                Field = "DefenseDate",
-                                ErrorMessage = $"Semester not found for Group {projectCode}",
+                                Field = "Ngày BVKL",
+                                ErrorMessage = $"Semester not found for Group '{projectCode}'",
                                 Value = defenseDate
                             });
                             result.FailureCount++;
@@ -609,13 +817,73 @@ namespace AIDefCom.Service.Services.DefenseSessionService
                             result.Errors.Add(new ImportErrorDto
                             {
                                 Row = row,
-                                Field = "DefenseDate",
+                                Field = "Ngày BVKL",
                                 ErrorMessage = $"Defense date must be within semester period ({semester.StartDate:dd/MM/yyyy} - {semester.EndDate:dd/MM/yyyy})",
                                 Value = defenseDate
                             });
                             result.FailureCount++;
                             continue;
                         }
+
+                        // ✅ VALIDATION: Check Council schedule conflicts in DATABASE
+                        var existingCouncilSessions = await _uow.DefenseSessions.Query()
+                            .Where(s => s.CouncilId == councilId && 
+                                       s.DefenseDate.Date == parsedDate.Date &&
+                                       !s.IsDeleted &&
+                                       s.Status != "Cancelled")
+                            .ToListAsync();
+
+                        bool hasConflictInDb = false;
+                        foreach (var existingSession in existingCouncilSessions)
+                        {
+                            if (TimeRangesOverlap(startTime, endTime, existingSession.StartTime, existingSession.EndTime))
+                            {
+                                result.Errors.Add(new ImportErrorDto
+                                {
+                                    Row = row,
+                                    Field = "Giờ, Hội đồng",
+                                    ErrorMessage = $"Schedule conflict: Council {councilId} already has a defense session on {parsedDate:dd/MM/yyyy} from {existingSession.StartTime:hh\\:mm} to {existingSession.EndTime:hh\\:mm}",
+                                    Value = $"{timeRange}, {councilIdStr}"
+                                });
+                                result.FailureCount++;
+                                hasConflictInDb = true;
+                                break;
+                            }
+                        }
+
+                        if (hasConflictInDb)
+                            continue;
+
+                        // ✅ VALIDATION: Check Council schedule conflicts within the IMPORT FILE
+                        if (!councilSchedules.ContainsKey(councilId))
+                        {
+                            councilSchedules[councilId] = new List<(DateTime, TimeSpan, TimeSpan, string, int)>();
+                        }
+
+                        var fileSchedules = councilSchedules[councilId].Where(s => s.date.Date == parsedDate.Date).ToList();
+                        bool hasConflictInFile = false;
+                        foreach (var fileSchedule in fileSchedules)
+                        {
+                            if (TimeRangesOverlap(startTime, endTime, fileSchedule.startTime, fileSchedule.endTime))
+                            {
+                                result.Errors.Add(new ImportErrorDto
+                                {
+                                    Row = row,
+                                    Field = "Giờ, Hội đồng",
+                                    ErrorMessage = $"Schedule conflict within file: Council {councilId} is already scheduled on {parsedDate:dd/MM/yyyy} from {fileSchedule.startTime:hh\\:mm} to {fileSchedule.endTime:hh\\:mm} for project '{fileSchedule.projectCode}' (row {fileSchedule.row})",
+                                    Value = $"{timeRange}, {councilIdStr}"
+                                });
+                                result.FailureCount++;
+                                hasConflictInFile = true;
+                                break;
+                            }
+                        }
+
+                        if (hasConflictInFile)
+                            continue;
+
+                        // Add to schedule tracker
+                        councilSchedules[councilId].Add((parsedDate, startTime, endTime, projectCode, row));
 
                         // Create DefenseSession
                         var defenseSession = new DefenseSession
@@ -632,7 +900,7 @@ namespace AIDefCom.Service.Services.DefenseSessionService
                         };
 
                         await _uow.DefenseSessions.AddAsync(defenseSession);
-                        await _uow.SaveChangesAsync(); // Save để có ID
+                        await _uow.SaveChangesAsync();
 
                         defenseSessionId = defenseSession.Id;
                         createdSessions[sessionKey] = defenseSessionId;
@@ -642,54 +910,64 @@ namespace AIDefCom.Service.Services.DefenseSessionService
                     // Process committee member if provided
                     if (!string.IsNullOrEmpty(memberEmail) && !string.IsNullOrEmpty(memberRole))
                     {
-                        // Find lecturer by email
-                        var lecturer = await _uow.Lecturers.GetByEmailAsync(memberEmail);
-                        if (lecturer == null)
+                        // ✅ VALIDATION: Email format for member
+                        if (!memberEmail.Contains("@") || !memberEmail.Contains("."))
                         {
                             result.Errors.Add(new ImportErrorDto
                             {
                                 Row = row,
                                 Field = "Email",
-                                ErrorMessage = $"Lecturer not found with email: {memberEmail}",
+                                ErrorMessage = $"Invalid email format for committee member: '{memberEmail}'",
                                 Value = memberEmail
                             });
-                            // Don't fail the row, just skip member assignment
                         }
                         else
                         {
-                            // Find CouncilRole by role name
-                            var councilRole = await _uow.CouncilRoles.GetByRoleNameAsync(memberRole);
-                            if (councilRole == null)
+                            var lecturer = await _uow.Lecturers.GetByEmailAsync(memberEmail);
+                            if (lecturer == null)
                             {
                                 result.Errors.Add(new ImportErrorDto
                                 {
                                     Row = row,
-                                    Field = "MemberRole",
-                                    ErrorMessage = $"Council role not found: {memberRole}",
-                                    Value = memberRole
+                                    Field = "Email",
+                                    ErrorMessage = $"Lecturer not found with email: {memberEmail}",
+                                    Value = memberEmail
                                 });
                             }
                             else
                             {
-                                // Check if this lecturer already assigned to this council
-                                var existingAssignment = await _uow.CommitteeAssignments.Query()
-                                    .FirstOrDefaultAsync(ca => ca.LecturerId == lecturer.Id && 
-                                                              ca.CouncilId == councilId &&
-                                                              !ca.IsDeleted);
-
-                                if (existingAssignment == null)
+                                var councilRole = await _uow.CouncilRoles.GetByRoleNameAsync(memberRole);
+                                if (councilRole == null)
                                 {
-                                    // Create committee assignment
-                                    var assignment = new CommitteeAssignment
+                                    result.Errors.Add(new ImportErrorDto
                                     {
-                                        Id = Guid.NewGuid().ToString(),
-                                        LecturerId = lecturer.Id,
-                                        CouncilId = councilId,
-                                        CouncilRoleId = councilRole.Id,
-                                        IsDeleted = false
-                                    };
+                                        Row = row,
+                                        Field = "Nhiệm vụ TVHĐ",
+                                        ErrorMessage = $"Council role not found: {memberRole}",
+                                        Value = memberRole
+                                    });
+                                }
+                                else
+                                {
+                                    var existingAssignment = await _uow.CommitteeAssignments.Query()
+                                        .Where(ca => ca.LecturerId == lecturer.Id && 
+                                                    ca.CouncilId == councilId &&
+                                                    !ca.IsDeleted)
+                                        .ToListAsync();
 
-                                    await _uow.CommitteeAssignments.AddAsync(assignment);
+                                    if (!existingAssignment.Any())
+                                    {
+                                        var assignment = new CommitteeAssignment
+                                        {
+                                            Id = Guid.NewGuid().ToString(),
+                                            LecturerId = lecturer.Id,
+                                            CouncilId = councilId,
+                                            CouncilRoleId = councilRole.Id,
+                                            IsDeleted = false
+                                        };
+
+                                        await _uow.CommitteeAssignments.AddAsync(assignment);
+                                    }
                                 }
                             }
                         }
@@ -703,14 +981,13 @@ namespace AIDefCom.Service.Services.DefenseSessionService
                     {
                         Row = row,
                         Field = "General",
-                        ErrorMessage = ex.Message,
+                        ErrorMessage = $"Unexpected error: {ex.Message}",
                         Value = ""
                     });
                     result.FailureCount++;
                 }
             }
 
-            // Save all committee assignments
             await _uow.SaveChangesAsync();
 
             result.Message = $"Import completed. {result.CreatedDefenseSessionIds.Count} defense sessions created successfully with committee members. Total rows processed: {result.SuccessCount}, {result.FailureCount} failed.";
@@ -742,19 +1019,6 @@ namespace AIDefCom.Service.Services.DefenseSessionService
                 range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
                 range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightYellow);
             }
-
-            // Sample data
-            worksheet.Cells[2, 1].Value = "SU25SE053";
-            worksheet.Cells[2, 2].Value = "Child Growth and Vaccination Tracking Platform";
-            worksheet.Cells[2, 3].Value = "Nền tảng theo dõi tăng trưởng và tiêm chủng của trẻ em";
-            worksheet.Cells[2, 4].Value = "Đỗ Tấn Nhân";
-            worksheet.Cells[2, 5].Value = "10/3/2025";
-            worksheet.Cells[2, 6].Value = "17h30-19h00";
-            worksheet.Cells[2, 7].Value = "101";
-            worksheet.Cells[2, 8].Value = "NVH 601-Cơ sở NVH";
-            worksheet.Cells[2, 9].Value = "Chủ tịch HĐ";
-            worksheet.Cells[2, 10].Value = "Nguyễn Trọng Tài";
-            worksheet.Cells[2, 11].Value = "TaiNT51@fe.edu.vn";
 
             // Add helpful comments
             worksheet.Cells[1, 1].AddComment("Project code must exist in the system", "System");
@@ -874,6 +1138,33 @@ namespace AIDefCom.Service.Services.DefenseSessionService
 
             // Update status
             existing.Status = newStatus;
+            await _uow.DefenseSessions.UpdateAsync(existing);
+            await _uow.SaveChangesAsync();
+            return true;
+        }
+
+        /// <summary>
+        /// Update total score for a defense session
+        /// </summary>
+        public async Task<bool> UpdateTotalScoreAsync(int id, DefenseSessionTotalScoreUpdateDto dto)
+        {
+            // Validate ID
+            if (id <= 0)
+                throw new ArgumentException("Defense session ID must be greater than 0", nameof(id));
+
+            // Validate score precision (max 2 decimal places)
+            if (Math.Round(dto.TotalScore, 2) != dto.TotalScore)
+                throw new ArgumentException("Total score must have at most 2 decimal places");
+
+            var existing = await _uow.DefenseSessions.GetByIdAsync(id);
+            if (existing == null) 
+                return false;
+
+            // Only allow updating score for Completed defense sessions
+            if (existing.Status != "Completed")
+                throw new InvalidOperationException($"Cannot update total score for defense session with status '{existing.Status}'. Only 'Completed' defense sessions can have their scores updated.");
+
+            existing.TotalScore = dto.TotalScore;
             await _uow.DefenseSessions.UpdateAsync(existing);
             await _uow.SaveChangesAsync();
             return true;

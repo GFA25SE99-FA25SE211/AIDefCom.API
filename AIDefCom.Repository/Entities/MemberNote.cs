@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -14,9 +14,9 @@ namespace AIDefCom.Repository.Entities
         public string CommitteeAssignmentId { get; set; } = string.Empty;
         public CommitteeAssignment? CommitteeAssignment { get; set; }
 
-        // Foreign Key to Group
-        public string GroupId { get; set; } = string.Empty;
-        public Group? Group { get; set; }
+        // Foreign Key to DefenseSession (changed from Group)
+        public int SessionId { get; set; }
+        public DefenseSession? Session { get; set; }
 
         public string? NoteContent { get; set; }
         public DateTime CreatedAt { get; set; }

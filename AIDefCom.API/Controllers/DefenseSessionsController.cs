@@ -285,6 +285,27 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
+        /// Update total score for a defense session
+        /// </summary>
+        [HttpPut("{id}/total-score")]
+        public async Task<IActionResult> UpdateTotalScore(int id, [FromBody] DefenseSessionTotalScoreUpdateDto dto)
+        {
+            _logger.LogInformation("Updating total score for defense session with ID: {Id}, Score: {Score}", id, dto.TotalScore);
+            var ok = await _service.UpdateTotalScoreAsync(id, dto);
+            
+            if (!ok)
+            {
+                throw new KeyNotFoundException($"Defense session with ID {id} not found");
+            }
+
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.TotalScoreUpdated, "Defense session")
+            });
+        }
+
+        /// <summary>
         /// Import defense sessions from Excel file
         /// </summary>
         [HttpPost("import")]
@@ -299,12 +320,41 @@ namespace AIDefCom.API.Controllers
 
             var result = await _service.ImportDefenseSessionsAsync(file);
 
-            return Ok(new ApiResponse<DefenseSessionImportResultDto>
+            // ✅ Return different HTTP status codes based on import results
+            // HTTP 200: All success
+            // HTTP 207: Partial success (some rows succeeded, some failed)
+            // HTTP 400: All failed
+
+            if (result.FailureCount == 0)
             {
-                Code = ResponseCodes.Success,
-                Message = result.Message,
-                Data = result
-            });
+                // All rows succeeded
+                return Ok(new ApiResponse<DefenseSessionImportResultDto>
+                {
+                    Code = ResponseCodes.Success,
+                    Message = result.Message,
+                    Data = result
+                });
+            }
+            else if (result.SuccessCount > 0)
+            {
+                // Partial success - return HTTP 207 Multi-Status
+                return StatusCode(207, new ApiResponse<DefenseSessionImportResultDto>
+                {
+                    Code = ResponseCodes.MultiStatus,
+                    Message = result.Message,
+                    Data = result
+                });
+            }
+            else
+            {
+                // All failed - return HTTP 400 Bad Request
+                return BadRequest(new ApiResponse<DefenseSessionImportResultDto>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = result.Message,
+                    Data = result
+                });
+            }
         }
 
         /// <summary>

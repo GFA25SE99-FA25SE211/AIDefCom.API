@@ -1,4 +1,4 @@
-namespace AIDefCom.Service.Constants
+﻿namespace AIDefCom.Service.Constants
 {
     /// <summary>
     /// Unified response messages corresponding to ResponseCodes
@@ -10,6 +10,7 @@ namespace AIDefCom.Service.Constants
         public const string Success = "Operation completed successfully.";
         public const string Created = "Resource created successfully.";
         public const string NoContent = "Operation completed successfully, no content returned.";
+        public const string MultiStatus = "Operation completed with partial success. Some items succeeded, some failed.";
         
         // Resource-specific success messages (parameterized)
         public const string Retrieved = "{0} retrieved successfully.";

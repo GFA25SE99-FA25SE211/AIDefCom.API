@@ -107,5 +107,31 @@ namespace AIDefCom.API.Controllers
                 Data = uri.ToString()
             });
         }
+
+        /// <summary>
+        /// Get recording by report ID
+        /// Uses the 1-1 relationship chain: Report -> DefenseSession -> Transcript -> Recording
+        /// - Returns 200 OK with recording data if found
+        /// - Returns 404 Not Found if no recording exists for the report
+        /// </summary>
+        [HttpGet("report/{reportId:int}")]
+        public async Task<ActionResult<ApiResponse<RecordingDto>>> GetByReportId([FromRoute] int reportId)
+        {
+            _logger.LogInformation("Retrieving recording for report ID: {ReportId}", reportId);
+            var recording = await _recordingService.GetRecordingByReportIdAsync(reportId);
+            
+            if (recording == null)
+            {
+                _logger.LogWarning("No recording found for report ID: {ReportId}", reportId);
+                throw new KeyNotFoundException($"No recording found for report {reportId}. The report may not have an associated defense session, transcript, or recording.");
+            }
+
+            return Ok(new ApiResponse<RecordingDto>
+            {
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Retrieved, "Recording for report"),
+                Data = recording
+            });
+        }
     }
 }

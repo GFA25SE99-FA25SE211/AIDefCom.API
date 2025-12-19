@@ -11,7 +11,7 @@ namespace AIDefCom.Service.Services.MemberNoteService
     {
         Task<IEnumerable<MemberNoteReadDto>> GetAllAsync();
         Task<MemberNoteReadDto?> GetByIdAsync(int id);
-        Task<IEnumerable<MemberNoteReadDto>> GetByGroupIdAsync(string groupId);
+        Task<IEnumerable<MemberNoteReadDto>> GetBySessionIdAsync(int sessionId);
         Task<IEnumerable<MemberNoteReadDto>> GetByUserIdAsync(string userId);
         Task<int> AddAsync(MemberNoteCreateDto dto);
         Task<bool> UpdateAsync(int id, MemberNoteUpdateDto dto);

@@ -175,12 +175,41 @@ namespace AIDefCom.API.Controllers
                 "Council & committee import completed. Success: {Success}, Failures: {Failures}, Councils: {Councils}, Assignments: {Assignments}",
                 result.SuccessCount, result.FailureCount, result.CreatedCouncilIds.Count, result.CreatedCommitteeAssignmentIds.Count);
 
-            return Ok(new ApiResponse<CouncilCommitteeImportResultDto>
+            // ✅ Return different HTTP status codes based on import results
+            // HTTP 200: All success
+            // HTTP 207: Partial success (some rows succeeded, some failed)
+            // HTTP 400: All failed
+
+            if (result.FailureCount == 0)
             {
-                Code = ResponseCodes.Success,
-                Message = result.Message,
-                Data = result
-            });
+                // All rows succeeded
+                return Ok(new ApiResponse<CouncilCommitteeImportResultDto>
+                {
+                    Code = ResponseCodes.Success,
+                    Message = result.Message,
+                    Data = result
+                });
+            }
+            else if (result.SuccessCount > 0)
+            {
+                // Partial success - return HTTP 207 Multi-Status
+                return StatusCode(207, new ApiResponse<CouncilCommitteeImportResultDto>
+                {
+                    Code = ResponseCodes.MultiStatus,
+                    Message = result.Message,
+                    Data = result
+                });
+            }
+            else
+            {
+                // All failed - return HTTP 400 Bad Request
+                return BadRequest(new ApiResponse<CouncilCommitteeImportResultDto>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = result.Message,
+                    Data = result
+                });
+            }
         }
 
         /// <summary>

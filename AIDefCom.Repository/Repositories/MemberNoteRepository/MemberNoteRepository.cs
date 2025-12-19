@@ -24,7 +24,7 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
             return await _set.AsNoTracking()
                              .Include(n => n.CommitteeAssignment)
                                  .ThenInclude(ca => ca.Lecturer)
-                             .Include(n => n.Group)
+                             .Include(n => n.Session)
                              .OrderByDescending(n => n.CreatedAt)
                              .ToListAsync();
         }
@@ -34,16 +34,17 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
             return await _set.AsNoTracking()
                              .Include(n => n.CommitteeAssignment)
                                  .ThenInclude(ca => ca.Lecturer)
-                             .Include(n => n.Group)
+                             .Include(n => n.Session)
                              .FirstOrDefaultAsync(n => n.Id == id);
         }
 
-        public async Task<IEnumerable<MemberNote>> GetByGroupIdAsync(string groupId)
+        public async Task<IEnumerable<MemberNote>> GetBySessionIdAsync(int sessionId)
         {
             return await _set.AsNoTracking()
                              .Include(n => n.CommitteeAssignment)
                                  .ThenInclude(ca => ca.Lecturer)
-                             .Where(n => n.GroupId == groupId)
+                             .Include(n => n.Session)
+                             .Where(n => n.SessionId == sessionId)
                              .OrderByDescending(n => n.CreatedAt)
                              .ToListAsync();
         }
@@ -53,7 +54,7 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
             return await _set.AsNoTracking()
                              .Include(n => n.CommitteeAssignment)
                                  .ThenInclude(ca => ca.Lecturer)
-                             .Include(n => n.Group)
+                             .Include(n => n.Session)
                              .Where(n => n.CommitteeAssignmentId == userId)
                              .OrderByDescending(n => n.CreatedAt)
                              .ToListAsync();
@@ -70,7 +71,7 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
             if (existing == null) return;
 
             existing.NoteContent = note.NoteContent;
-            existing.GroupId = note.GroupId;
+            existing.SessionId = note.SessionId;
             existing.CommitteeAssignmentId = note.CommitteeAssignmentId;
         }
 

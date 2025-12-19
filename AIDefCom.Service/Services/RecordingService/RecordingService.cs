@@ -63,6 +63,29 @@ namespace AIDefCom.Service.Services.RecordingService
             return await _storage.CreateReadSasAsync(rec.BlobPath, ttl);
         }
 
+        public async Task<RecordingDto?> GetRecordingByReportIdAsync(int reportId)
+        {
+            var recording = await _recordings.GetByReportIdAsync(reportId);
+            
+            if (recording == null)
+                return null;
+
+            return new RecordingDto
+            {
+                Id = recording.Id,
+                BlobPath = recording.BlobPath,
+                BlobUrl = recording.BlobUrl,
+                MimeType = recording.MimeType,
+                DurationSeconds = recording.DurationSeconds,
+                SizeBytes = recording.SizeBytes,
+                CreatedUtc = recording.CreatedUtc,
+                Notes = recording.Notes,
+                UserId = recording.UserId,
+                UserFullName = recording.User?.FullName,
+                TranscriptId = recording.TranscriptId
+            };
+        }
+
         private static string MimeToExt(string mime)
         {
             // Minimal mapping; default to webm
