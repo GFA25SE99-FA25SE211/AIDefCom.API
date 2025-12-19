@@ -14,9 +14,7 @@ namespace AIDefCom.Service.Services.GroupService
         Task<IEnumerable<GroupReadDto>> GetBySemesterIdAsync(int semesterId);
         Task<string> AddAsync(GroupCreateDto dto);
         Task<bool> UpdateAsync(string id, GroupUpdateDto dto);
-        Task<bool> UpdateTotalScoreAsync(string id, GroupTotalScoreUpdateDto dto);
         Task<bool> DeleteAsync(string id);
-        Task<bool> SoftDeleteAsync(string id);
         Task<bool> RestoreAsync(string id);
     }
 }

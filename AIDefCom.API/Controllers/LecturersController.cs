@@ -1,4 +1,4 @@
-using AIDefCom.Service.Constants;
+﻿using AIDefCom.Service.Constants;
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.Lecturer;
 using AIDefCom.Service.Dto.Import;
@@ -182,12 +182,41 @@ namespace AIDefCom.API.Controllers
                 result.SuccessCount, result.FailureCount);
             var msg = $"Import completed. {result.SuccessCount} lecturers created successfully, {result.FailureCount} failed.";
 
-            return Ok(new ApiResponse<ImportResultDto>
+            // ✅ Return different HTTP status codes based on import results
+            // HTTP 200: All success
+            // HTTP 207: Partial success (some rows succeeded, some failed)
+            // HTTP 400: All failed
+
+            if (result.FailureCount == 0)
             {
-                Code = ResponseCodes.Success,
-                Message = msg,
-                Data = result
-            });
+                // All rows succeeded
+                return Ok(new ApiResponse<ImportResultDto>
+                {
+                    Code = ResponseCodes.Success,
+                    Message = msg,
+                    Data = result
+                });
+            }
+            else if (result.SuccessCount > 0)
+            {
+                // Partial success - return HTTP 207 Multi-Status
+                return StatusCode(207, new ApiResponse<ImportResultDto>
+                {
+                    Code = ResponseCodes.MultiStatus,
+                    Message = msg,
+                    Data = result
+                });
+            }
+            else
+            {
+                // All failed - return HTTP 400 Bad Request
+                return BadRequest(new ApiResponse<ImportResultDto>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = msg,
+                    Data = result
+                });
+            }
         }
 
         /// <summary>

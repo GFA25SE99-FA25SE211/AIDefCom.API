@@ -19,6 +19,7 @@ namespace AIDefCom.Service.Services.DefenseSessionService
         Task<string?> GetLecturerRoleInDefenseSessionAsync(string lecturerId, int defenseSessionId);
         Task<int> AddAsync(DefenseSessionCreateDto dto);
         Task<bool> UpdateAsync(int id, DefenseSessionUpdateDto dto);
+        Task<bool> UpdateTotalScoreAsync(int id, DefenseSessionTotalScoreUpdateDto dto);
         Task<bool> DeleteAsync(int id);
         Task<bool> SoftDeleteAsync(int id);
         Task<bool> RestoreAsync(int id);

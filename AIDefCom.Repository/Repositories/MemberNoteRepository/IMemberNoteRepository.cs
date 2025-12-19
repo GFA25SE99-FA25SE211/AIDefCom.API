@@ -11,7 +11,7 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
     {
         Task<IEnumerable<MemberNote>> GetAllAsync();
         Task<MemberNote?> GetByIdAsync(int id);
-        Task<IEnumerable<MemberNote>> GetByGroupIdAsync(string groupId);
+        Task<IEnumerable<MemberNote>> GetBySessionIdAsync(int sessionId);
         Task<IEnumerable<MemberNote>> GetByUserIdAsync(string userId);
         Task AddAsync(MemberNote note);
         Task UpdateAsync(MemberNote note);

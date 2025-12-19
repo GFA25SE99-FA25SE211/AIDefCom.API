@@ -9,7 +9,7 @@ namespace AIDefCom.Service.Dto.MemberNote
     public class MemberNoteCreateDto
     {
         public string CommitteeAssignmentId { get; set; } = string.Empty;
-        public string GroupId { get; set; } = string.Empty;
+        public int SessionId { get; set; }
         public string? NoteContent { get; set; }
     }
 }

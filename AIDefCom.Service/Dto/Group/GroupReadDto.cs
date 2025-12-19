@@ -17,6 +17,5 @@ namespace AIDefCom.Service.Dto.Group
         public int MajorId { get; set; }
         public string? MajorName { get; set; }
         public string Status { get; set; } = string.Empty;
-        public double? TotalScore { get; set; }
     }
 }

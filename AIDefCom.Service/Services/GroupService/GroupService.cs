@@ -115,36 +115,7 @@ namespace AIDefCom.Service.Services.GroupService
             return true;
         }
 
-        public async Task<bool> UpdateTotalScoreAsync(string id, GroupTotalScoreUpdateDto dto)
-        {
-            // Validate ID
-            if (string.IsNullOrWhiteSpace(id))
-                throw new ArgumentException("Group ID cannot be null or empty", nameof(id));
-
-            // Validate score precision (max 2 decimal places)
-            if (Math.Round(dto.TotalScore, 2) != dto.TotalScore)
-                throw new ArgumentException("Total score must have at most 2 decimal places");
-
-            var existing = await _uow.Groups.GetByIdAsync(id);
-            if (existing == null) 
-                return false;
-
-            // Only allow updating score for Completed groups
-            if (existing.Status != "Completed")
-                throw new InvalidOperationException($"Cannot update total score for group with status '{existing.Status}'. Only 'Completed' groups can have their scores updated.");
-
-            existing.TotalScore = dto.TotalScore;
-            await _uow.Groups.UpdateAsync(existing);
-            await _uow.SaveChangesAsync();
-            return true;
-        }
-
         public async Task<bool> DeleteAsync(string id)
-        {
-            return await SoftDeleteAsync(id);
-        }
-
-        public async Task<bool> SoftDeleteAsync(string id)
         {
             // Validate ID
             if (string.IsNullOrWhiteSpace(id))
@@ -164,12 +135,7 @@ namespace AIDefCom.Service.Services.GroupService
             if (studentGroups.Any())
                 throw new InvalidOperationException($"Cannot delete group '{existing.ProjectCode}' because it has {studentGroups.Count()} student(s) assigned. Please remove students first.");
 
-            // Check if group has member notes
-            var memberNotes = await _uow.MemberNotes.GetByGroupIdAsync(id);
-            if (memberNotes.Any())
-                throw new InvalidOperationException($"Cannot delete group '{existing.ProjectCode}' because it has member notes. Please remove notes first.");
-
-            await _uow.Groups.SoftDeleteAsync(id);
+            await _uow.Groups.DeleteAsync(id);
             await _uow.SaveChangesAsync();
             return true;
         }
