@@ -292,9 +292,26 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        /// <summary>
-        /// Import defense sessions from Excel file (Admin and Moderator)
-        /// </summary>
+        [Authorize(Roles = "Admin,Lecturer")]
+        [HttpPut("{id}/total-score")]
+        public async Task<IActionResult> UpdateTotalScore(int id, [FromBody] DefenseSessionTotalScoreUpdateDto dto)
+        {
+            _logger.LogInformation("Updating total score for defense session with ID: {Id}, Score: {Score}", id, dto.TotalScore);
+            var ok = await _service.UpdateTotalScoreAsync(id, dto);
+
+            if (!ok)
+            {
+                throw new KeyNotFoundException($"Defense session with ID {id} not found");
+            }
+
+            return Ok(new ApiResponse<object>
+            {
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.TotalScoreUpdated, "Defense session")
+            });
+        }
+
+        
         [Authorize(Roles = "Admin,Moderator")]
         [HttpPost("import")]
         public async Task<IActionResult> ImportDefenseSessions(IFormFile file)

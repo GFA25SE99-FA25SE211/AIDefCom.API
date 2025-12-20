@@ -14,7 +14,7 @@ namespace AIDefCom.API.Controllers
     /// </summary>
     [Route("api/lecturers")]
     [ApiController]
-    [Authorize(Roles = "Admin,Moderator,Lecturer")] // Lecturer có quyền truy cập
+    [Authorize(Roles = "Admin,Moderator,Lecturer")] 
     public class LecturersController : ControllerBase
     {
         private readonly ILecturerService _service;
