@@ -2,6 +2,7 @@
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.Semester;
 using AIDefCom.Service.Services.SemesterService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
@@ -11,6 +12,7 @@ namespace AIDefCom.API.Controllers
     /// </summary>
     [Route("api/semesters")]
     [ApiController]
+    [Authorize(Roles = "Admin")] // Chỉ Admin mới có quyền truy cập (Lecturer không có quyền)
     public class SemestersController : ControllerBase
     {
         private readonly ISemesterService _service;

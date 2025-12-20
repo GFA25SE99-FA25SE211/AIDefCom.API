@@ -1,13 +1,15 @@
-using AIDefCom.Service.Constants;
+﻿using AIDefCom.Service.Constants;
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.Transcript;
 using AIDefCom.Service.Services.TranscriptService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
     [Route("api/transcripts")]
     [ApiController]
+    [Authorize(Roles = "Admin,Moderator,Lecturer")] // Admin, Moderator và Lecturer có quyền truy cập (chỉ xem)
     public class TranscriptsController : ControllerBase
     {
         private readonly ITranscriptService _transcriptService;
@@ -67,6 +69,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Lecturer")]
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] TranscriptCreateDto request)
         {
@@ -83,6 +86,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Lecturer")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] TranscriptUpdateDto request)
         {
@@ -103,6 +107,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Lecturer")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

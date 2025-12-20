@@ -3,6 +3,7 @@ using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.Council;
 using AIDefCom.Service.Dto.Import;
 using AIDefCom.Service.Services.CouncilService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
@@ -12,6 +13,7 @@ namespace AIDefCom.API.Controllers
     /// </summary>
     [Route("api/councils")]
     [ApiController]
+    [Authorize(Roles = "Admin,Moderator")] // Admin và Moderator có quyền truy cập
     public class CouncilsController : ControllerBase
     {
         private readonly ICouncilService _service;
@@ -64,8 +66,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Create a new council
+        /// Create a new council (Admin and Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] CouncilCreateDto dto)
         {
@@ -83,8 +86,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Update an existing council
+        /// Update an existing council (Admin and Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] CouncilUpdateDto dto)
         {
@@ -106,8 +110,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Soft delete a council
+        /// Soft delete a council (Admin and Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> SoftDelete(int id)
         {
@@ -129,8 +134,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Restore a soft-deleted council
+        /// Restore a soft-deleted council (Admin and Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPut("{id}/restore")]
         public async Task<IActionResult> Restore(int id)
         {
@@ -152,8 +158,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Import councils with committee assignments from Excel file
+        /// Import councils with committee assignments from Excel file (Admin and Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPost("import")]
         public async Task<IActionResult> ImportCouncilsWithCommittees([FromForm] CouncilCommitteeImportRequestDto request)
         {
@@ -213,7 +220,7 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Download Excel template for council & committee import
+        /// Download Excel template for council & committee import (Admin và Moderator)
         /// </summary>
         [HttpGet("import/template")]
         public IActionResult DownloadCouncilCommitteeTemplate()

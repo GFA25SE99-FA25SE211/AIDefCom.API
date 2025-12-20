@@ -3,12 +3,14 @@ using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.DefenseSession;
 using AIDefCom.Service.Dto.Import;
 using AIDefCom.Service.Services.DefenseSessionService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
     [Route("api/defense-sessions")]
     [ApiController]
+    [Authorize] // Tất cả endpoints yêu cầu authenticated (bao gồm Student)
     public class DefenseSessionsController : ControllerBase
     {
         private readonly IDefenseSessionService _service;
@@ -158,8 +160,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Create a new defense session
+        /// Create a new defense session (Admin and Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] DefenseSessionCreateDto dto)
         {
@@ -176,8 +179,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Update an existing defense session
+        /// Update an existing defense session (Admin and Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] DefenseSessionUpdateDto dto)
         {
@@ -197,8 +201,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Soft delete a defense session
+        /// Soft delete a defense session (Admin and Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -218,8 +223,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Restore a soft-deleted defense session
+        /// Restore a soft-deleted defense session (Admin and Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPut("{id}/restore")]
         public async Task<IActionResult> Restore(int id)
         {
@@ -239,8 +245,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Change defense session status to InProgress
+        /// Change defense session status to InProgress (Admin and Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPut("{id}/start")]
         public async Task<IActionResult> StartSession(int id)
         {
@@ -262,8 +269,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Change defense session status to Completed
+        /// Change defense session status to Completed (Admin and Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPut("{id}/complete")]
         public async Task<IActionResult> CompleteSession(int id)
         {
@@ -285,29 +293,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Update total score for a defense session
+        /// Import defense sessions from Excel file (Admin and Moderator)
         /// </summary>
-        [HttpPut("{id}/total-score")]
-        public async Task<IActionResult> UpdateTotalScore(int id, [FromBody] DefenseSessionTotalScoreUpdateDto dto)
-        {
-            _logger.LogInformation("Updating total score for defense session with ID: {Id}, Score: {Score}", id, dto.TotalScore);
-            var ok = await _service.UpdateTotalScoreAsync(id, dto);
-            
-            if (!ok)
-            {
-                throw new KeyNotFoundException($"Defense session with ID {id} not found");
-            }
-
-            return Ok(new ApiResponse<object>
-            {
-                Code = ResponseCodes.Success,
-                Message = string.Format(ResponseMessages.TotalScoreUpdated, "Defense session")
-            });
-        }
-
-        /// <summary>
-        /// Import defense sessions from Excel file
-        /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPost("import")]
         public async Task<IActionResult> ImportDefenseSessions(IFormFile file)
         {
@@ -358,8 +346,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Download Excel template for defense session import
+        /// Download Excel template for defense session import (Admin và Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpGet("import/template")]
         public IActionResult DownloadDefenseSessionTemplate()
         {
