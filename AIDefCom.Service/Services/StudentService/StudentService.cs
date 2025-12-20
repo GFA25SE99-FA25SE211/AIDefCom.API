@@ -109,7 +109,7 @@ namespace AIDefCom.Service.Services.StudentService
             return true;
         }
 
-        // Import methods
+        // Import methods - All or Nothing approach
         public async Task<ImportResultDto> ImportFromExcelAsync(IFormFile file)
         {
             var result = new ImportResultDto();
@@ -142,179 +142,239 @@ namespace AIDefCom.Service.Services.StudentService
             int rowCount = worksheet.Dimension?.Rows ?? 0;
             result.TotalRows = rowCount - 1;
 
+            if (rowCount < 2)
+                throw new ArgumentException("Excel file contains no data rows");
+
+            // ✅ PHASE 1: VALIDATE ALL ROWS (No database operations)
+            var validatedStudents = new List<(int Row, Student Student, string Password)>();
+            var processedStudentCodes = new HashSet<string>();
+            var processedUserNames = new HashSet<string>();
+            var processedEmails = new HashSet<string>();
+
             for (int row = 2; row <= rowCount; row++)
             {
-                try
-                {
-                    var studentCode = worksheet.Cells[row, 1].Text?.Trim();
-                    var userName = worksheet.Cells[row, 2].Text?.Trim();
-                    var email = worksheet.Cells[row, 3].Text?.Trim();
-                    var fullName = worksheet.Cells[row, 4].Text?.Trim();
-                    var dateOfBirthStr = worksheet.Cells[row, 5].Text?.Trim();
-                    var gender = worksheet.Cells[row, 6].Text?.Trim();
-                    var phoneNumber = worksheet.Cells[row, 7].Text?.Trim();
+                var studentCode = worksheet.Cells[row, 1].Text?.Trim();
+                var userName = worksheet.Cells[row, 2].Text?.Trim();
+                var email = worksheet.Cells[row, 3].Text?.Trim();
+                var fullName = worksheet.Cells[row, 4].Text?.Trim();
+                var dateOfBirthStr = worksheet.Cells[row, 5].Text?.Trim();
+                var gender = worksheet.Cells[row, 6].Text?.Trim();
+                var phoneNumber = worksheet.Cells[row, 7].Text?.Trim();
 
-                    // Validate required fields
-                    if (string.IsNullOrEmpty(studentCode))
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "StudentCode",
-                            ErrorMessage = "StudentCode is required",
-                            Value = ""
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(fullName))
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Required",
-                            ErrorMessage = "UserName, Email, and FullName are required",
-                            Value = ""
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    // Check if StudentCode already exists
-                    var existingStudent = await _uow.Students.GetByIdAsync(studentCode);
-                    if (existingStudent != null)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "StudentCode",
-                            ErrorMessage = "StudentCode already exists",
-                            Value = studentCode
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    // Check if UserName already exists
-                    var existingUser = await _userManager.FindByNameAsync(userName);
-                    if (existingUser != null)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "UserName",
-                            ErrorMessage = "UserName already exists",
-                            Value = userName
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    DateTime? dateOfBirth = null;
-                    if (!string.IsNullOrEmpty(dateOfBirthStr))
-                    {
-                        // Try parsing with multiple date formats
-                        var dateFormats = new[]
-                        {
-                            "dd/MM/yyyy",     // 14/03/2004 (Vietnamese format)
-                            "MM/dd/yyyy",     // 03/14/2004 (US format)
-                            "yyyy-MM-dd",     // 2004-03-14 (ISO format)
-                            "dd-MM-yyyy",     // 14-03-2004
-                            "MM-dd-yyyy",     // 03-14-2004
-                            "d/M/yyyy",       // 14/3/2004 (without leading zeros)
-                            "M/d/yyyy"        // 3/14/2004 (without leading zeros)
-                        };
-
-                        if (DateTime.TryParseExact(dateOfBirthStr, dateFormats, 
-                            System.Globalization.CultureInfo.InvariantCulture, 
-                            System.Globalization.DateTimeStyles.None, out var dob))
-                        {
-                            dateOfBirth = dob;
-                        }
-                        else if (DateTime.TryParse(dateOfBirthStr, out dob))
-                        {
-                            // Fallback to default parsing
-                            dateOfBirth = dob;
-                        }
-                        else
-                        {
-                            result.Errors.Add(new ImportErrorDto
-                            {
-                                Row = row,
-                                Field = "DateOfBirth",
-                                ErrorMessage = "Invalid date format. Use dd/MM/yyyy (e.g., 14/03/2004)",
-                                Value = dateOfBirthStr
-                            });
-                            result.FailureCount++;
-                            continue;
-                        }
-                    }
-
-                    var student = new Student
-                    {
-                        Id = studentCode, // Use StudentCode as ID instead of Guid
-                        UserName = userName,
-                        Email = email,
-                        FullName = fullName,
-                        DateOfBirth = dateOfBirth,
-                        Gender = gender,
-                        PhoneNumber = phoneNumber,
-                        EmailConfirmed = true,
-                        HasGeneratedPassword = true,
-                        PasswordGeneratedAt = DateTime.UtcNow
-                    };
-
-                    var password = GenerateRandomPassword();
-                    student.LastGeneratedPassword = password;
-
-                    var createResult = await _userManager.CreateAsync(student, password);
-
-                    if (createResult.Succeeded)
-                    {
-                        await _userManager.AddToRoleAsync(student, "Student");
-                        result.SuccessCount++;
-                        result.CreatedUserIds.Add(student.Id);
-
-                        // 📧 Gửi email thông báo tài khoản và mật khẩu
-                        try
-                        {
-                            await SendWelcomeEmail(student.Email, student.UserName, password, student.FullName);
-                            _logger.LogInformation("✅ Sent welcome email to {Email}", student.Email);
-                        }
-                        catch (Exception emailEx)
-                        {
-                            _logger.LogWarning("⚠️ Failed to send welcome email to {Email}: {Error}", 
-                                student.Email, emailEx.Message);
-                            // Không fail import nếu gửi email lỗi, chỉ log warning
-                        }
-                    }
-                    else
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "General",
-                            ErrorMessage = string.Join(", ", createResult.Errors.Select(e => e.Description)),
-                            Value = userName
-                        });
-                        result.FailureCount++;
-                    }
-                }
-                catch (Exception ex)
+                // Validation 1: Required fields
+                if (string.IsNullOrEmpty(studentCode))
                 {
                     result.Errors.Add(new ImportErrorDto
                     {
                         Row = row,
-                        Field = "General",
-                        ErrorMessage = ex.Message,
+                        Field = "StudentCode",
+                        ErrorMessage = "StudentCode is required",
                         Value = ""
                     });
-                    result.FailureCount++;
+                    continue;
                 }
+
+                if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(fullName))
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "UserName, Email, FullName",
+                        ErrorMessage = "UserName, Email, and FullName are required",
+                        Value = $"{userName}, {email}, {fullName}"
+                    });
+                    continue;
+                }
+
+                // Validation 2: Email format
+                if (!email.Contains("@") || !email.Contains("."))
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Email",
+                        ErrorMessage = "Invalid email format",
+                        Value = email
+                    });
+                    continue;
+                }
+
+                // Validation 3: Duplicate StudentCode within file
+                if (processedStudentCodes.Contains(studentCode))
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "StudentCode",
+                        ErrorMessage = $"Duplicate StudentCode '{studentCode}' found in the file",
+                        Value = studentCode
+                    });
+                    continue;
+                }
+
+                // Validation 4: Duplicate UserName within file
+                if (processedUserNames.Contains(userName.ToLower()))
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "UserName",
+                        ErrorMessage = $"Duplicate UserName '{userName}' found in the file",
+                        Value = userName
+                    });
+                    continue;
+                }
+
+                // Validation 5: Duplicate Email within file
+                if (processedEmails.Contains(email.ToLower()))
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Email",
+                        ErrorMessage = $"Duplicate Email '{email}' found in the file",
+                        Value = email
+                    });
+                    continue;
+                }
+
+                // Validation 6: Check if StudentCode already exists in database
+                var existingStudent = await _uow.Students.GetByIdAsync(studentCode);
+                if (existingStudent != null)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "StudentCode",
+                        ErrorMessage = $"StudentCode '{studentCode}' already exists in the system",
+                        Value = studentCode
+                    });
+                    continue;
+                }
+
+                // Validation 7: Check if UserName already exists in database
+                var existingUserByName = await _userManager.FindByNameAsync(userName);
+                if (existingUserByName != null)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "UserName",
+                        ErrorMessage = $"UserName '{userName}' already exists in the system",
+                        Value = userName
+                    });
+                    continue;
+                }
+
+                // Validation 8: Check if Email already exists in database
+                var existingUserByEmail = await _userManager.FindByEmailAsync(email);
+                if (existingUserByEmail != null)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Email",
+                        ErrorMessage = $"Email '{email}' already exists in the system",
+                        Value = email
+                    });
+                    continue;
+                }
+
+                // Validation 9: Date format
+                DateTime? dateOfBirth = null;
+                if (!string.IsNullOrEmpty(dateOfBirthStr))
+                {
+                    var dateFormats = new[]
+                    {
+                        "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd",
+                        "dd-MM-yyyy", "MM-dd-yyyy", "d/M/yyyy", "M/d/yyyy"
+                    };
+
+                    if (!DateTime.TryParseExact(dateOfBirthStr, dateFormats, 
+                        System.Globalization.CultureInfo.InvariantCulture, 
+                        System.Globalization.DateTimeStyles.None, out var dob) &&
+                        !DateTime.TryParse(dateOfBirthStr, out dob))
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "DateOfBirth",
+                            ErrorMessage = "Invalid date format. Use dd/MM/yyyy (e.g., 14/03/2004)",
+                            Value = dateOfBirthStr
+                        });
+                        continue;
+                    }
+                    dateOfBirth = dob;
+                }
+
+                // All validations passed - prepare student object
+                var student = new Student
+                {
+                    Id = studentCode,
+                    UserName = userName,
+                    Email = email,
+                    FullName = fullName,
+                    DateOfBirth = dateOfBirth,
+                    Gender = gender,
+                    PhoneNumber = phoneNumber,
+                    EmailConfirmed = true,
+                    HasGeneratedPassword = true,
+                    PasswordGeneratedAt = DateTime.UtcNow
+                };
+
+                var password = GenerateRandomPassword();
+                student.LastGeneratedPassword = password;
+
+                validatedStudents.Add((row, student, password));
+                processedStudentCodes.Add(studentCode);
+                processedUserNames.Add(userName.ToLower());
+                processedEmails.Add(email.ToLower());
             }
 
-            return result;
+            // ✅ PHASE 2: CHECK IF ANY VALIDATION ERRORS
+            if (result.Errors.Any())
+            {
+                result.FailureCount = result.Errors.Count;
+                result.TotalRows = rowCount - 1;
+                throw new ArgumentException($"Import validation failed. Found {result.Errors.Count} error(s). Please fix all errors and try again. Errors: {string.Join("; ", result.Errors.Select(e => $"Row {e.Row}: {e.ErrorMessage} (Field: {e.Field}, Value: '{e.Value}')"))}");
+            }
+
+            // ✅ PHASE 3: ALL VALID - INSERT ALL (Transaction)
+            try
+            {
+                foreach (var (row, student, password) in validatedStudents)
+                {
+                    var createResult = await _userManager.CreateAsync(student, password);
+
+                    if (!createResult.Succeeded)
+                    {
+                        throw new InvalidOperationException($"Row {row}: Failed to create student '{student.UserName}'. {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
+                    }
+
+                    await _userManager.AddToRoleAsync(student, "Student");
+                    result.CreatedUserIds.Add(student.Id);
+
+                    // Send email (non-blocking)
+                    try
+                    {
+                        await SendWelcomeEmail(student.Email, student.UserName, password, student.FullName);
+                        _logger.LogInformation("✅ Sent welcome email to {Email}", student.Email);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogWarning("⚠️ Failed to send welcome email to {Email}: {Error}", 
+                            student.Email, emailEx.Message);
+                    }
+                }
+
+                result.SuccessCount = validatedStudents.Count;
+                result.FailureCount = 0;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Import failed: {ex.Message}. All changes have been rolled back.", ex);
+            }
         }
 
         public byte[] GenerateExcelTemplate()
@@ -500,371 +560,349 @@ namespace AIDefCom.Service.Services.StudentService
         private async Task<StudentGroupImportResultDto> ProcessStudentGroupImportRows(
             ExcelWorksheet worksheet, int rowCount, StudentGroupImportResultDto result, int semesterId, int majorId)
         {
-            var createdGroups = new Dictionary<string, string>();
+            // ✅ PHASE 1: VALIDATE ALL ROWS
+            var validatedData = new List<(
+                int Row,
+                string Mssv,
+                string FullName,
+                string Email,
+                string RoleInGroup,
+                string GroupCode,
+                string ProjectCode,
+                string TopicTitleEN,
+                string TopicTitleVN,
+                string Password
+            )>();
             
-            // ✅ Track duplicates within the file
             var processedStudents = new HashSet<string>();
             var processedEmails = new HashSet<string>();
-            var processedGroupCodes = new HashSet<string>();
-            var processedProjectCodes = new HashSet<string>();
+            var groupData = new Dictionary<string, (string ProjectCode, string TopicEN, string TopicVN)>();
 
             for (int row = 2; row <= rowCount; row++)
             {
-                try
+                var mssv = worksheet.Cells[row, 1].Text?.Trim();
+                var fullName = worksheet.Cells[row, 2].Text?.Trim();
+                var email = worksheet.Cells[row, 3].Text?.Trim();
+                var roleInGroup = worksheet.Cells[row, 4].Text?.Trim();
+                var groupCode = worksheet.Cells[row, 5].Text?.Trim();
+                var projectCode = worksheet.Cells[row, 6].Text?.Trim();
+                var topicTitleEN = worksheet.Cells[row, 7].Text?.Trim();
+                var topicTitleVN = worksheet.Cells[row, 8].Text?.Trim();
+
+                // ✅ VALIDATION: Required fields
+                var missingFields = new List<string>();
+                if (string.IsNullOrEmpty(mssv)) missingFields.Add("MSSV");
+                if (string.IsNullOrEmpty(fullName)) missingFields.Add("Fullname");
+                if (string.IsNullOrEmpty(email)) missingFields.Add("Email");
+                if (string.IsNullOrEmpty(groupCode)) missingFields.Add("Mã nhóm");
+                if (string.IsNullOrEmpty(projectCode)) missingFields.Add("Mã đề tài");
+
+                if (missingFields.Any())
                 {
-                    var mssv = worksheet.Cells[row, 1].Text?.Trim();
-                    var fullName = worksheet.Cells[row, 2].Text?.Trim();
-                    var email = worksheet.Cells[row, 3].Text?.Trim();
-                    var roleInGroup = worksheet.Cells[row, 4].Text?.Trim();
-                    var groupCode = worksheet.Cells[row, 5].Text?.Trim();
-                    var projectCode = worksheet.Cells[row, 6].Text?.Trim();
-                    var topicTitleEN = worksheet.Cells[row, 7].Text?.Trim();
-                    var topicTitleVN = worksheet.Cells[row, 8].Text?.Trim();
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = string.Join(", ", missingFields),
+                        ErrorMessage = $"Required field(s) missing: {string.Join(", ", missingFields)}",
+                        Value = ""
+                    });
+                    continue;
+                }
 
-                    // ✅ VALIDATION: Required fields
-                    var missingFields = new List<string>();
-                    if (string.IsNullOrEmpty(mssv)) missingFields.Add("MSSV");
-                    if (string.IsNullOrEmpty(fullName)) missingFields.Add("Fullname");
-                    if (string.IsNullOrEmpty(email)) missingFields.Add("Email");
-                    if (string.IsNullOrEmpty(groupCode)) missingFields.Add("Mã nhóm");
-                    if (string.IsNullOrEmpty(projectCode)) missingFields.Add("Mã đề tài");
+                // ✅ VALIDATION: Student code length
+                if (mssv.Length > 50)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "MSSV",
+                        ErrorMessage = "Student code cannot exceed 50 characters",
+                        Value = mssv
+                    });
+                    continue;
+                }
 
-                    if (missingFields.Any())
+                // ✅ VALIDATION: Email format
+                if (!email.Contains("@") || !email.Contains("."))
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Email",
+                        ErrorMessage = "Invalid email format",
+                        Value = email
+                    });
+                    continue;
+                }
+
+                if (email.Length > 256)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Email",
+                        ErrorMessage = "Email cannot exceed 256 characters",
+                        Value = email
+                    });
+                    continue;
+                }
+
+                // ✅ VALIDATION: Role
+                if (!string.IsNullOrEmpty(roleInGroup))
+                {
+                    var validRoles = new[] { "Leader", "Member", "leader", "member" };
+                    if (!validRoles.Contains(roleInGroup))
                     {
                         result.Errors.Add(new ImportErrorDto
                         {
                             Row = row,
-                            Field = string.Join(", ", missingFields),
-                            ErrorMessage = $"Required field(s) missing: {string.Join(", ", missingFields)}",
-                            Value = ""
+                            Field = "Role in group",
+                            ErrorMessage = $"Invalid role. Allowed values: Leader, Member",
+                            Value = roleInGroup
                         });
-                        result.FailureCount++;
                         continue;
                     }
+                }
 
-                    // ✅ VALIDATION: Student code format and length
-                    if (mssv.Length > 50)
+                // ✅ VALIDATION: Duplicate MSSV within file
+                if (processedStudents.Contains(mssv))
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "MSSV",
+                        ErrorMessage = $"Duplicate student code '{mssv}' found in the file",
+                        Value = mssv
+                    });
+                    continue;
+                }
+
+                // ✅ VALIDATION: Duplicate Email within file
+                if (processedEmails.Contains(email.ToLower()))
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Email",
+                        ErrorMessage = $"Duplicate email '{email}' found in the file",
+                        Value = email
+                    });
+                    continue;
+                }
+
+                // ✅ VALIDATION: Check if Student exists in database
+                var existingStudent = await _uow.Students.GetByIdAsync(mssv);
+                if (existingStudent != null)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "MSSV",
+                        ErrorMessage = $"Student with code '{mssv}' already exists in the system",
+                        Value = mssv
+                    });
+                    continue;
+                }
+
+                // ✅ VALIDATION: Check if Email exists in database
+                var existingEmail = await _userManager.FindByEmailAsync(email);
+                if (existingEmail != null)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Email",
+                        ErrorMessage = $"Email '{email}' already exists in the system",
+                        Value = email
+                    });
+                    continue;
+                }
+
+                // ✅ VALIDATION: Group consistency
+                if (groupData.ContainsKey(groupCode))
+                {
+                    var existing = groupData[groupCode];
+                    if (existing.ProjectCode != projectCode)
                     {
                         result.Errors.Add(new ImportErrorDto
                         {
                             Row = row,
-                            Field = "MSSV",
-                            ErrorMessage = "Student code cannot exceed 50 characters",
-                            Value = mssv
+                            Field = "Mã nhóm, Mã đề tài",
+                            ErrorMessage = $"Group '{groupCode}' has conflicting project codes in file: '{existing.ProjectCode}' vs '{projectCode}'",
+                            Value = $"{groupCode}, {projectCode}"
                         });
-                        result.FailureCount++;
                         continue;
                     }
-
-                    // ✅ VALIDATION: Email format
-                    if (!email.Contains("@") || !email.Contains("."))
+                }
+                else
+                {
+                    // Check if group exists in database
+                    var existingGroup = await _uow.Groups.GetByIdAsync(groupCode);
+                    if (existingGroup != null)
                     {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Email",
-                            ErrorMessage = "Invalid email format. Email must contain '@' and a domain (e.g., user@example.com)",
-                            Value = email
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    // ✅ VALIDATION: Email length
-                    if (email.Length > 256)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Email",
-                            ErrorMessage = "Email cannot exceed 256 characters",
-                            Value = email
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    // ✅ VALIDATION: Role validation
-                    if (!string.IsNullOrEmpty(roleInGroup))
-                    {
-                        var validRoles = new[] { "Leader", "Member", "leader", "member" };
-                        if (!validRoles.Contains(roleInGroup))
-                        {
-                            result.Errors.Add(new ImportErrorDto
-                            {
-                                Row = row,
-                                Field = "Role in group",
-                                ErrorMessage = $"Invalid role. Allowed values: Leader, Member. Current value: '{roleInGroup}'",
-                                Value = roleInGroup
-                            });
-                            result.FailureCount++;
-                            continue;
-                        }
-                    }
-
-                    // ✅ VALIDATION: Check duplicate MSSV within file
-                    if (processedStudents.Contains(mssv))
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "MSSV",
-                            ErrorMessage = $"Duplicate student code '{mssv}' found in the file. Each student can only appear once.",
-                            Value = mssv
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    // ✅ VALIDATION: Check duplicate Email within file
-                    if (processedEmails.Contains(email.ToLower()))
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Email",
-                            ErrorMessage = $"Duplicate email '{email}' found in the file. Each email must be unique.",
-                            Value = email
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    // ✅ VALIDATION: Check if Student already exists in database
-                    var existingStudent = await _uow.Students.GetByIdAsync(mssv);
-                    if (existingStudent != null)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "MSSV",
-                            ErrorMessage = $"Student with code '{mssv}' already exists in the system",
-                            Value = mssv
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    // ✅ VALIDATION: Check if Email already exists in database
-                    var existingEmail = await _userManager.FindByEmailAsync(email);
-                    if (existingEmail != null)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Email",
-                            ErrorMessage = $"Email '{email}' already exists in the system",
-                            Value = email
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    // Process Group validation
-                    string groupId;
-                    if (createdGroups.ContainsKey(groupCode))
-                    {
-                        groupId = createdGroups[groupCode];
-                    }
-                    else
-                    {
-                        // ✅ VALIDATION: Check if Group with different ProjectCode but same GroupCode
-                        if (processedGroupCodes.Contains(groupCode))
+                        if (existingGroup.SemesterId != semesterId || existingGroup.MajorId != majorId)
                         {
                             result.Errors.Add(new ImportErrorDto
                             {
                                 Row = row,
                                 Field = "Mã nhóm",
-                                ErrorMessage = $"Group code '{groupCode}' is being used multiple times with different project codes in this file",
+                                ErrorMessage = $"Group '{groupCode}' exists but belongs to different Semester or Major",
                                 Value = groupCode
                             });
-                            result.FailureCount++;
                             continue;
                         }
-
-                        // ✅ VALIDATION: Check if ProjectCode is being used with different GroupCode
-                        if (processedProjectCodes.Contains(projectCode) && !createdGroups.Values.Any(v => v == groupCode))
+                        groupData[groupCode] = (existingGroup.ProjectCode, existingGroup.TopicTitle_EN ?? "", existingGroup.TopicTitle_VN ?? "");
+                    }
+                    else
+                    {
+                        // New group - check if projectCode already used
+                        var existingGroupByProject = await _uow.Groups.GetByProjectCodeAsync(projectCode);
+                        if (existingGroupByProject != null)
                         {
                             result.Errors.Add(new ImportErrorDto
                             {
                                 Row = row,
                                 Field = "Mã đề tài",
-                                ErrorMessage = $"Project code '{projectCode}' is being used with multiple different group codes in this file",
+                                ErrorMessage = $"Project code '{projectCode}' already exists for group '{existingGroupByProject.Id}'",
                                 Value = projectCode
                             });
-                            result.FailureCount++;
                             continue;
                         }
 
-                        var existingGroup = await _uow.Groups.GetByIdAsync(groupCode);
+                        if (projectCode.Length > 50)
+                        {
+                            result.Errors.Add(new ImportErrorDto
+                            {
+                                Row = row,
+                                Field = "Mã đề tài",
+                                ErrorMessage = "Project code cannot exceed 50 characters",
+                                Value = projectCode
+                            });
+                            continue;
+                        }
+
+                        groupData[groupCode] = (projectCode, topicTitleEN ?? "", topicTitleVN ?? "");
+                    }
+                }
+
+                // ✅ VALIDATION: Check if student already in group
+                var existingAssignment = await _uow.StudentGroups.Query()
+                    .Where(sg => sg.UserId == mssv && sg.GroupId == groupCode)
+                    .FirstOrDefaultAsync();
+
+                if (existingAssignment != null)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "MSSV",
+                        ErrorMessage = $"Student '{mssv}' is already assigned to group '{groupCode}'",
+                        Value = mssv
+                    });
+                    continue;
+                }
+
+                // All validations passed
+                var password = GenerateRandomPassword();
+                validatedData.Add((row, mssv, fullName, email, roleInGroup, groupCode, projectCode, topicTitleEN ?? "", topicTitleVN ?? "", password));
+                processedStudents.Add(mssv);
+                processedEmails.Add(email.ToLower());
+            }
+
+            // ✅ PHASE 2: CHECK IF ANY VALIDATION ERRORS
+            if (result.Errors.Any())
+            {
+                result.FailureCount = result.Errors.Count;
+                result.TotalRows = rowCount - 1;
+                throw new ArgumentException($"Import validation failed. Found {result.Errors.Count} error(s). Please fix all errors and try again. Errors: {string.Join("; ", result.Errors.Select(e => $"Row {e.Row}: {e.ErrorMessage} (Field: {e.Field}, Value: '{e.Value}')"))}");
+            }
+
+            // ✅ PHASE 3: INSERT ALL (Transaction)
+            try
+            {
+                var createdGroups = new HashSet<string>();
+
+                foreach (var data in validatedData)
+                {
+                    // Create group if not exists
+                    if (!createdGroups.Contains(data.GroupCode))
+                    {
+                        var existingGroup = await _uow.Groups.GetByIdAsync(data.GroupCode);
                         if (existingGroup == null)
                         {
-                            // ✅ VALIDATION: Check if ProjectCode already exists for different group
-                            var existingGroupByProjectCode = await _uow.Groups.GetByProjectCodeAsync(projectCode);
-                            if (existingGroupByProjectCode != null && existingGroupByProjectCode.Id != groupCode)
-                            {
-                                result.Errors.Add(new ImportErrorDto
-                                {
-                                    Row = row,
-                                    Field = "Mã đề tài",
-                                    ErrorMessage = $"Project code '{projectCode}' already exists in the system for group '{existingGroupByProjectCode.Id}'",
-                                    Value = projectCode
-                                });
-                                result.FailureCount++;
-                                continue;
-                            }
-
-                            // ✅ VALIDATION: Project code format
-                            if (projectCode.Length > 50)
-                            {
-                                result.Errors.Add(new ImportErrorDto
-                                {
-                                    Row = row,
-                                    Field = "Mã đề tài",
-                                    ErrorMessage = "Project code cannot exceed 50 characters",
-                                    Value = projectCode
-                                });
-                                result.FailureCount++;
-                                continue;
-                            }
-
                             var group = new Group
                             {
-                                Id = groupCode,
-                                ProjectCode = projectCode,
-                                TopicTitle_EN = topicTitleEN ?? "",
-                                TopicTitle_VN = topicTitleVN ?? "",
+                                Id = data.GroupCode,
+                                ProjectCode = data.ProjectCode,
+                                TopicTitle_EN = data.TopicTitleEN,
+                                TopicTitle_VN = data.TopicTitleVN,
                                 SemesterId = semesterId,
                                 MajorId = majorId,
                                 Status = "Active"
                             };
 
                             await _uow.Groups.AddAsync(group);
-                            createdGroups[groupCode] = groupCode;
-                            processedGroupCodes.Add(groupCode);
-                            processedProjectCodes.Add(projectCode);
-                            groupId = groupCode;
-                            result.CreatedGroupIds.Add(groupId);
+                            result.CreatedGroupIds.Add(data.GroupCode);
                         }
-                        else
-                        {
-                            // ✅ VALIDATION: Verify existing group belongs to same semester and major
-                            if (existingGroup.SemesterId != semesterId || existingGroup.MajorId != majorId)
-                            {
-                                result.Errors.Add(new ImportErrorDto
-                                {
-                                    Row = row,
-                                    Field = "Mã nhóm",
-                                    ErrorMessage = $"Group '{groupCode}' already exists but belongs to different Semester or Major",
-                                    Value = groupCode
-                                });
-                                result.FailureCount++;
-                                continue;
-                            }
-
-                            groupId = existingGroup.Id;
-                            createdGroups[groupCode] = groupId;
-                        }
-                    }
-
-                    // ✅ VALIDATION: Check if student already assigned to this group
-                    var allAssignments = await _uow.StudentGroups.Query()
-                        .Where(sg => sg.UserId == mssv && sg.GroupId == groupId)
-                        .ToListAsync();
-                    
-                    var existingAssignment = allAssignments.FirstOrDefault();
-                    
-                    if (existingAssignment != null)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "MSSV",
-                            ErrorMessage = $"Student '{mssv}' is already assigned to group '{groupCode}'",
-                            Value = mssv
-                        });
-                        result.FailureCount++;
-                        continue;
+                        createdGroups.Add(data.GroupCode);
                     }
 
                     // Create student
                     var student = new Student
                     {
-                        Id = mssv,
-                        UserName = email,
-                        Email = email,
-                        FullName = fullName,
-                        DateOfBirth = null,
-                        Gender = null,
-                        PhoneNumber = null,
+                        Id = data.Mssv,
+                        UserName = data.Email,
+                        Email = data.Email,
+                        FullName = data.FullName,
                         EmailConfirmed = true,
                         HasGeneratedPassword = true,
-                        PasswordGeneratedAt = DateTime.UtcNow
+                        PasswordGeneratedAt = DateTime.UtcNow,
+                        LastGeneratedPassword = data.Password
                     };
 
-                    var password = GenerateRandomPassword();
-                    student.LastGeneratedPassword = password;
-
-                    var createResult = await _userManager.CreateAsync(student, password);
-
-                    if (createResult.Succeeded)
+                    var createResult = await _userManager.CreateAsync(student, data.Password);
+                    if (!createResult.Succeeded)
                     {
-                        await _userManager.AddToRoleAsync(student, "Student");
-                        result.CreatedStudentIds.Add(student.Id);
-                        processedStudents.Add(mssv);
-                        processedEmails.Add(email.ToLower());
-
-                        try
-                        {
-                            await SendWelcomeEmail(student.Email, student.UserName, password, student.FullName);
-                            _logger.LogInformation("✅ Sent welcome email to {Email}", student.Email);
-                        }
-                        catch (Exception emailEx)
-                        {
-                            _logger.LogWarning("⚠️ Failed to send welcome email to {Email}: {Error}", 
-                                student.Email, emailEx.Message);
-                        }
-
-                        // Create StudentGroup relationship
-                        var studentGroup = new StudentGroup
-                        {
-                            UserId = mssv,
-                            GroupId = groupId,
-                            GroupRole = roleInGroup
-                        };
-
-                        await _uow.StudentGroups.AddAsync(studentGroup);
-                        result.SuccessCount++;
+                        throw new InvalidOperationException($"Row {data.Row}: Failed to create student '{data.Mssv}'. {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
                     }
-                    else
+
+                    await _userManager.AddToRoleAsync(student, "Student");
+                    result.CreatedStudentIds.Add(student.Id);
+
+                    // Create StudentGroup relationship
+                    var studentGroup = new StudentGroup
                     {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "UserCreation",
-                            ErrorMessage = $"Failed to create user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}",
-                            Value = mssv
-                        });
-                        result.FailureCount++;
+                        UserId = data.Mssv,
+                        GroupId = data.GroupCode,
+                        GroupRole = data.RoleInGroup
+                    };
+
+                    await _uow.StudentGroups.AddAsync(studentGroup);
+
+                    // Send email (non-blocking)
+                    try
+                    {
+                        await SendWelcomeEmail(student.Email, student.UserName, data.Password, student.FullName);
+                        _logger.LogInformation("✅ Sent welcome email to {Email}", student.Email);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogWarning("⚠️ Failed to send welcome email to {Email}: {Error}", 
+                            student.Email, emailEx.Message);
                     }
                 }
-                catch (Exception ex)
-                {
-                    result.Errors.Add(new ImportErrorDto
-                    {
-                        Row = row,
-                        Field = "General",
-                        ErrorMessage = $"Unexpected error: {ex.Message}",
-                        Value = ""
-                    });
-                    result.FailureCount++;
-                }
+
+                await _uow.SaveChangesAsync();
+
+                result.SuccessCount = validatedData.Count;
+                result.FailureCount = 0;
+                result.Message = $"Import completed successfully. Created {result.CreatedStudentIds.Count} students and {result.CreatedGroupIds.Count} groups.";
+                return result;
             }
-
-            await _uow.SaveChangesAsync();
-
-            result.Message = $"Import completed. {result.SuccessCount} records processed successfully, {result.FailureCount} failed. Created {result.CreatedStudentIds.Count} students and {result.CreatedGroupIds.Count} groups.";
-            return result;
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Import failed: {ex.Message}. All changes have been rolled back.", ex);
+            }
         }
 
         private string GenerateRandomPassword()
