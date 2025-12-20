@@ -111,7 +111,7 @@ namespace AIDefCom.Service.Services.LecturerService
             return true;
         }
 
-        // Import methods
+        // Import methods - All or Nothing approach
         public async Task<ImportResultDto> ImportFromExcelAsync(IFormFile file)
         {
             var result = new ImportResultDto();
@@ -144,154 +144,204 @@ namespace AIDefCom.Service.Services.LecturerService
             int rowCount = worksheet.Dimension?.Rows ?? 0;
             result.TotalRows = rowCount - 1;
 
+            if (rowCount < 2)
+                throw new ArgumentException("Excel file contains no data rows");
+
+            // ✅ PHASE 1: VALIDATE ALL ROWS (No database operations)
+            var validatedLecturers = new List<(int Row, Lecturer Lecturer, string Password)>();
+            var processedUserNames = new HashSet<string>();
+            var processedEmails = new HashSet<string>();
+
             for (int row = 2; row <= rowCount; row++)
             {
-                try
-                {
-                    var userName = worksheet.Cells[row, 1].Text?.Trim();
-                    var email = worksheet.Cells[row, 2].Text?.Trim();
-                    var fullName = worksheet.Cells[row, 3].Text?.Trim();
-                    var dateOfBirthStr = worksheet.Cells[row, 4].Text?.Trim();
-                    var gender = worksheet.Cells[row, 5].Text?.Trim();
-                    var phoneNumber = worksheet.Cells[row, 6].Text?.Trim();
-                    var department = worksheet.Cells[row, 7].Text?.Trim();
-                    var academicRank = worksheet.Cells[row, 8].Text?.Trim();
-                    var degree = worksheet.Cells[row, 9].Text?.Trim();
+                var userName = worksheet.Cells[row, 1].Text?.Trim();
+                var email = worksheet.Cells[row, 2].Text?.Trim();
+                var fullName = worksheet.Cells[row, 3].Text?.Trim();
+                var dateOfBirthStr = worksheet.Cells[row, 4].Text?.Trim();
+                var gender = worksheet.Cells[row, 5].Text?.Trim();
+                var phoneNumber = worksheet.Cells[row, 6].Text?.Trim();
+                var department = worksheet.Cells[row, 7].Text?.Trim();
+                var academicRank = worksheet.Cells[row, 8].Text?.Trim();
+                var degree = worksheet.Cells[row, 9].Text?.Trim();
 
-                    if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(fullName))
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Required",
-                            ErrorMessage = "UserName, Email, and FullName are required",
-                            Value = ""
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    var existingUser = await _userManager.FindByNameAsync(userName);
-                    if (existingUser != null)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "UserName",
-                            ErrorMessage = "UserName already exists",
-                            Value = userName
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    DateTime? dateOfBirth = null;
-                    if (!string.IsNullOrEmpty(dateOfBirthStr))
-                    {
-                        // Try parsing with multiple date formats
-                        var dateFormats = new[]
-                        {
-                            "dd/MM/yyyy",     // 14/03/1980 (Vietnamese format)
-                            "MM/dd/yyyy",     // 03/14/1980 (US format)
-                            "yyyy-MM-dd",     // 1980-03-14 (ISO format)
-                            "dd-MM-yyyy",     // 14-03-1980
-                            "MM-dd-yyyy",     // 03-14-1980
-                            "d/M/yyyy",       // 14/3/1980 (without leading zeros)
-                            "M/d/yyyy"        // 3/14/1980 (without leading zeros)
-                        };
-
-                        if (DateTime.TryParseExact(dateOfBirthStr, dateFormats, 
-                            System.Globalization.CultureInfo.InvariantCulture, 
-                            System.Globalization.DateTimeStyles.None, out var dob))
-                        {
-                            dateOfBirth = dob;
-                        }
-                        else if (DateTime.TryParse(dateOfBirthStr, out dob))
-                        {
-                            // Fallback to default parsing
-                            dateOfBirth = dob;
-                        }
-                        else
-                        {
-                            result.Errors.Add(new ImportErrorDto
-                            {
-                                Row = row,
-                                Field = "DateOfBirth",
-                                ErrorMessage = "Invalid date format. Use dd/MM/yyyy (e.g., 15/01/1980)",
-                                Value = dateOfBirthStr
-                            });
-                            result.FailureCount++;
-                            continue;
-                        }
-                    }
-
-                    var lecturer = new Lecturer
-                    {
-                        Id = Guid.NewGuid().ToString(),
-                        UserName = userName,
-                        Email = email,
-                        FullName = fullName,
-                        DateOfBirth = dateOfBirth,
-                        Gender = gender,
-                        PhoneNumber = phoneNumber,
-                        Department = department,
-                        AcademicRank = academicRank,
-                        Degree = degree,
-                        EmailConfirmed = true,
-                        HasGeneratedPassword = true,
-                        PasswordGeneratedAt = DateTime.UtcNow
-                    };
-
-                    var password = GenerateRandomPassword();
-                    lecturer.LastGeneratedPassword = password;
-
-                    var createResult = await _userManager.CreateAsync(lecturer, password);
-
-                    if (createResult.Succeeded)
-                    {
-                        await _userManager.AddToRoleAsync(lecturer, "Lecturer");
-                        result.SuccessCount++;
-                        result.CreatedUserIds.Add(lecturer.Id);
-
-                        // 📧 Gửi email thông báo tài khoản và mật khẩu
-                        try
-                        {
-                            await SendWelcomeEmail(lecturer.Email, lecturer.UserName, password, lecturer.FullName);
-                            _logger.LogInformation("✅ Sent welcome email to {Email}", lecturer.Email);
-                        }
-                        catch (Exception emailEx)
-                        {
-                            _logger.LogWarning("⚠️ Failed to send welcome email to {Email}: {Error}", 
-                                lecturer.Email, emailEx.Message);
-                            // Không fail import nếu gửi email lỗi, chỉ log warning
-                        }
-                    }
-                    else
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "General",
-                            ErrorMessage = string.Join(", ", createResult.Errors.Select(e => e.Description)),
-                            Value = userName
-                        });
-                        result.FailureCount++;
-                    }
-                }
-                catch (Exception ex)
+                // Validation 1: Required fields
+                if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(fullName))
                 {
                     result.Errors.Add(new ImportErrorDto
                     {
                         Row = row,
-                        Field = "General",
-                        ErrorMessage = ex.Message,
-                        Value = ""
+                        Field = "UserName, Email, FullName",
+                        ErrorMessage = "UserName, Email, and FullName are required",
+                        Value = $"{userName}, {email}, {fullName}"
                     });
-                    result.FailureCount++;
+                    continue;
                 }
+
+                // Validation 2: Email format
+                if (!email.Contains("@") || !email.Contains("."))
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Email",
+                        ErrorMessage = "Invalid email format",
+                        Value = email
+                    });
+                    continue;
+                }
+
+                // Validation 3: Duplicate within file
+                if (processedUserNames.Contains(userName.ToLower()))
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "UserName",
+                        ErrorMessage = $"Duplicate UserName '{userName}' found in the file",
+                        Value = userName
+                    });
+                    continue;
+                }
+
+                if (processedEmails.Contains(email.ToLower()))
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Email",
+                        ErrorMessage = $"Duplicate Email '{email}' found in the file",
+                        Value = email
+                    });
+                    continue;
+                }
+
+                // Validation 4: Check if UserName exists in database
+                var existingUserByName = await _userManager.FindByNameAsync(userName);
+                if (existingUserByName != null)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "UserName",
+                        ErrorMessage = $"UserName '{userName}' already exists in the system",
+                        Value = userName
+                    });
+                    continue;
+                }
+
+                // Validation 5: Check if Email exists in database
+                var existingUserByEmail = await _userManager.FindByEmailAsync(email);
+                if (existingUserByEmail != null)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Email",
+                        ErrorMessage = $"Email '{email}' already exists in the system",
+                        Value = email
+                    });
+                    continue;
+                }
+
+                // Validation 6: Date format
+                DateTime? dateOfBirth = null;
+                if (!string.IsNullOrEmpty(dateOfBirthStr))
+                {
+                    var dateFormats = new[]
+                    {
+                        "dd/MM/yyyy", "MM/dd/yyyy", "yyyy-MM-dd",
+                        "dd-MM-yyyy", "MM-dd-yyyy", "d/M/yyyy", "M/d/yyyy"
+                    };
+
+                    if (!DateTime.TryParseExact(dateOfBirthStr, dateFormats, 
+                        System.Globalization.CultureInfo.InvariantCulture, 
+                        System.Globalization.DateTimeStyles.None, out var dob) &&
+                        !DateTime.TryParse(dateOfBirthStr, out dob))
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "DateOfBirth",
+                            ErrorMessage = "Invalid date format. Use dd/MM/yyyy (e.g., 15/01/1980)",
+                            Value = dateOfBirthStr
+                        });
+                        continue;
+                    }
+                    dateOfBirth = dob;
+                }
+
+                // All validations passed - prepare lecturer object
+                var lecturer = new Lecturer
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    UserName = userName,
+                    Email = email,
+                    FullName = fullName,
+                    DateOfBirth = dateOfBirth,
+                    Gender = gender,
+                    PhoneNumber = phoneNumber,
+                    Department = department,
+                    AcademicRank = academicRank,
+                    Degree = degree,
+                    EmailConfirmed = true,
+                    HasGeneratedPassword = true,
+                    PasswordGeneratedAt = DateTime.UtcNow
+                };
+
+                var password = GenerateRandomPassword();
+                lecturer.LastGeneratedPassword = password;
+
+                validatedLecturers.Add((row, lecturer, password));
+                processedUserNames.Add(userName.ToLower());
+                processedEmails.Add(email.ToLower());
             }
 
-            return result;
+            // ✅ PHASE 2: CHECK IF ANY VALIDATION ERRORS
+            if (result.Errors.Any())
+            {
+                result.FailureCount = result.Errors.Count;
+                result.TotalRows = rowCount - 1;
+                throw new ArgumentException($"Import validation failed. Found {result.Errors.Count} error(s). Please fix all errors and try again. Errors: {string.Join("; ", result.Errors.Select(e => $"Row {e.Row}: {e.ErrorMessage} (Field: {e.Field}, Value: '{e.Value}')"))}");
+            }
+
+            // ✅ PHASE 3: ALL VALID - INSERT ALL (Transaction)
+            try
+            {
+                foreach (var (row, lecturer, password) in validatedLecturers)
+                {
+                    var createResult = await _userManager.CreateAsync(lecturer, password);
+
+                    if (!createResult.Succeeded)
+                    {
+                        // Rollback by throwing exception
+                        throw new InvalidOperationException($"Row {row}: Failed to create lecturer '{lecturer.UserName}'. {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
+                    }
+
+                    await _userManager.AddToRoleAsync(lecturer, "Lecturer");
+                    result.CreatedUserIds.Add(lecturer.Id);
+
+                    // Send email (non-blocking, errors are logged but don't fail the import)
+                    try
+                    {
+                        await SendWelcomeEmail(lecturer.Email, lecturer.UserName, password, lecturer.FullName);
+                        _logger.LogInformation("✅ Sent welcome email to {Email}", lecturer.Email);
+                    }
+                    catch (Exception emailEx)
+                    {
+                        _logger.LogWarning("⚠️ Failed to send welcome email to {Email}: {Error}", 
+                            lecturer.Email, emailEx.Message);
+                    }
+                }
+
+                result.SuccessCount = validatedLecturers.Count;
+                result.FailureCount = 0;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                // If any creation fails, throw to rollback
+                throw new InvalidOperationException($"Import failed: {ex.Message}. All changes have been rolled back.", ex);
+            }
         }
 
         public byte[] GenerateExcelTemplate()
