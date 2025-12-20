@@ -2,6 +2,7 @@
 using AIDefCom.Service.Dto.CommitteeAssignment;
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Services.CommitteeAssignmentService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
@@ -11,6 +12,7 @@ namespace AIDefCom.API.Controllers
     /// </summary>
     [Route("api/committee-assignments")]
     [ApiController]
+    [Authorize] // Tất cả endpoints yêu cầu authenticated
     public class CommitteeAssignmentsController : ControllerBase
     {
         private readonly ICommitteeAssignmentService _service;
@@ -123,6 +125,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] CommitteeAssignmentCreateDto dto)
         {
@@ -137,6 +140,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] CommitteeAssignmentUpdateDto dto)
         {
@@ -155,6 +159,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
@@ -173,6 +178,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPut("{id}/restore")]
         public async Task<IActionResult> Restore(string id)
         {

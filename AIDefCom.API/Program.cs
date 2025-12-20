@@ -1,4 +1,4 @@
-using AIDefCom.API.Mapper;
+﻿using AIDefCom.API.Mapper;
 using AIDefCom.API.Middlewares;
 using AIDefCom.API.Hubs;
 using AIDefCom.API.Swagger;
@@ -43,7 +43,16 @@ namespace AIDefCom.API
                 option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     In = ParameterLocation.Header,
-                    Description = "Enter token: Bearer {your token}",
+                    Description = @"JWT Authorization header using the Bearer scheme. 
+                    
+Enter 'Bearer' [space] and then your token in the text input below.
+
+Example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+
+To get a token:
+1. Use the /api/auth/login endpoint
+2. Copy the token from the response
+3. Click 'Authorize' button above and paste it",
                     Name = "Authorization",
                     Type = SecuritySchemeType.Http,
                     BearerFormat = "JWT",
@@ -210,6 +219,10 @@ namespace AIDefCom.API
 
             app.UseCors("AllowAll");
             app.UseAuthentication();
+            
+            // ⭐ Authentication/Authorization Error Handling - ĐẶT SAU UseAuthentication và UseAuthorization
+            app.UseMiddleware<AuthenticationMiddleware>();
+            
             app.UseAuthorization();
 
             app.UseSession();

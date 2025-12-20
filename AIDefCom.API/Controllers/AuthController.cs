@@ -29,8 +29,9 @@ namespace AIDefCom.API.Controllers
         // ------------------ REGISTER ------------------
 
         /// <summary>
-        /// Register a new user
+        /// Register a new user (Admin only)
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpPost("create-account")]
         public async Task<IActionResult> CreateAccount([FromBody] CreateAccountDto request)
         {
@@ -61,7 +62,7 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Register a new student user
+        /// Register a new student user (Public)
         /// </summary>
         [HttpPost("register/student")]
         public async Task<IActionResult> RegisterWithRole([FromBody] AppUserDto request)
@@ -101,7 +102,7 @@ namespace AIDefCom.API.Controllers
         // ------------------ LOGIN ------------------
         
         /// <summary>
-        /// User login
+        /// User login (Public)
         /// </summary>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto request)
@@ -127,7 +128,7 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Google login
+        /// Google login (Public)
         /// </summary>
         [HttpPost("login/google")]
         public async Task<IActionResult> GoogleLogin([FromBody] GoogleUserLoginDTO googleLoginDTO)
@@ -159,7 +160,7 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Google login as lecturer
+        /// Google login as lecturer (Public)
         /// </summary>
         [HttpPost("login/google/lecturer")]
         public async Task<IActionResult> GoogleLoginAsLecturer([FromBody] GoogleUserLoginDTO googleLoginDTO)
@@ -193,8 +194,9 @@ namespace AIDefCom.API.Controllers
         // ------------------ ROLE MANAGEMENT ------------------
         
         /// <summary>
-        /// Assign a role to a user
+        /// Assign a role to a user (Admin only)
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpPut("roles/assign")]
         public async Task<IActionResult> AssignRole([FromBody] SetRoleRequestDto request)
         {
@@ -214,8 +216,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Create a new role
+        /// Create a new role (Admin only)
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpPost("roles")]
         public async Task<IActionResult> AddRole([FromBody] string roleName)
         {
@@ -237,8 +240,9 @@ namespace AIDefCom.API.Controllers
         // ------------------ GOOGLE SET PASSWORD ------------------
         
         /// <summary>
-        /// Set password for Google account
+        /// Set password for Google account (Authenticated)
         /// </summary>
+        [Authorize]
         [HttpPost("google/set-password")]
         public async Task<IActionResult> GoogleSetPassword([FromBody] SetPasswordDTO setPasswordDTO, [FromHeader(Name = "Authorization")] string authorizationHeader)
         {
@@ -262,7 +266,7 @@ namespace AIDefCom.API.Controllers
         // ------------------ LOGOUT ------------------
         
         /// <summary>
-        /// User logout
+        /// User logout (Authenticated)
         /// </summary>
         [Authorize]
         [HttpPost("logout")]
@@ -287,7 +291,7 @@ namespace AIDefCom.API.Controllers
         // ------------------ CHANGE PASSWORD ------------------
         
         /// <summary>
-        /// Change user password
+        /// Change user password (Authenticated)
         /// </summary>
         [Authorize]
         [HttpPut("password")]
@@ -323,7 +327,7 @@ namespace AIDefCom.API.Controllers
         // ------------------ REFRESH TOKEN ------------------
         
         /// <summary>
-        /// Refresh access token
+        /// Refresh access token (Public)
         /// </summary>
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshTokens([FromBody] RefreshTokenRequestDto request)
@@ -351,8 +355,9 @@ namespace AIDefCom.API.Controllers
         // ------------------ ACCOUNT MANAGEMENT ------------------
         
         /// <summary>
-        /// Hard delete a user account
+        /// Hard delete a user account (Admin only)
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpDelete("accounts/{email}")]
         public async Task<IActionResult> DeleteAccount(string email)
         {
@@ -370,7 +375,7 @@ namespace AIDefCom.API.Controllers
         // ------------------ PASSWORD RECOVERY ------------------
         
         /// <summary>
-        /// Request password reset
+        /// Request password reset (Public)
         /// </summary>
         [HttpPost("password/forgot")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto request)
@@ -386,7 +391,7 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Reset password
+        /// Reset password (Public)
         /// </summary>
         [HttpPost("password/reset")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto request)
@@ -404,8 +409,9 @@ namespace AIDefCom.API.Controllers
         // ------------------ USER QUERIES ------------------
         
         /// <summary>
-        /// Get all users
+        /// Get all users (Admin only)
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {
@@ -420,8 +426,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Get user by ID
+        /// Get user by ID (Admin only)
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpGet("users/{id}")]
         public async Task<IActionResult> GetUserById(string id)
         {
@@ -443,6 +450,7 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Update user account information (Admin only)
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpPut("users/{id}")]
         public async Task<IActionResult> UpdateAccount(string id, [FromBody] UpdateAccountDto request)
         {

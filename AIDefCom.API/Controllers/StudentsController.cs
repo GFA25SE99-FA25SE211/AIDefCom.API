@@ -3,6 +3,7 @@ using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.Student;
 using AIDefCom.Service.Dto.Import;
 using AIDefCom.Service.Services.StudentService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,6 +11,7 @@ namespace AIDefCom.API.Controllers
 {
     [Route("api/students")]
     [ApiController]
+    [Authorize] // Tất cả endpoints yêu cầu authenticated
     public class StudentsController : ControllerBase
     {
         private readonly IStudentService _service;
@@ -65,6 +67,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] StudentCreateDto dto)
         {
@@ -80,6 +83,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] StudentUpdateDto dto)
         {
@@ -98,6 +102,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
@@ -117,8 +122,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Import students from Excel file
+        /// Import students from Excel file (Admin only)
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpPost("import")]
         public async Task<IActionResult> ImportStudents(IFormFile file)
         {
@@ -172,8 +178,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Download Excel template for student import
+        /// Download Excel template for student import (Admin và Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpGet("import/template")]
         public IActionResult DownloadTemplate()
         {
@@ -184,8 +191,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Download Excel template for student-group import
+        /// Download Excel template for student-group import (Admin và Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpGet("import/student-group-template")]
         public IActionResult DownloadStudentGroupTemplate()
         {
@@ -196,8 +204,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Import students with groups from Excel file
+        /// Import students with groups from Excel file (Admin only)
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpPost("import/student-groups")]
         public async Task<IActionResult> ImportStudentsWithGroups([FromForm] StudentGroupImportRequestDto request)
         {

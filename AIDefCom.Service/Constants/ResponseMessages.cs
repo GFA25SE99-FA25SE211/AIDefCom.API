@@ -26,8 +26,11 @@
         // ==================== CLIENT ERROR MESSAGES (4xx) ====================
         
         public const string BadRequest = "The request is invalid or cannot be processed.";
-        public const string Unauthorized = "Authentication is required to access this resource.";
-        public const string Forbidden = "You do not have permission to access this resource.";
+        public const string Unauthorized = "Authentication failed. Please provide a valid access token.";
+        public const string UnauthorizedMissingToken = "Access token is required. Please login first.";
+        public const string UnauthorizedInvalidToken = "Your access token is invalid or expired. Please login again.";
+        public const string Forbidden = "Access denied. You do not have sufficient permissions to perform this action.";
+        public const string ForbiddenRoleRequired = "Access denied. This action requires {0} role.";
         public const string NotFound = "The requested resource could not be found.";
         public const string Conflict = "The operation conflicts with the current state of the resource.";
         public const string RequestTimeout = "The request timed out.";

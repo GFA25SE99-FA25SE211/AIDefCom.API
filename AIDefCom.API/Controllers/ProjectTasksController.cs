@@ -2,12 +2,14 @@
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.ProjectTask;
 using AIDefCom.Service.Services.ProjectTaskService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
     [Route("api/project-tasks")]
     [ApiController]
+    [Authorize] // Tất cả endpoints yêu cầu authenticated
     public class ProjectTasksController : ControllerBase
     {
         private readonly IProjectTaskService _service;
@@ -136,6 +138,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Lecturer")]
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] ProjectTaskCreateDto dto)
         {
@@ -152,6 +155,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Lecturer")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] ProjectTaskUpdateDto dto)
         {
@@ -172,6 +176,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Lecturer")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

@@ -2,12 +2,14 @@
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.CouncilRole;
 using AIDefCom.Service.Services.CouncilRoleService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
     [Route("api/council-roles")]
     [ApiController]
+    [Authorize(Roles = "Admin")] // Chỉ Admin mới có quyền truy cập (Lecturer không có quyền)
     public class CouncilRolesController : ControllerBase
     {
         private readonly ICouncilRoleService _service;
