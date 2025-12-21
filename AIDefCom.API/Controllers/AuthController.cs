@@ -409,9 +409,9 @@ namespace AIDefCom.API.Controllers
         // ------------------ USER QUERIES ------------------
         
         /// <summary>
-        /// Get all users (Admin only)
+        /// Get all users (Admin and Moderator)
         /// </summary>
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {

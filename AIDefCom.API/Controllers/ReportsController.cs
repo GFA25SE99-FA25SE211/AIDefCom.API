@@ -112,7 +112,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin,Lecturer")]
+        [Authorize(Roles = "Admin,Moderator,Lecturer")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

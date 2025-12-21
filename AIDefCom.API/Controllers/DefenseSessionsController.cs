@@ -25,6 +25,7 @@ namespace AIDefCom.API.Controllers
         /// Get all defense sessions
         /// </summary>
         [HttpGet]
+        [Authorize]
         public async Task<IActionResult> GetAll([FromQuery] bool includeDeleted = false)
         {
             _logger.LogInformation("Retrieving all defense sessions (includeDeleted: {IncludeDeleted})", includeDeleted);
@@ -42,6 +43,7 @@ namespace AIDefCom.API.Controllers
         /// Get defense session by ID
         /// </summary>
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<IActionResult> GetById(int id)
         {
             _logger.LogInformation("Retrieving defense session with ID: {Id}", id);
@@ -65,6 +67,7 @@ namespace AIDefCom.API.Controllers
         /// Get defense sessions by group ID
         /// </summary>
         [HttpGet("group/{groupId}")]
+        [Authorize]
         public async Task<IActionResult> GetByGroupId(string groupId)
         {
             _logger.LogInformation("Retrieving defense sessions for group ID: {GroupId}", groupId);
@@ -82,6 +85,7 @@ namespace AIDefCom.API.Controllers
         /// Get defense sessions by lecturer ID
         /// </summary>
         [HttpGet("lecturer/{lecturerId}")]
+        [Authorize]
         public async Task<IActionResult> GetByLecturerId(string lecturerId)
         {
             _logger.LogInformation("Retrieving defense sessions for lecturer ID: {LecturerId}", lecturerId);
@@ -99,6 +103,7 @@ namespace AIDefCom.API.Controllers
         /// Get defense sessions by student ID
         /// </summary>
         [HttpGet("student/{studentId}")]
+        [Authorize]
         public async Task<IActionResult> GetByStudentId(string studentId)
         {
             _logger.LogInformation("Retrieving defense sessions for student ID: {StudentId}", studentId);
@@ -116,6 +121,7 @@ namespace AIDefCom.API.Controllers
         /// Get lecturer's role in a specific defense session
         /// </summary>
         [HttpGet("{defenseSessionId}/lecturer/{lecturerId}/role")]
+        [Authorize]
         public async Task<IActionResult> GetLecturerRoleInDefenseSession(string lecturerId, int defenseSessionId)
         {
             _logger.LogInformation("Retrieving role for lecturer {LecturerId} in defense session {DefenseSessionId}", 
@@ -140,6 +146,7 @@ namespace AIDefCom.API.Controllers
         /// Get users by defense session ID
         /// </summary>
         [HttpGet("{id}/users")]
+        [Authorize]
         public async Task<IActionResult> GetUsersByDefenseSessionId(int id)
         {
             _logger.LogInformation("Retrieving users for defense session ID: {Id}", id);
