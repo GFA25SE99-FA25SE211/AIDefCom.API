@@ -10,7 +10,6 @@ namespace AIDefCom.API.Controllers
 {
     [Route("api/defense-sessions")]
     [ApiController]
-    [Authorize] // Tất cả endpoints yêu cầu authenticated (bao gồm Student)
     public class DefenseSessionsController : ControllerBase
     {
         private readonly IDefenseSessionService _service;
@@ -247,7 +246,7 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Change defense session status to InProgress (Admin and Moderator)
         /// </summary>
-        [Authorize(Roles = "Admin,Moderator")]
+        [Authorize(Roles = "Admin,Moderator,Lecturer")]
         [HttpPut("{id}/start")]
         public async Task<IActionResult> StartSession(int id)
         {
@@ -271,7 +270,7 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Change defense session status to Completed (Admin and Moderator)
         /// </summary>
-        [Authorize(Roles = "Admin,Moderator")]
+        [Authorize(Roles = "Admin,Moderator,Lecturer")]
         [HttpPut("{id}/complete")]
         public async Task<IActionResult> CompleteSession(int id)
         {
