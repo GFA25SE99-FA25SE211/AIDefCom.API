@@ -312,6 +312,9 @@ namespace AIDefCom.API.Controllers
         }
 
         
+        /// <summary>
+        /// Import defense sessions from Excel file (Admin and Moderator) - All or Nothing approach
+        /// </summary>
         [Authorize(Roles = "Admin,Moderator")]
         [HttpPost("import")]
         public async Task<IActionResult> ImportDefenseSessions(IFormFile file)
@@ -323,41 +326,78 @@ namespace AIDefCom.API.Controllers
                 throw new ArgumentNullException(nameof(file), "File is required");
             }
 
-            var result = await _service.ImportDefenseSessionsAsync(file);
-
-            // ✅ Return different HTTP status codes based on import results
-            // HTTP 200: All success
-            // HTTP 207: Partial success (some rows succeeded, some failed)
-            // HTTP 400: All failed
-
-            if (result.FailureCount == 0)
+            try
             {
-                // All rows succeeded
+                var result = await _service.ImportDefenseSessionsAsync(file);
+
+                _logger.LogInformation("Defense session import completed successfully. {Count} sessions created", 
+                    result.CreatedDefenseSessionIds.Count);
+
                 return Ok(new ApiResponse<DefenseSessionImportResultDto>
                 {
                     Code = ResponseCodes.Success,
-                    Message = result.Message,
+                    Message = string.Format(ResponseMessages.ImportSuccess, result.SuccessCount),
                     Data = result
                 });
             }
-            else if (result.SuccessCount > 0)
+            catch (ArgumentException argEx)
             {
-                // Partial success - return HTTP 207 Multi-Status
-                return StatusCode(207, new ApiResponse<DefenseSessionImportResultDto>
+                _logger.LogWarning("Defense session import validation failed: {Error}", argEx.Message);
+
+                var errorResult = new DefenseSessionImportResultDto
                 {
-                    Code = ResponseCodes.MultiStatus,
-                    Message = result.Message,
-                    Data = result
-                });
-            }
-            else
-            {
-                // All failed - return HTTP 400 Bad Request
+                    TotalRows = 0,
+                    SuccessCount = 0,
+                    FailureCount = 0,
+                    Errors = new List<ImportErrorDto>(),
+                    Message = argEx.Message
+                };
+
+                if (argEx.Message.Contains("Errors:"))
+                {
+                    var errorsPart = argEx.Message.Split("Errors:")[1];
+                    var errorMessages = errorsPart.Split(';').Select(e => e.Trim()).Where(e => !string.IsNullOrEmpty(e));
+                    
+                    foreach (var errorMsg in errorMessages)
+                    {
+                        errorResult.Errors.Add(new ImportErrorDto
+                        {
+                            Row = 0,
+                            Field = "Validation",
+                            ErrorMessage = errorMsg,
+                            Value = ""
+                        });
+                    }
+                    errorResult.FailureCount = errorResult.Errors.Count;
+                }
+                else
+                {
+                    errorResult.Errors.Add(new ImportErrorDto
+                    {
+                        Row = 0,
+                        Field = "File",
+                        ErrorMessage = argEx.Message,
+                        Value = ""
+                    });
+                    errorResult.FailureCount = 1;
+                }
+
                 return BadRequest(new ApiResponse<DefenseSessionImportResultDto>
                 {
                     Code = ResponseCodes.BadRequest,
-                    Message = result.Message,
-                    Data = result
+                    Message = ResponseMessages.ImportValidationFailed,
+                    Data = errorResult
+                });
+            }
+            catch (InvalidOperationException invEx)
+            {
+                _logger.LogError(invEx, "Defense session import failed during data creation");
+
+                return BadRequest(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = $"Import failed: {invEx.Message}",
+                    Data = null
                 });
             }
         }

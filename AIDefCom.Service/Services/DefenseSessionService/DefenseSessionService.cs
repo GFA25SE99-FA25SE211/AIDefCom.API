@@ -534,464 +534,388 @@ namespace AIDefCom.Service.Services.DefenseSessionService
         private async Task<DefenseSessionImportResultDto> ProcessDefenseSessionImportRows(
             ExcelWorksheet worksheet, int rowCount, DefenseSessionImportResultDto result)
         {
-            var createdSessions = new Dictionary<string, int>();
-            var createdCouncils = new Dictionary<int, bool>();
-            
-            // ✅ Track schedule conflicts within the file for each council
+            // ✅ PHASE 1: VALIDATE ALL ROWS
+            var validatedData = new List<(
+                int Row,
+                string ProjectCode,
+                DateTime DefenseDate,
+                TimeSpan StartTime,
+                TimeSpan EndTime,
+                int CouncilId,
+                string Location,
+                List<(string Email, string Role)> CommitteeMembers
+            )>();
+
+            var processedSessionKeys = new HashSet<string>();
             var councilSchedules = new Dictionary<int, List<(DateTime date, TimeSpan startTime, TimeSpan endTime, string projectCode, int row)>>();
+            var councilCache = new Dictionary<int, bool>(); // councilId -> isActive
 
             for (int row = 2; row <= rowCount; row++)
             {
-                try
-                {
-                    var projectCode = worksheet.Cells[row, 1].Text?.Trim();
-                    var defenseDate = worksheet.Cells[row, 5].Text?.Trim();
-                    var timeRange = worksheet.Cells[row, 6].Text?.Trim();
-                    var councilIdStr = worksheet.Cells[row, 7].Text?.Trim();
-                    var location = worksheet.Cells[row, 8].Text?.Trim();
-                    var memberRole = worksheet.Cells[row, 9].Text?.Trim();
-                    var memberName = worksheet.Cells[row, 10].Text?.Trim();
-                    var memberEmail = worksheet.Cells[row, 11].Text?.Trim();
+                var projectCode = worksheet.Cells[row, 1].Text?.Trim();
+                var defenseDate = worksheet.Cells[row, 5].Text?.Trim();
+                var timeRange = worksheet.Cells[row, 6].Text?.Trim();
+                var councilIdStr = worksheet.Cells[row, 7].Text?.Trim();
+                var location = worksheet.Cells[row, 8].Text?.Trim();
+                var memberRole = worksheet.Cells[row, 9].Text?.Trim();
+                var memberName = worksheet.Cells[row, 10].Text?.Trim();
+                var memberEmail = worksheet.Cells[row, 11].Text?.Trim();
 
-                    // ✅ VALIDATION: Required fields
-                    var missingFields = new List<string>();
-                    if (string.IsNullOrEmpty(projectCode)) missingFields.Add("Mã đề tài");
-                    if (string.IsNullOrEmpty(defenseDate)) missingFields.Add("Ngày BVKL");
-                    if (string.IsNullOrEmpty(timeRange)) missingFields.Add("Giờ");
-                    if (string.IsNullOrEmpty(councilIdStr)) missingFields.Add("Hội đồng");
-                    if (string.IsNullOrEmpty(location)) missingFields.Add("Địa điểm");
+                // VALIDATION: Required fields
+                var missingFields = new List<string>();
+                if (string.IsNullOrEmpty(projectCode)) missingFields.Add("Mã đề tài");
+                if (string.IsNullOrEmpty(defenseDate)) missingFields.Add("Ngày BVKL");
+                if (string.IsNullOrEmpty(timeRange)) missingFields.Add("Giờ");
+                if (string.IsNullOrEmpty(councilIdStr)) missingFields.Add("Hội đồng");
+                if (string.IsNullOrEmpty(location)) missingFields.Add("Địa điểm");
 
-                    if (missingFields.Any())
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = string.Join(", ", missingFields),
-                            ErrorMessage = $"Required field(s) missing: {string.Join(", ", missingFields)}",
-                            Value = ""
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    // ✅ VALIDATION: Council ID format
-                    if (!int.TryParse(councilIdStr, out int councilId))
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Hội đồng",
-                            ErrorMessage = $"Invalid Council ID format. Must be a number. Current value: '{councilIdStr}'",
-                            Value = councilIdStr
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    if (councilId <= 0)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Hội đồng",
-                            ErrorMessage = "Council ID must be greater than 0",
-                            Value = councilIdStr
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    // ✅ VALIDATION: Check if Council exists (cache result)
-                    if (!createdCouncils.ContainsKey(councilId))
-                    {
-                        var council = await _uow.Councils.GetByIdAsync(councilId);
-                        if (council == null)
-                        {
-                            result.Errors.Add(new ImportErrorDto
-                            {
-                                Row = row,
-                                Field = "Hội đồng",
-                                ErrorMessage = $"Council with ID {councilId} not found in the system",
-                                Value = councilIdStr
-                            });
-                            result.FailureCount++;
-                            continue;
-                        }
-
-                        // ✅ VALIDATION: Check if Council is active
-                        if (!council.IsActive)
-                        {
-                            result.Errors.Add(new ImportErrorDto
-                            {
-                                Row = row,
-                                Field = "Hội đồng",
-                                ErrorMessage = $"Council with ID {councilId} is not active. Only active councils can conduct defense sessions",
-                                Value = councilIdStr
-                            });
-                            result.FailureCount++;
-                            continue;
-                        }
-
-                        createdCouncils[councilId] = true;
-                    }
-
-                    // ✅ VALIDATION: Parse and validate date
-                    DateTime parsedDate;
-                    var dateFormats = new[] { "dd/MM/yyyy", "d/M/yyyy", "MM/dd/yyyy", "M/d/yyyy", "yyyy-MM-dd", "dd-MM-yyyy" };
-
-                    if (!DateTime.TryParseExact(defenseDate, dateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate))
-                    {
-                        if (!DateTime.TryParse(defenseDate, out parsedDate))
-                        {
-                            result.Errors.Add(new ImportErrorDto
-                            {
-                                Row = row,
-                                Field = "Ngày BVKL",
-                                ErrorMessage = "Invalid date format. Use dd/MM/yyyy (e.g., 10/03/2025) or MM/dd/yyyy (e.g., 03/10/2025)",
-                                Value = defenseDate
-                            });
-                            result.FailureCount++;
-                            continue;
-                        }
-                    }
-
-                    // ✅ VALIDATION: Date must not be in the past
-                    if (parsedDate.Date < DateTime.UtcNow.Date)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Ngày BVKL",
-                            ErrorMessage = $"Defense date cannot be in the past. Date: {parsedDate:dd/MM/yyyy}",
-                            Value = defenseDate
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    // ✅ VALIDATION: Parse Time Range
-                    TimeSpan startTime, endTime;
-                    if (!TryParseTimeRange(timeRange, out startTime, out endTime))
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Giờ",
-                            ErrorMessage = "Invalid time format. Use format like '17h30-19h00' or '17:30-19:00'",
-                            Value = timeRange
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    // ✅ VALIDATION: Time range validation
-                    if (startTime >= endTime)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Giờ",
-                            ErrorMessage = "Start time must be before end time",
-                            Value = timeRange
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    var duration = endTime - startTime;
-                    if (duration.TotalMinutes < 30)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Giờ",
-                            ErrorMessage = "Defense session must be at least 30 minutes long",
-                            Value = timeRange
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    if (duration.TotalHours > 8)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Giờ",
-                            ErrorMessage = "Defense session cannot exceed 8 hours",
-                            Value = timeRange
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    // ✅ VALIDATION: Location
-                    if (location.Length < 5)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Địa điểm",
-                            ErrorMessage = "Location must be at least 5 characters long",
-                            Value = location
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    if (location.Length > 500)
-                    {
-                        result.Errors.Add(new ImportErrorDto
-                        {
-                            Row = row,
-                            Field = "Địa điểm",
-                            ErrorMessage = "Location cannot exceed 500 characters",
-                            Value = location
-                        });
-                        result.FailureCount++;
-                        continue;
-                    }
-
-                    string sessionKey = $"{projectCode}_{defenseDate}_{timeRange}";
-
-                    // Check if defense session already created for this row group
-                    int defenseSessionId;
-                    if (createdSessions.ContainsKey(sessionKey))
-                    {
-                        defenseSessionId = createdSessions[sessionKey];
-                    }
-                    else
-                    {
-                        // ✅ VALIDATION: Check if Group exists
-                        var group = await _uow.Groups.GetByProjectCodeAsync(projectCode);
-                        if (group == null)
-                        {
-                            result.Errors.Add(new ImportErrorDto
-                            {
-                                Row = row,
-                                Field = "Mã đề tài",
-                                ErrorMessage = $"Group with project code '{projectCode}' not found in the system",
-                                Value = projectCode
-                            });
-                            result.FailureCount++;
-                            continue;
-                        }
-
-                        // ✅ VALIDATION: Check if group already has active defense session
-                        var existingGroupSessions = await _uow.DefenseSessions.GetByGroupIdAsync(group.Id);
-                        var hasActiveSession = existingGroupSessions.Any(s => 
-                            s.Status != "Completed" && 
-                            s.Status != "Cancelled" && 
-                            !s.IsDeleted);
-
-                        if (hasActiveSession)
-                        {
-                            result.Errors.Add(new ImportErrorDto
-                            {
-                                Row = row,
-                                Field = "Mã đề tài",
-                                ErrorMessage = $"Group '{projectCode}' already has an active defense session. Please complete or cancel the existing session first",
-                                Value = projectCode
-                            });
-                            result.FailureCount++;
-                            continue;
-                        }
-
-                        // ✅ VALIDATION: Validate DefenseDate with Semester
-                        var semester = await _uow.Semesters.GetByIdAsync(group.SemesterId);
-                        if (semester == null)
-                        {
-                            result.Errors.Add(new ImportErrorDto
-                            {
-                                Row = row,
-                                Field = "Ngày BVKL",
-                                ErrorMessage = $"Semester not found for Group '{projectCode}'",
-                                Value = defenseDate
-                            });
-                            result.FailureCount++;
-                            continue;
-                        }
-
-                        if (parsedDate.Date < semester.StartDate.Date || parsedDate.Date > semester.EndDate.Date)
-                        {
-                            result.Errors.Add(new ImportErrorDto
-                            {
-                                Row = row,
-                                Field = "Ngày BVKL",
-                                ErrorMessage = $"Defense date must be within semester period ({semester.StartDate:dd/MM/yyyy} - {semester.EndDate:dd/MM/yyyy})",
-                                Value = defenseDate
-                            });
-                            result.FailureCount++;
-                            continue;
-                        }
-
-                        // ✅ VALIDATION: Check Council schedule conflicts in DATABASE
-                        var existingCouncilSessions = await _uow.DefenseSessions.Query()
-                            .Where(s => s.CouncilId == councilId && 
-                                       s.DefenseDate.Date == parsedDate.Date &&
-                                       !s.IsDeleted &&
-                                       s.Status != "Cancelled")
-                            .ToListAsync();
-
-                        bool hasConflictInDb = false;
-                        foreach (var existingSession in existingCouncilSessions)
-                        {
-                            if (TimeRangesOverlap(startTime, endTime, existingSession.StartTime, existingSession.EndTime))
-                            {
-                                result.Errors.Add(new ImportErrorDto
-                                {
-                                    Row = row,
-                                    Field = "Giờ, Hội đồng",
-                                    ErrorMessage = $"Schedule conflict: Council {councilId} already has a defense session on {parsedDate:dd/MM/yyyy} from {existingSession.StartTime:hh\\:mm} to {existingSession.EndTime:hh\\:mm}",
-                                    Value = $"{timeRange}, {councilIdStr}"
-                                });
-                                result.FailureCount++;
-                                hasConflictInDb = true;
-                                break;
-                            }
-                        }
-
-                        if (hasConflictInDb)
-                            continue;
-
-                        // ✅ VALIDATION: Check Council schedule conflicts within the IMPORT FILE
-                        if (!councilSchedules.ContainsKey(councilId))
-                        {
-                            councilSchedules[councilId] = new List<(DateTime, TimeSpan, TimeSpan, string, int)>();
-                        }
-
-                        var fileSchedules = councilSchedules[councilId].Where(s => s.date.Date == parsedDate.Date).ToList();
-                        bool hasConflictInFile = false;
-                        foreach (var fileSchedule in fileSchedules)
-                        {
-                            if (TimeRangesOverlap(startTime, endTime, fileSchedule.startTime, fileSchedule.endTime))
-                            {
-                                result.Errors.Add(new ImportErrorDto
-                                {
-                                    Row = row,
-                                    Field = "Giờ, Hội đồng",
-                                    ErrorMessage = $"Schedule conflict within file: Council {councilId} is already scheduled on {parsedDate:dd/MM/yyyy} from {fileSchedule.startTime:hh\\:mm} to {fileSchedule.endTime:hh\\:mm} for project '{fileSchedule.projectCode}' (row {fileSchedule.row})",
-                                    Value = $"{timeRange}, {councilIdStr}"
-                                });
-                                result.FailureCount++;
-                                hasConflictInFile = true;
-                                break;
-                            }
-                        }
-
-                        if (hasConflictInFile)
-                            continue;
-
-                        // Add to schedule tracker
-                        councilSchedules[councilId].Add((parsedDate, startTime, endTime, projectCode, row));
-
-                        // Create DefenseSession
-                        var defenseSession = new DefenseSession
-                        {
-                            GroupId = group.Id,
-                            Location = location,
-                            DefenseDate = parsedDate,
-                            StartTime = startTime,
-                            EndTime = endTime,
-                            Status = "Scheduled",
-                            CouncilId = councilId,
-                            CreatedAt = DateTime.UtcNow,
-                            IsDeleted = false
-                        };
-
-                        await _uow.DefenseSessions.AddAsync(defenseSession);
-                        await _uow.SaveChangesAsync();
-
-                        defenseSessionId = defenseSession.Id;
-                        createdSessions[sessionKey] = defenseSessionId;
-                        result.CreatedDefenseSessionIds.Add(defenseSessionId);
-                    }
-
-                    // Process committee member if provided
-                    if (!string.IsNullOrEmpty(memberEmail) && !string.IsNullOrEmpty(memberRole))
-                    {
-                        // ✅ VALIDATION: Email format for member
-                        if (!memberEmail.Contains("@") || !memberEmail.Contains("."))
-                        {
-                            result.Errors.Add(new ImportErrorDto
-                            {
-                                Row = row,
-                                Field = "Email",
-                                ErrorMessage = $"Invalid email format for committee member: '{memberEmail}'",
-                                Value = memberEmail
-                            });
-                        }
-                        else
-                        {
-                            var lecturer = await _uow.Lecturers.GetByEmailAsync(memberEmail);
-                            if (lecturer == null)
-                            {
-                                result.Errors.Add(new ImportErrorDto
-                                {
-                                    Row = row,
-                                    Field = "Email",
-                                    ErrorMessage = $"Lecturer not found with email: {memberEmail}",
-                                    Value = memberEmail
-                                });
-                            }
-                            else
-                            {
-                                var councilRole = await _uow.CouncilRoles.GetByRoleNameAsync(memberRole);
-                                if (councilRole == null)
-                                {
-                                    result.Errors.Add(new ImportErrorDto
-                                    {
-                                        Row = row,
-                                        Field = "Nhiệm vụ TVHĐ",
-                                        ErrorMessage = $"Council role not found: {memberRole}",
-                                        Value = memberRole
-                                    });
-                                }
-                                else
-                                {
-                                    var existingAssignment = await _uow.CommitteeAssignments.Query()
-                                        .Where(ca => ca.LecturerId == lecturer.Id && 
-                                                    ca.CouncilId == councilId &&
-                                                    !ca.IsDeleted)
-                                        .ToListAsync();
-
-                                    if (!existingAssignment.Any())
-                                    {
-                                        var assignment = new CommitteeAssignment
-                                        {
-                                            Id = Guid.NewGuid().ToString(),
-                                            LecturerId = lecturer.Id,
-                                            CouncilId = councilId,
-                                            CouncilRoleId = councilRole.Id,
-                                            IsDeleted = false
-                                        };
-
-                                        await _uow.CommitteeAssignments.AddAsync(assignment);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    result.SuccessCount++;
-                }
-                catch (Exception ex)
+                if (missingFields.Any())
                 {
                     result.Errors.Add(new ImportErrorDto
                     {
                         Row = row,
-                        Field = "General",
-                        ErrorMessage = $"Unexpected error: {ex.Message}",
+                        Field = string.Join(", ", missingFields),
+                        ErrorMessage = $"Required field(s) missing",
                         Value = ""
                     });
-                    result.FailureCount++;
+                    continue;
                 }
+
+                // VALIDATION: Council ID format
+                if (!int.TryParse(councilIdStr, out int councilId) || councilId <= 0)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Hội đồng",
+                        ErrorMessage = "Invalid Council ID. Must be a positive number",
+                        Value = councilIdStr
+                    });
+                    continue;
+                }
+
+                // VALIDATION: Check if Council exists and is active
+                if (!councilCache.ContainsKey(councilId))
+                {
+                    var council = await _uow.Councils.GetByIdAsync(councilId);
+                    if (council == null)
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "Hội đồng",
+                            ErrorMessage = $"Council with ID {councilId} not found",
+                            Value = councilIdStr
+                        });
+                        continue;
+                    }
+
+                    if (!council.IsActive)
+                    {
+                        result.Errors.Add(new ImportErrorDto
+                        {
+                            Row = row,
+                            Field = "Hội đồng",
+                            ErrorMessage = $"Council {councilId} is not active",
+                            Value = councilIdStr
+                        });
+                        continue;
+                    }
+
+                    councilCache[councilId] = true;
+                }
+
+                // VALIDATION: Parse date
+                DateTime parsedDate;
+                var dateFormats = new[] { "dd/MM/yyyy", "d/M/yyyy", "MM/dd/yyyy", "M/d/yyyy", "yyyy-MM-dd" };
+
+                if (!DateTime.TryParseExact(defenseDate, dateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate) &&
+                    !DateTime.TryParse(defenseDate, out parsedDate))
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Ngày BVKL",
+                        ErrorMessage = "Invalid date format. Use dd/MM/yyyy",
+                        Value = defenseDate
+                    });
+                    continue;
+                }
+
+                if (parsedDate.Date < DateTime.UtcNow.Date)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Ngày BVKL",
+                        ErrorMessage = "Defense date cannot be in the past",
+                        Value = defenseDate
+                    });
+                    continue;
+                }
+
+                // VALIDATION: Parse time range
+                if (!TryParseTimeRange(timeRange, out TimeSpan startTime, out TimeSpan endTime))
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Giờ",
+                        ErrorMessage = "Invalid time format. Use '17h30-19h00' or '17:30-19:00'",
+                        Value = timeRange
+                    });
+                    continue;
+                }
+
+                if (startTime >= endTime)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Giờ",
+                        ErrorMessage = "Start time must be before end time",
+                        Value = timeRange
+                    });
+                    continue;
+                }
+
+                var duration = endTime - startTime;
+                if (duration.TotalMinutes < 30 || duration.TotalHours > 8)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Giờ",
+                        ErrorMessage = "Session duration must be between 30 minutes and 8 hours",
+                        Value = timeRange
+                    });
+                    continue;
+                }
+
+                // VALIDATION: Location
+                if (location.Length < 5 || location.Length > 500)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Địa điểm",
+                        ErrorMessage = "Location must be between 5 and 500 characters",
+                        Value = location
+                    });
+                    continue;
+                }
+
+                string sessionKey = $"{projectCode}_{parsedDate:yyyyMMdd}_{startTime:hhmm}_{endTime:hhmm}_{councilId}";
+
+                // Check if this is a duplicate session within file
+                if (processedSessionKeys.Contains(sessionKey))
+                {
+                    // This is a committee member for an already processed session
+                    // Find the session and add committee member
+                    var existingData = validatedData.FirstOrDefault(v => 
+                        v.ProjectCode == projectCode &&
+                        v.DefenseDate.Date == parsedDate.Date &&
+                        v.StartTime == startTime &&
+                        v.EndTime == endTime &&
+                        v.CouncilId == councilId);
+
+                    if (existingData != default)
+                    {
+                        if (!string.IsNullOrEmpty(memberEmail) && !string.IsNullOrEmpty(memberRole))
+                        {
+                            existingData.CommitteeMembers.Add((memberEmail, memberRole));
+                        }
+                    }
+                    continue;
+                }
+
+                // VALIDATION: Check if Group exists
+                var group = await _uow.Groups.GetByProjectCodeAsync(projectCode);
+                if (group == null)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Mã đề tài",
+                        ErrorMessage = $"Group with project code '{projectCode}' not found",
+                        Value = projectCode
+                    });
+                    continue;
+                }
+
+                // VALIDATION: Check if group has active session
+                var existingGroupSessions = await _uow.DefenseSessions.GetByGroupIdAsync(group.Id);
+                if (existingGroupSessions.Any(s => s.Status != "Completed" && s.Status != "Cancelled" && !s.IsDeleted))
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Mã đề tài",
+                        ErrorMessage = $"Group '{projectCode}' already has an active defense session",
+                        Value = projectCode
+                    });
+                    continue;
+                }
+
+                // VALIDATION: Check semester date range
+                var semester = await _uow.Semesters.GetByIdAsync(group.SemesterId);
+                if (semester == null)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Ngày BVKL",
+                        ErrorMessage = $"Semester not found for group '{projectCode}'",
+                        Value = defenseDate
+                    });
+                    continue;
+                }
+
+                if (parsedDate.Date < semester.StartDate.Date || parsedDate.Date > semester.EndDate.Date)
+                {
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Ngày BVKL",
+                        ErrorMessage = $"Date must be within semester ({semester.StartDate:dd/MM/yyyy} - {semester.EndDate:dd/MM/yyyy})",
+                        Value = defenseDate
+                    });
+                    continue;
+                }
+
+                // VALIDATION: Check council schedule conflicts in database
+                var existingCouncilSessions = await _uow.DefenseSessions.Query()
+                    .Where(s => s.CouncilId == councilId && 
+                               s.DefenseDate.Date == parsedDate.Date &&
+                               !s.IsDeleted &&
+                               s.Status != "Cancelled")
+                    .ToListAsync();
+
+                if (existingCouncilSessions.Any(s => TimeRangesOverlap(startTime, endTime, s.StartTime, s.EndTime)))
+                {
+                    var conflictingSession = existingCouncilSessions.First(s => TimeRangesOverlap(startTime, endTime, s.StartTime, s.EndTime));
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Giờ, Hội đồng",
+                        ErrorMessage = $"Council {councilId} busy on {parsedDate:dd/MM/yyyy} ({conflictingSession.StartTime:hh\\:mm}-{conflictingSession.EndTime:hh\\:mm})",
+                        Value = $"{timeRange}, {councilId}"
+                    });
+                    continue;
+                }
+
+                // VALIDATION: Check schedule conflicts within file
+                if (!councilSchedules.ContainsKey(councilId))
+                    councilSchedules[councilId] = new List<(DateTime, TimeSpan, TimeSpan, string, int)>();
+
+                var fileConflicts = councilSchedules[councilId]
+                    .Where(s => s.date.Date == parsedDate.Date && 
+                               TimeRangesOverlap(startTime, endTime, s.startTime, s.endTime))
+                    .ToList();
+
+                if (fileConflicts.Any())
+                {
+                    var conflict = fileConflicts.First();
+                    result.Errors.Add(new ImportErrorDto
+                    {
+                        Row = row,
+                        Field = "Giờ, Hội đồng",
+                        ErrorMessage = $"Conflict with row {conflict.row}: Council {councilId} already scheduled {parsedDate:dd/MM/yyyy} ({conflict.startTime:hh\\:mm}-{conflict.endTime:hh\\:mm})",
+                        Value = $"{timeRange}, {councilId}"
+                    });
+                    continue;
+                }
+
+                // All validations passed
+                councilSchedules[councilId].Add((parsedDate, startTime, endTime, projectCode, row));
+                
+                var committeeMembers = new List<(string Email, string Role)>();
+                if (!string.IsNullOrEmpty(memberEmail) && !string.IsNullOrEmpty(memberRole))
+                {
+                    committeeMembers.Add((memberEmail, memberRole));
+                }
+
+                validatedData.Add((row, projectCode, parsedDate, startTime, endTime, councilId, location, committeeMembers));
+                processedSessionKeys.Add(sessionKey);
             }
 
-            await _uow.SaveChangesAsync();
+            // ✅ PHASE 2: CHECK IF ANY VALIDATION ERRORS
+            if (result.Errors.Any())
+            {
+                result.FailureCount = result.Errors.Count;
+                result.TotalRows = rowCount - 1;
+                throw new ArgumentException($"Import validation failed. Found {result.Errors.Count} error(s). Please fix all errors and try again. Errors: {string.Join("; ", result.Errors.Select(e => $"Row {e.Row}: {e.ErrorMessage} (Field: {e.Field})"))}");
+            }
 
-            result.Message = $"Import completed. {result.CreatedDefenseSessionIds.Count} defense sessions created successfully with committee members. Total rows processed: {result.SuccessCount}, {result.FailureCount} failed.";
-            return result;
+            // ✅ PHASE 3: INSERT ALL (Transaction)
+            try
+            {
+                foreach (var data in validatedData)
+                {
+                    var group = await _uow.Groups.GetByProjectCodeAsync(data.ProjectCode);
+                    
+                    var defenseSession = new DefenseSession
+                    {
+                        GroupId = group!.Id,
+                        Location = data.Location,
+                        DefenseDate = data.DefenseDate,
+                        StartTime = data.StartTime,
+                        EndTime = data.EndTime,
+                        Status = "Scheduled",
+                        CouncilId = data.CouncilId,
+                        CreatedAt = DateTime.UtcNow,
+                        IsDeleted = false
+                    };
+
+                    await _uow.DefenseSessions.AddAsync(defenseSession);
+                    await _uow.SaveChangesAsync(); // Need ID for committee assignments
+
+                    result.CreatedDefenseSessionIds.Add(defenseSession.Id);
+
+                    // Process committee members
+                    foreach (var (email, role) in data.CommitteeMembers)
+                    {
+                        var lecturer = await _uow.Lecturers.GetByEmailAsync(email);
+                        if (lecturer != null)
+                        {
+                            var councilRole = await _uow.CouncilRoles.GetByRoleNameAsync(role);
+                            if (councilRole != null)
+                            {
+                                var existingAssignment = await _uow.CommitteeAssignments.Query()
+                                    .Where(ca => ca.LecturerId == lecturer.Id && 
+                                                ca.CouncilId == data.CouncilId &&
+                                                !ca.IsDeleted)
+                                    .FirstOrDefaultAsync();
+
+                                if (existingAssignment == null)
+                                {
+                                    var assignment = new CommitteeAssignment
+                                    {
+                                        Id = Guid.NewGuid().ToString(),
+                                        LecturerId = lecturer.Id,
+                                        CouncilId = data.CouncilId,
+                                        CouncilRoleId = councilRole.Id,
+                                        IsDeleted = false
+                                    };
+
+                                    await _uow.CommitteeAssignments.AddAsync(assignment);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                await _uow.SaveChangesAsync();
+
+                result.SuccessCount = validatedData.Count;
+                result.FailureCount = 0;
+                result.Message = $"Import completed successfully. Created {result.CreatedDefenseSessionIds.Count} defense sessions.";
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Import failed: {ex.Message}. All changes have been rolled back.", ex);
+            }
         }
 
         public byte[] GenerateDefenseSessionTemplate()

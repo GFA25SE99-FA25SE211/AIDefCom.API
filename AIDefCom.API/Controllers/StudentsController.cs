@@ -122,7 +122,7 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Import students from Excel file (Admin only)
+        /// Import students from Excel file (Admin only) - All or Nothing approach
         /// </summary>
         [Authorize(Roles = "Admin")]
         [HttpPost("import")]
@@ -135,44 +135,76 @@ namespace AIDefCom.API.Controllers
                 throw new ArgumentNullException(nameof(file), "File is required");
             }
 
-            var result = await _service.ImportFromExcelAsync(file);
-
-            _logger.LogInformation("Student import completed. Success: {Success}, Failures: {Failures}", result.SuccessCount, result.FailureCount);
-            var msg = $"Import completed. {result.SuccessCount} students created successfully, {result.FailureCount} failed.";
-
-            // ✅ Return different HTTP status codes based on import results
-            // HTTP 200: All success
-            // HTTP 207: Partial success (some rows succeeded, some failed)
-            // HTTP 400: All failed
-
-            if (result.FailureCount == 0)
+            try
             {
-                // All rows succeeded
+                var result = await _service.ImportFromExcelAsync(file);
+
+                _logger.LogInformation("Student import completed successfully. {Count} students created", result.SuccessCount);
+
                 return Ok(new ApiResponse<ImportResultDto>
                 {
                     Code = ResponseCodes.Success,
-                    Message = msg,
+                    Message = string.Format(ResponseMessages.ImportSuccess, result.SuccessCount),
                     Data = result
                 });
             }
-            else if (result.SuccessCount > 0)
+            catch (ArgumentException argEx)
             {
-                // Partial success - return HTTP 207 Multi-Status
-                return StatusCode(207, new ApiResponse<ImportResultDto>
+                _logger.LogWarning("Student import validation failed: {Error}", argEx.Message);
+
+                var errorResult = new ImportResultDto
                 {
-                    Code = ResponseCodes.MultiStatus,
-                    Message = msg,
-                    Data = result
-                });
-            }
-            else
-            {
-                // All failed - return HTTP 400 Bad Request
+                    TotalRows = 0,
+                    SuccessCount = 0,
+                    FailureCount = 0,
+                    Errors = new List<ImportErrorDto>()
+                };
+
+                if (argEx.Message.Contains("Errors:"))
+                {
+                    var errorsPart = argEx.Message.Split("Errors:")[1];
+                    var errorMessages = errorsPart.Split(';').Select(e => e.Trim()).Where(e => !string.IsNullOrEmpty(e));
+                    
+                    foreach (var errorMsg in errorMessages)
+                    {
+                        errorResult.Errors.Add(new ImportErrorDto
+                        {
+                            Row = 0,
+                            Field = "Validation",
+                            ErrorMessage = errorMsg,
+                            Value = ""
+                        });
+                    }
+                    errorResult.FailureCount = errorResult.Errors.Count;
+                }
+                else
+                {
+                    errorResult.Errors.Add(new ImportErrorDto
+                    {
+                        Row = 0,
+                        Field = "File",
+                        ErrorMessage = argEx.Message,
+                        Value = ""
+                    });
+                    errorResult.FailureCount = 1;
+                }
+
                 return BadRequest(new ApiResponse<ImportResultDto>
                 {
                     Code = ResponseCodes.BadRequest,
-                    Message = msg,
-                    Data = result
+                    Message = ResponseMessages.ImportValidationFailed,
+                    Data = errorResult
+                });
+            }
+            catch (InvalidOperationException invEx)
+            {
+                _logger.LogError(invEx, "Student import failed during data creation");
+
+                return BadRequest(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = $"Import failed: {invEx.Message}",
+                    Data = null
                 });
             }
         }
@@ -204,7 +236,7 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Import students with groups from Excel file (Admin only)
+        /// Import students with groups from Excel file (Admin only) - All or Nothing approach
         /// </summary>
         [Authorize(Roles = "Admin")]
         [HttpPost("import/student-groups")]
@@ -222,44 +254,78 @@ namespace AIDefCom.API.Controllers
                 throw new ArgumentException("Valid SemesterId and MajorId are required");
             }
 
-            var result = await _service.ImportStudentsWithGroupsAsync(request.SemesterId, request.MajorId, request.File);
-
-            _logger.LogInformation("Student-group import completed. Success: {Success}, Failures: {Failures}, Students: {Students}, Groups: {Groups}", result.SuccessCount, result.FailureCount, result.CreatedStudentIds.Count, result.CreatedGroupIds.Count);
-            var msg = result.Message; // from StudentGroupImportResultDto (has Message)
-
-            // ✅ Return different HTTP status codes based on import results
-            // HTTP 200: All success
-            // HTTP 207: Partial success (some rows succeeded, some failed)
-            // HTTP 400: All failed
-
-            if (result.FailureCount == 0)
+            try
             {
-                // All rows succeeded
+                var result = await _service.ImportStudentsWithGroupsAsync(request.SemesterId, request.MajorId, request.File);
+
+                _logger.LogInformation("Student-group import completed successfully. Students: {Students}, Groups: {Groups}", 
+                    result.CreatedStudentIds.Count, result.CreatedGroupIds.Count);
+
                 return Ok(new ApiResponse<StudentGroupImportResultDto>
                 {
                     Code = ResponseCodes.Success,
-                    Message = msg,
+                    Message = string.Format(ResponseMessages.ImportSuccess, result.SuccessCount),
                     Data = result
                 });
             }
-            else if (result.SuccessCount > 0)
+            catch (ArgumentException argEx)
             {
-                // Partial success - return HTTP 207 Multi-Status
-                return StatusCode(207, new ApiResponse<StudentGroupImportResultDto>
+                _logger.LogWarning("Student-group import validation failed: {Error}", argEx.Message);
+
+                var errorResult = new StudentGroupImportResultDto
                 {
-                    Code = ResponseCodes.MultiStatus,
-                    Message = msg,
-                    Data = result
-                });
-            }
-            else
-            {
-                // All failed - return HTTP 400 Bad Request
+                    TotalRows = 0,
+                    SuccessCount = 0,
+                    FailureCount = 0,
+                    Errors = new List<ImportErrorDto>(),
+                    Message = argEx.Message
+                };
+
+                if (argEx.Message.Contains("Errors:"))
+                {
+                    var errorsPart = argEx.Message.Split("Errors:")[1];
+                    var errorMessages = errorsPart.Split(';').Select(e => e.Trim()).Where(e => !string.IsNullOrEmpty(e));
+                    
+                    foreach (var errorMsg in errorMessages)
+                    {
+                        errorResult.Errors.Add(new ImportErrorDto
+                        {
+                            Row = 0,
+                            Field = "Validation",
+                            ErrorMessage = errorMsg,
+                            Value = ""
+                        });
+                    }
+                    errorResult.FailureCount = errorResult.Errors.Count;
+                }
+                else
+                {
+                    errorResult.Errors.Add(new ImportErrorDto
+                    {
+                        Row = 0,
+                        Field = "File",
+                        ErrorMessage = argEx.Message,
+                        Value = ""
+                    });
+                    errorResult.FailureCount = 1;
+                }
+
                 return BadRequest(new ApiResponse<StudentGroupImportResultDto>
                 {
                     Code = ResponseCodes.BadRequest,
-                    Message = msg,
-                    Data = result
+                    Message = ResponseMessages.ImportValidationFailed,
+                    Data = errorResult
+                });
+            }
+            catch (InvalidOperationException invEx)
+            {
+                _logger.LogError(invEx, "Student-group import failed during data creation");
+
+                return BadRequest(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = $"Import failed: {invEx.Message}",
+                    Data = null
                 });
             }
         }

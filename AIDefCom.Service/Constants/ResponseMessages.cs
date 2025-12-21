@@ -60,5 +60,11 @@
         
         // New: host shutdown / crash
         public const string HostShutdown = "The server is shutting down or has encountered a fatal host error.";
+        
+        // ==================== IMPORT VALIDATION MESSAGES ====================
+        
+        public const string ImportValidationFailed = "Import validation failed. All rows must be valid before import can proceed.";
+        public const string ImportSuccess = "Import completed successfully. {0} record(s) imported.";
+        public const string ImportAllOrNothingFailed = "Import aborted. Found {0} validation error(s) in the file. Please fix all errors and try again.";
     }
 }

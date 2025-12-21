@@ -169,7 +169,7 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Import lecturers from Excel file (Admin only)
+        /// Import lecturers from Excel file (Admin only) - All or Nothing approach
         /// </summary>
         [Authorize(Roles = "Admin")]
         [HttpPost("import")]
@@ -182,45 +182,81 @@ namespace AIDefCom.API.Controllers
                 throw new ArgumentNullException(nameof(file), "File is required");
             }
 
-            var result = await _service.ImportFromExcelAsync(file);
-
-            _logger.LogInformation("Lecturer import completed. Success: {Success}, Failures: {Failures}", 
-                result.SuccessCount, result.FailureCount);
-            var msg = $"Import completed. {result.SuccessCount} lecturers created successfully, {result.FailureCount} failed.";
-
-            // ✅ Return different HTTP status codes based on import results
-            // HTTP 200: All success
-            // HTTP 207: Partial success (some rows succeeded, some failed)
-            // HTTP 400: All failed
-
-            if (result.FailureCount == 0)
+            try
             {
-                // All rows succeeded
+                var result = await _service.ImportFromExcelAsync(file);
+
+                _logger.LogInformation("Lecturer import completed successfully. {Count} lecturers created", result.SuccessCount);
+
                 return Ok(new ApiResponse<ImportResultDto>
                 {
                     Code = ResponseCodes.Success,
-                    Message = msg,
+                    Message = string.Format(ResponseMessages.ImportSuccess, result.SuccessCount),
                     Data = result
                 });
             }
-            else if (result.SuccessCount > 0)
+            catch (ArgumentException argEx)
             {
-                // Partial success - return HTTP 207 Multi-Status
-                return StatusCode(207, new ApiResponse<ImportResultDto>
+                // Validation errors (file format, duplicates, missing fields, etc.)
+                _logger.LogWarning("Lecturer import validation failed: {Error}", argEx.Message);
+
+                // Parse error details if available
+                var errorResult = new ImportResultDto
                 {
-                    Code = ResponseCodes.MultiStatus,
-                    Message = msg,
-                    Data = result
-                });
-            }
-            else
-            {
-                // All failed - return HTTP 400 Bad Request
+                    TotalRows = 0,
+                    SuccessCount = 0,
+                    FailureCount = 0,
+                    Errors = new List<ImportErrorDto>()
+                };
+
+                // Try to extract structured error info from the exception message
+                if (argEx.Message.Contains("Errors:"))
+                {
+                    var errorsPart = argEx.Message.Split("Errors:")[1];
+                    var errorMessages = errorsPart.Split(';').Select(e => e.Trim()).Where(e => !string.IsNullOrEmpty(e));
+                    
+                    foreach (var errorMsg in errorMessages)
+                    {
+                        errorResult.Errors.Add(new ImportErrorDto
+                        {
+                            Row = 0,
+                            Field = "Validation",
+                            ErrorMessage = errorMsg,
+                            Value = ""
+                        });
+                    }
+                    errorResult.FailureCount = errorResult.Errors.Count;
+                }
+                else
+                {
+                    // Single error message
+                    errorResult.Errors.Add(new ImportErrorDto
+                    {
+                        Row = 0,
+                        Field = "File",
+                        ErrorMessage = argEx.Message,
+                        Value = ""
+                    });
+                    errorResult.FailureCount = 1;
+                }
+
                 return BadRequest(new ApiResponse<ImportResultDto>
                 {
                     Code = ResponseCodes.BadRequest,
-                    Message = msg,
-                    Data = result
+                    Message = ResponseMessages.ImportValidationFailed,
+                    Data = errorResult
+                });
+            }
+            catch (InvalidOperationException invEx)
+            {
+                // Database/creation errors during import
+                _logger.LogError(invEx, "Lecturer import failed during data creation");
+
+                return BadRequest(new ApiResponse<object>
+                {
+                    Code = ResponseCodes.BadRequest,
+                    Message = $"Import failed: {invEx.Message}",
+                    Data = null
                 });
             }
         }
