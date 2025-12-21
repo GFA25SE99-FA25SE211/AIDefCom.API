@@ -450,7 +450,6 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Update user account information (Admin only)
         /// </summary>
-        [Authorize(Roles = "Admin")]
         [HttpPut("users/{id}")]
         public async Task<IActionResult> UpdateAccount(string id, [FromBody] UpdateAccountDto request)
         {
