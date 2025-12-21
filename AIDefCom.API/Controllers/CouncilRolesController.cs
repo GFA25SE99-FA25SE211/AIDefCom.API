@@ -9,7 +9,7 @@ namespace AIDefCom.API.Controllers
 {
     [Route("api/council-roles")]
     [ApiController]
-    [Authorize(Roles = "Admin")] // Chỉ Admin mới có quyền truy cập (Lecturer không có quyền)
+    [Authorize(Roles = "Admin,Moderator")] 
     public class CouncilRolesController : ControllerBase
     {
         private readonly ICouncilRoleService _service;
