@@ -56,11 +56,11 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Upload a defense report file (PDF or Word) to Azure Blob Storage (Admin and Lecturer)
+        /// Upload a defense report file (PDF or Word) to Azure Blob Storage (Admin, Moderator and Lecturer)
         /// </summary>
         /// <param name="file">Document file (.pdf, .doc, .docx)</param>
         /// <returns>File information with download URL</returns>
-        [Authorize(Roles = "Admin,Lecturer")]
+        [Authorize(Roles = "Admin,Moderator,Lecturer")]
         [HttpPost("upload-pdf")]
         [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(ApiResponse<FileUploadResponseDto>), StatusCodes.Status200OK)]
