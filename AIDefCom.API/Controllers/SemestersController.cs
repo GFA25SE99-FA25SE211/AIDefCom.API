@@ -12,7 +12,7 @@ namespace AIDefCom.API.Controllers
     /// </summary>
     [Route("api/semesters")]
     [ApiController]
-    [Authorize(Roles = "Admin")] // Chỉ Admin mới có quyền truy cập (Lecturer không có quyền)
+    [Authorize(Roles = "Admin,Moderator")] // Admin và Moderator có quyền truy cập
     public class SemestersController : ControllerBase
     {
         private readonly ISemesterService _service;
