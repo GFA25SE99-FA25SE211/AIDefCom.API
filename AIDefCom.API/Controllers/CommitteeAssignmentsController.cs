@@ -12,7 +12,7 @@ namespace AIDefCom.API.Controllers
     /// </summary>
     [Route("api/committee-assignments")]
     [ApiController]
-    [Authorize] // Tất cả endpoints yêu cầu authenticated
+    [Authorize(Roles = "Admin,Moderator")] // Default: Admin và Moderator có quyền truy cập
     public class CommitteeAssignmentsController : ControllerBase
     {
         private readonly ICommitteeAssignmentService _service;
@@ -24,7 +24,11 @@ namespace AIDefCom.API.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Get all committee assignments (All authenticated users)
+        /// </summary>
         [HttpGet]
+        [Authorize] // Override: Tất cả user đã authenticated đều được xem
         public async Task<IActionResult> GetAll([FromQuery] bool includeDeleted = false)
         {
             _logger.LogInformation("Retrieving all committee assignments (includeDeleted: {IncludeDeleted})", includeDeleted);
@@ -37,6 +41,9 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Get committee assignment by ID (Admin and Moderator)
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(string id)
         {
@@ -55,7 +62,11 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Get committee assignments by council ID (All authenticated users)
+        /// </summary>
         [HttpGet("council/{councilId}")]
+        [Authorize] // Override: Tất cả user đã authenticated đều được xem
         public async Task<IActionResult> GetByCouncilId(int councilId)
         {
             _logger.LogInformation("Retrieving committee assignments for council ID: {CouncilId}", councilId);
@@ -68,6 +79,9 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Get committee assignments by session ID (Admin and Moderator)
+        /// </summary>
         [HttpGet("session/{sessionId}")]
         public async Task<IActionResult> GetBySessionId(int sessionId)
         {
@@ -81,6 +95,9 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        /// <summary>
+        /// Get committee assignments by lecturer ID (Admin and Moderator)
+        /// </summary>
         [HttpGet("lecturer/{lecturerId}")]
         public async Task<IActionResult> GetByLecturerId(string lecturerId)
         {
@@ -95,7 +112,7 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Get CommitteeAssignment ID by Lecturer ID and Defense Session ID
+        /// Get CommitteeAssignment ID by Lecturer ID and Defense Session ID (Admin and Moderator)
         /// </summary>
         /// <param name="lecturerId">The Lecturer ID</param>
         /// <param name="sessionId">The Defense Session ID</param>
@@ -125,7 +142,9 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin,Moderator")]
+        /// <summary>
+        /// Create a new committee assignment (Admin and Moderator)
+        /// </summary>
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] CommitteeAssignmentCreateDto dto)
         {
@@ -140,7 +159,9 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin,Moderator")]
+        /// <summary>
+        /// Update an existing committee assignment (Admin and Moderator)
+        /// </summary>
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] CommitteeAssignmentUpdateDto dto)
         {
@@ -159,7 +180,9 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin,Moderator")]
+        /// <summary>
+        /// Soft delete a committee assignment (Admin and Moderator)
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
@@ -178,7 +201,9 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin,Moderator")]
+        /// <summary>
+        /// Restore a soft-deleted committee assignment (Admin and Moderator)
+        /// </summary>
         [HttpPut("{id}/restore")]
         public async Task<IActionResult> Restore(string id)
         {
