@@ -146,7 +146,6 @@ namespace AIDefCom.API.Controllers
         /// Get users by defense session ID
         /// </summary>
         [HttpGet("{id}/users")]
-        [Authorize]
         public async Task<IActionResult> GetUsersByDefenseSessionId(int id)
         {
             _logger.LogInformation("Retrieving users for defense session ID: {Id}", id);
