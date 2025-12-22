@@ -335,7 +335,7 @@ namespace AIDefCom.API.Swagger
                 schema.Example = new OpenApiObject
                 {
                     ["committeeAssignmentId"] = new OpenApiString("CA-001"),
-                    ["groupId"] = new OpenApiString("GFA25SE01"),
+                    ["sessionId"] = new OpenApiInteger(1),
                     ["noteContent"] = new OpenApiString("Student demonstrated strong technical knowledge but needs improvement in presentation skills")
                 };
             }
