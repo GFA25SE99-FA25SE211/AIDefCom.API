@@ -39,39 +39,6 @@ namespace AIDefCom.API
             {
                 // Add custom schema filter for better examples
                 option.SchemaFilter<SchemaExampleFilter>();
-
-                option.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                {
-                    In = ParameterLocation.Header,
-                    Description = @"JWT Authorization header using the Bearer scheme. 
-                    
-Enter 'Bearer' [space] and then your token in the text input below.
-
-Example: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
-
-To get a token:
-1. Use the /api/auth/login endpoint
-2. Copy the token from the response
-3. Click 'Authorize' button above and paste it",
-                    Name = "Authorization",
-                    Type = SecuritySchemeType.Http,
-                    BearerFormat = "JWT",
-                    Scheme = "Bearer"
-                });
-                option.AddSecurityRequirement(new OpenApiSecurityRequirement
-                {
-                    {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
-                        },
-                        new string[] {}
-                    }
-                });
             });
 
             // 2) Database
