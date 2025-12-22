@@ -3,7 +3,6 @@ using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.DefenseReport;
 using AIDefCom.Service.Services.DefenseReportService;
 using AIDefCom.Service.Services.FileStorageService;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -16,7 +15,6 @@ namespace AIDefCom.API.Controllers
     /// </summary>
     [Route("api/defense-reports")]
     [ApiController]
-    [Authorize] // Tất cả endpoints yêu cầu authenticated
     public class DefenseReportsController : ControllerBase
     {
         private readonly IDefenseReportService _reportService;
@@ -60,7 +58,6 @@ namespace AIDefCom.API.Controllers
         /// </summary>
         /// <param name="file">Document file (.pdf, .doc, .docx)</param>
         /// <returns>File information with download URL</returns>
-        [Authorize(Roles = "Admin,Moderator,Lecturer")]
         [HttpPost("upload-pdf")]
         [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(ApiResponse<FileUploadResponseDto>), StatusCodes.Status200OK)]
