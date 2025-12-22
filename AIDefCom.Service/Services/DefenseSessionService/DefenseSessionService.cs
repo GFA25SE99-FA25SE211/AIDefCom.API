@@ -561,6 +561,16 @@ namespace AIDefCom.Service.Services.DefenseSessionService
                 var memberName = worksheet.Cells[row, 10].Text?.Trim();
                 var memberEmail = worksheet.Cells[row, 11].Text?.Trim();
 
+                // SKIP EMPTY ROWS: Check if all important cells are empty
+                if (string.IsNullOrEmpty(projectCode) && 
+                    string.IsNullOrEmpty(defenseDate) && 
+                    string.IsNullOrEmpty(timeRange) && 
+                    string.IsNullOrEmpty(councilIdStr) && 
+                    string.IsNullOrEmpty(location))
+                {
+                    continue; // Skip this empty row
+                }
+
                 // VALIDATION: Required fields
                 var missingFields = new List<string>();
                 if (string.IsNullOrEmpty(projectCode)) missingFields.Add("Mã đề tài");
