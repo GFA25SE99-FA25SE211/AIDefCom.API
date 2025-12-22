@@ -172,7 +172,7 @@ To get a token:
                 
                 options.AddPolicy("SignalRPolicy", policy =>
                 {
-                    policy.WithOrigins("http://localhost:3000", "https://localhost:3000") // Add your frontend URLs
+                    policy.WithOrigins("http://aidefcom.io.vn", "https://aidefcom.io.vn") // Add your frontend URLs
                           .AllowAnyHeader()
                           .AllowAnyMethod()
                           .AllowCredentials();
