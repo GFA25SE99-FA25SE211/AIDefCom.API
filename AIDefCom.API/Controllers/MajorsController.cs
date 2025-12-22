@@ -9,7 +9,7 @@ namespace AIDefCom.API.Controllers
 {
     [Route("api/majors")]
     [ApiController]
-    [Authorize(Roles = "Admin")] // Chỉ Admin mới có quyền truy cập (Lecturer không có quyền)
+    [Authorize(Roles = "Admin,Moderator")] // Admin và Moderator có quyền truy cập
     public class MajorsController : ControllerBase
     {
         private readonly IMajorService _majorService;
@@ -22,7 +22,7 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Get all majors
+        /// Get all majors (Admin and Moderator)
         /// </summary>
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] bool includeDeleted = false)

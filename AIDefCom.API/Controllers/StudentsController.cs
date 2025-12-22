@@ -67,7 +67,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] StudentCreateDto dto)
         {
@@ -83,7 +83,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] StudentUpdateDto dto)
         {
@@ -102,7 +102,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
@@ -122,9 +122,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Import students from Excel file (Admin only) - All or Nothing approach
+        /// Import students from Excel file (Admin and Moderator) - All or Nothing approach
         /// </summary>
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPost("import")]
         public async Task<IActionResult> ImportStudents(IFormFile file)
         {
@@ -236,9 +236,9 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
-        /// Import students with groups from Excel file (Admin only) - All or Nothing approach
+        /// Import students with groups from Excel file (Admin and Moderator) - All or Nothing approach
         /// </summary>
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPost("import/student-groups")]
         public async Task<IActionResult> ImportStudentsWithGroups([FromForm] StudentGroupImportRequestDto request)
         {
