@@ -2,12 +2,14 @@
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.Group;
 using AIDefCom.Service.Services.GroupService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
     [Route("api/groups")]
     [ApiController]
+    [Authorize] // Tất cả endpoints yêu cầu authenticated
     public class GroupsController : ControllerBase
     {
         private readonly IGroupService _service;
@@ -63,6 +65,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] GroupCreateDto dto)
         {
@@ -78,6 +81,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] GroupUpdateDto dto)
         {
@@ -95,6 +99,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
@@ -112,6 +117,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPut("{id}/restore")]
         public async Task<IActionResult> Restore(string id)
         {
