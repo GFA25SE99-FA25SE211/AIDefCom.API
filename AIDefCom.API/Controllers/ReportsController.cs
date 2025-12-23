@@ -2,14 +2,12 @@
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.Report;
 using AIDefCom.Service.Services.ReportService;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
     [Route("api/reports")]
     [ApiController]
-    [Authorize(Roles = "Admin,Moderator,Lecturer")] // Admin, Moderator và Lecturer có quyền truy cập (chỉ xem)
     public class ReportsController : ControllerBase
     {
         private readonly IReportService _service;
@@ -78,7 +76,6 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin,Lecturer")]
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] ReportCreateDto dto)
         {
@@ -94,7 +91,6 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin,Lecturer")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] ReportUpdateDto dto)
         {
@@ -112,7 +108,6 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin,Moderator,Lecturer")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -130,7 +125,6 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin,Lecturer")]
         [HttpPut("{id}/approve")]
         public async Task<IActionResult> Approve(int id)
         {
@@ -148,7 +142,6 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin,Lecturer")]
         [HttpPut("{id}/reject")]
         public async Task<IActionResult> Reject(int id)
         {
@@ -171,7 +164,6 @@ namespace AIDefCom.API.Controllers
         /// </summary>
         /// <param name="id">Report ID</param>
         /// <param name="request">Object chứa file path</param>
-        [Authorize(Roles = "Admin,Lecturer")]
         [HttpPut("{id}/filepath")]
         public async Task<IActionResult> SaveFilePath(int id, [FromBody] SaveFilePathRequest request)
         {

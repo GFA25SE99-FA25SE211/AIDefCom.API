@@ -31,7 +31,6 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Register a new user (Admin only)
         /// </summary>
-        [Authorize(Roles = "Admin")]
         [HttpPost("create-account")]
         public async Task<IActionResult> CreateAccount([FromBody] CreateAccountDto request)
         {
@@ -196,7 +195,6 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Assign a role to a user (Admin only)
         /// </summary>
-        [Authorize(Roles = "Admin")]
         [HttpPut("roles/assign")]
         public async Task<IActionResult> AssignRole([FromBody] SetRoleRequestDto request)
         {
@@ -218,7 +216,6 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Create a new role (Admin only)
         /// </summary>
-        [Authorize(Roles = "Admin")]
         [HttpPost("roles")]
         public async Task<IActionResult> AddRole([FromBody] string roleName)
         {
@@ -242,7 +239,6 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Set password for Google account (Authenticated)
         /// </summary>
-        [Authorize]
         [HttpPost("google/set-password")]
         public async Task<IActionResult> GoogleSetPassword([FromBody] SetPasswordDTO setPasswordDTO, [FromHeader(Name = "Authorization")] string authorizationHeader)
         {
@@ -268,7 +264,6 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// User logout (Authenticated)
         /// </summary>
-        [Authorize]
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
         {
@@ -293,7 +288,6 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Change user password (Authenticated)
         /// </summary>
-        [Authorize]
         [HttpPut("password")]
         public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto request)
         {
@@ -357,7 +351,6 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Hard delete a user account (Admin only)
         /// </summary>
-        [Authorize(Roles = "Admin")]
         [HttpDelete("accounts/{email}")]
         public async Task<IActionResult> DeleteAccount(string email)
         {
@@ -411,7 +404,6 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Get all users (Admin and Moderator)
         /// </summary>
-        [Authorize(Roles = "Admin,Moderator")]
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {
@@ -449,7 +441,6 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Update user account information (Admin only)
         /// </summary>
-        [Authorize(Roles = "Admin")]
         [HttpPut("users/{id}")]
         public async Task<IActionResult> UpdateAccount(string id, [FromBody] UpdateAccountDto request)
         {

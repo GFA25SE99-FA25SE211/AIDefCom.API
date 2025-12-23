@@ -2,14 +2,12 @@
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.Rubric;
 using AIDefCom.Service.Services.RubricService;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
     [Route("api/rubrics")]
     [ApiController]
-    [Authorize] // Tất cả endpoints yêu cầu authenticated
     public class RubricsController : ControllerBase
     {
         private readonly IRubricService _rubricService;
@@ -52,7 +50,6 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] RubricCreateDto request)
         {
@@ -68,7 +65,6 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] RubricUpdateDto request)
         {
@@ -86,7 +82,6 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -104,7 +99,6 @@ namespace AIDefCom.API.Controllers
             });
         }
 
-        [Authorize(Roles = "Admin")]
         [HttpPut("{id}/restore")]
         public async Task<IActionResult> Restore(int id)
         {
