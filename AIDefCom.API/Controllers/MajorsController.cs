@@ -2,12 +2,14 @@
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.Major;
 using AIDefCom.Service.Services.MajorService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
 {
     [Route("api/majors")]
     [ApiController]
+    [Authorize(Roles = "Admin,Moderator")] // Admin và Moderator có quyền truy cập
     public class MajorsController : ControllerBase
     {
         private readonly IMajorService _majorService;

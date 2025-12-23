@@ -2,6 +2,7 @@
 using AIDefCom.Service.Dto.CommitteeAssignment;
 using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Services.CommitteeAssignmentService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AIDefCom.API.Controllers
@@ -11,6 +12,7 @@ namespace AIDefCom.API.Controllers
     /// </summary>
     [Route("api/committee-assignments")]
     [ApiController]
+    [Authorize(Roles = "Admin,Moderator")] // Default: Admin và Moderator có quyền truy cập
     public class CommitteeAssignmentsController : ControllerBase
     {
         private readonly ICommitteeAssignmentService _service;
@@ -26,6 +28,7 @@ namespace AIDefCom.API.Controllers
         /// Get all committee assignments (All authenticated users)
         /// </summary>
         [HttpGet]
+        [Authorize] // Override: Tất cả user đã authenticated đều được xem
         public async Task<IActionResult> GetAll([FromQuery] bool includeDeleted = false)
         {
             _logger.LogInformation("Retrieving all committee assignments (includeDeleted: {IncludeDeleted})", includeDeleted);
@@ -42,6 +45,7 @@ namespace AIDefCom.API.Controllers
         /// Get committee assignment by ID (Admin and Moderator)
         /// </summary>
         [HttpGet("{id}")]
+        [Authorize]
         public async Task<IActionResult> GetById(string id)
         {
             _logger.LogInformation("Retrieving committee assignment with ID: {Id}", id);
@@ -63,6 +67,7 @@ namespace AIDefCom.API.Controllers
         /// Get committee assignments by council ID (All authenticated users)
         /// </summary>
         [HttpGet("council/{councilId}")]
+        [Authorize] // Override: Tất cả user đã authenticated đều được xem
         public async Task<IActionResult> GetByCouncilId(int councilId)
         {
             _logger.LogInformation("Retrieving committee assignments for council ID: {CouncilId}", councilId);
@@ -79,6 +84,7 @@ namespace AIDefCom.API.Controllers
         /// Get committee assignments by session ID (Admin and Moderator)
         /// </summary>
         [HttpGet("session/{sessionId}")]
+        [Authorize]
         public async Task<IActionResult> GetBySessionId(int sessionId)
         {
             _logger.LogInformation("Retrieving committee assignments for session ID: {SessionId}", sessionId);
@@ -95,6 +101,7 @@ namespace AIDefCom.API.Controllers
         /// Get committee assignments by lecturer ID (Admin and Moderator)
         /// </summary>
         [HttpGet("lecturer/{lecturerId}")]
+        [Authorize]
         public async Task<IActionResult> GetByLecturerId(string lecturerId)
         {
             _logger.LogInformation("Retrieving committee assignments for lecturer ID: {LecturerId}", lecturerId);
@@ -114,6 +121,7 @@ namespace AIDefCom.API.Controllers
         /// <param name="sessionId">The Defense Session ID</param>
         /// <returns>CommitteeAssignment ID or null if not found</returns>
         [HttpGet("lecturer/{lecturerId}/session/{sessionId}/id")]
+        [Authorize]
         public async Task<IActionResult> GetIdByLecturerIdAndSessionId(string lecturerId, int sessionId)
         {
             _logger.LogInformation("Retrieving committee assignment ID for lecturer {LecturerId} in session {SessionId}", lecturerId, sessionId);

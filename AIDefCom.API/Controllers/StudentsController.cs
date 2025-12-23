@@ -11,6 +11,7 @@ namespace AIDefCom.API.Controllers
 {
     [Route("api/students")]
     [ApiController]
+    [Authorize] // Tất cả endpoints yêu cầu authenticated
     public class StudentsController : ControllerBase
     {
         private readonly IStudentService _service;
@@ -66,6 +67,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] StudentCreateDto dto)
         {
@@ -81,6 +83,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] StudentUpdateDto dto)
         {
@@ -99,6 +102,7 @@ namespace AIDefCom.API.Controllers
             });
         }
 
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
@@ -120,6 +124,7 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Import students from Excel file (Admin and Moderator) - All or Nothing approach
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPost("import")]
         public async Task<IActionResult> ImportStudents(IFormFile file)
         {
@@ -207,6 +212,7 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Download Excel template for student import (Admin và Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpGet("import/template")]
         public IActionResult DownloadTemplate()
         {
@@ -219,6 +225,7 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Download Excel template for student-group import (Admin và Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpGet("import/student-group-template")]
         public IActionResult DownloadStudentGroupTemplate()
         {
@@ -231,6 +238,7 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Import students with groups from Excel file (Admin and Moderator) - All or Nothing approach
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpPost("import/student-groups")]
         public async Task<IActionResult> ImportStudentsWithGroups([FromForm] StudentGroupImportRequestDto request)
         {

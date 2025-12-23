@@ -14,6 +14,7 @@ namespace AIDefCom.API.Controllers
     /// </summary>
     [Route("api/lecturers")]
     [ApiController]
+    [Authorize(Roles = "Admin,Moderator,Lecturer")] 
     public class LecturersController : ControllerBase
     {
         private readonly ILecturerService _service;
@@ -102,6 +103,7 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Create a new lecturer (Admin only)
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] LecturerCreateDto dto)
         {
@@ -121,6 +123,7 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Update an existing lecturer (Admin only)
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] LecturerUpdateDto dto)
         {
@@ -144,6 +147,7 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Delete a lecturer (Admin only)
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
@@ -167,6 +171,7 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Import lecturers from Excel file (Admin only) - All or Nothing approach
         /// </summary>
+        [Authorize(Roles = "Admin")]
         [HttpPost("import")]
         public async Task<IActionResult> ImportLecturers(IFormFile file)
         {
@@ -259,6 +264,7 @@ namespace AIDefCom.API.Controllers
         /// <summary>
         /// Download Excel template for lecturer import (Admin và Moderator)
         /// </summary>
+        [Authorize(Roles = "Admin,Moderator")]
         [HttpGet("import/template")]
         public IActionResult DownloadTemplate()
         {

@@ -109,6 +109,26 @@ namespace AIDefCom.API.Controllers
         }
 
         /// <summary>
+        /// Get download SAS URL for a recording
+        /// - Returns 200 OK with an ApiResponse containing the download URL on success
+        /// - Returns 404 Not Found if the recording does not exist
+        /// </summary>
+        [HttpGet("{id:guid}/download-sas")]
+        public async Task<ActionResult<ApiResponse<string>>> GetDownloadSas([FromRoute] Guid id, [FromQuery] int? minutes)
+        {
+            _logger.LogInformation("Generating download SAS URL for recording {RecordingId} with TTL {Minutes} minutes", id, minutes);
+            var ttl = minutes.HasValue && minutes.Value > 0 ? TimeSpan.FromMinutes(minutes.Value) : TimeSpan.Zero;
+            var uri = await _recordingService.GetDownloadSasAsync(id, ttl);
+            
+            return Ok(new ApiResponse<string>
+            {
+                Code = ResponseCodes.Success,
+                Message = string.Format(ResponseMessages.Retrieved, "Recording download URL"),
+                Data = uri.ToString()
+            });
+        }
+
+        /// <summary>
         /// Get recording by report ID
         /// Uses the 1-1 relationship chain: Report -> DefenseSession -> Transcript -> Recording
         /// - Returns 200 OK with recording data if found

@@ -63,6 +63,20 @@ namespace AIDefCom.Service.Services.RecordingService
             return await _storage.CreateReadSasAsync(rec.BlobPath, ttl);
         }
 
+        public async Task<Uri> GetDownloadSasAsync(Guid recordingId, TimeSpan ttl)
+        {
+            var rec = await _recordings.GetByIdAsync(recordingId) ?? throw new InvalidOperationException("Recording not found");
+            
+            // Get reportId to generate filename
+            var reportId = await _recordings.GetReportIdByRecordingIdAsync(recordingId);
+            var ext = MimeToExt(rec.MimeType);
+            var fileName = reportId.HasValue 
+                ? $"recording_{reportId.Value}.{ext}" 
+                : $"recording_{recordingId:N}.{ext}";
+            
+            return await _storage.CreateDownloadSasAsync(rec.BlobPath, ttl, fileName);
+        }
+
         public async Task<RecordingDto?> GetRecordingByReportIdAsync(int reportId)
         {
             var recording = await _recordings.GetByReportIdAsync(reportId);

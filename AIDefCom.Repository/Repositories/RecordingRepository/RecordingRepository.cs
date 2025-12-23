@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using AIDefCom.Repository.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +22,13 @@ namespace AIDefCom.Repository.Repositories.RecordingRepository
             return await _set.FirstOrDefaultAsync(r => r.Id == id);
         }
 
+        public async Task<Recording?> GetByIdWithTranscriptAsync(Guid id)
+        {
+            return await _set
+                .Include(r => r.Transcript)
+                .FirstOrDefaultAsync(r => r.Id == id);
+        }
+
         public async Task<Recording?> GetByReportIdAsync(int reportId)
         {
             // Report (1-1) -> DefenseSession (1-1) -> Transcript (1-1) -> Recording
@@ -40,6 +48,18 @@ namespace AIDefCom.Repository.Repositories.RecordingRepository
                 .Include(r => r.Transcript)
                 .Include(r => r.User)
                 .FirstOrDefaultAsync(r => r.TranscriptId == transcriptId);
+        }
+
+        public async Task<int?> GetReportIdByRecordingIdAsync(Guid recordingId)
+        {
+            // Recording -> Transcript -> Session -> Report
+            var recording = await _set
+                .Include(r => r.Transcript)
+                    .ThenInclude(t => t!.Session)
+                        .ThenInclude(s => s!.Report)
+                .FirstOrDefaultAsync(r => r.Id == recordingId);
+
+            return recording?.Transcript?.Session?.Report?.Id;
         }
 
         public async Task AddAsync(Recording entity)
