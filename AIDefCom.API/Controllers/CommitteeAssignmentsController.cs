@@ -12,7 +12,7 @@ namespace AIDefCom.API.Controllers
     /// </summary>
     [Route("api/committee-assignments")]
     [ApiController]
-    [Authorize(Roles = "Admin,Moderator")] // Default: Admin và Moderator có quyền truy cập
+    [Authorize(Roles = "Admin,Moderator,Lecturer")] 
     public class CommitteeAssignmentsController : ControllerBase
     {
         private readonly ICommitteeAssignmentService _service;

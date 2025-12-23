@@ -78,7 +78,8 @@ namespace AIDefCom.API.Mapper
             CreateMap<MemberNote, MemberNoteReadDto>()
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.CommitteeAssignment!.Lecturer!.FullName))
                 .ForMember(dest => dest.CommitteeAssignmentId, opt => opt.MapFrom(src => src.CommitteeAssignmentId));
-            CreateMap<MemberNoteCreateDto, MemberNote>();
+            // Note: MemberNoteCreateDto -> MemberNote mapping removed because AddAsync manually creates the entity
+            // using LecturerId and SessionId to lookup CommitteeAssignmentId
             CreateMap<MemberNoteUpdateDto, MemberNote>();
 
             CreateMap<Council, CouncilReadDto>()
