@@ -16,7 +16,6 @@ namespace AIDefCom.API.Controllers
     /// </summary>
     [Route("api/defense-reports")]
     [ApiController]
-    [Authorize] // Tất cả endpoints yêu cầu authenticated
     public class DefenseReportsController : ControllerBase
     {
         private readonly IDefenseReportService _reportService;
@@ -60,7 +59,6 @@ namespace AIDefCom.API.Controllers
         /// </summary>
         /// <param name="file">Document file (.pdf, .doc, .docx)</param>
         /// <returns>File information with download URL</returns>
-        [Authorize(Roles = "Admin,Moderator,Lecturer")]
         [HttpPost("upload-pdf")]
         [Consumes("multipart/form-data")]
         [ProducesResponseType(typeof(ApiResponse<FileUploadResponseDto>), StatusCodes.Status200OK)]
