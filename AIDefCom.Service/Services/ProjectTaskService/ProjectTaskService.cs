@@ -117,16 +117,14 @@ namespace AIDefCom.Service.Services.ProjectTaskService
             }
 
             // ✅ Validate AssignedById - If dto contains LecturerId, find CommitteeAssignment
-            var assignedByList = await _uow.CommitteeAssignments.GetByLecturerIdAsync(dto.AssignedById);
-            var assignedBy = assignedByList.FirstOrDefault();
+            var assignedBy = await _uow.CommitteeAssignments.GetByLecturerIdAndSessionIdAsync(dto.AssignedById, dto.SessionId);
             if (assignedBy == null)
             {
                 throw new ArgumentException($"No active CommitteeAssignment found for Lecturer ID '{dto.AssignedById}' (AssignedById)");
             }
 
             // ✅ Validate AssignedToId - If dto contains LecturerId, find CommitteeAssignment
-            var assignedToList = await _uow.CommitteeAssignments.GetByLecturerIdAsync(dto.AssignedToId);
-            var assignedTo = assignedToList.FirstOrDefault();
+            var assignedTo = await _uow.CommitteeAssignments.GetByLecturerIdAndSessionIdAsync(dto.AssignedToId, dto.SessionId);
             if (assignedTo == null)
             {
                 throw new ArgumentException($"No active CommitteeAssignment found for Lecturer ID '{dto.AssignedToId}' (AssignedToId)");
