@@ -8,6 +8,7 @@ namespace AIDefCom.Service.Services.RecordingService
         Task<(Guid recordingId, Uri uploadUri, string blobUrl, string blobPath)> BeginUploadAsync(string userId, string mimeType);
         Task FinalizeAsync(Guid recordingId, int durationSec, long sizeBytes, string? notes, int transcriptId);
         Task<Uri> GetReadSasAsync(Guid recordingId, TimeSpan ttl);
+        Task<Uri> GetDownloadSasAsync(Guid recordingId, TimeSpan ttl);
         Task<RecordingDto?> GetRecordingByReportIdAsync(int reportId);
     }
 

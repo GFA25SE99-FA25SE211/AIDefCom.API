@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.IO;
 using System.Threading.Tasks;
 using Azure.Storage;
 using Azure.Storage.Blobs;
@@ -81,6 +82,30 @@ namespace AIDefCom.Service.Services.RecordingService
                 Resource = "b",
                 StartsOn = DateTimeOffset.UtcNow.AddMinutes(-5),
                 ExpiresOn = DateTimeOffset.UtcNow.Add(ttl <= TimeSpan.Zero ? _defaultTtl : ttl)
+            };
+            sasBuilder.SetPermissions(BlobSasPermissions.Read);
+
+            return GenerateBlobSasUri(blobClient, sasBuilder);
+        }
+
+        // Create a download SAS for an existing blob path with Content-Disposition attachment
+        public async Task<Uri> CreateDownloadSasAsync(string blobPath, TimeSpan ttl, string fileName)
+        {
+            if (string.IsNullOrWhiteSpace(blobPath)) throw new ArgumentException("blobPath is required", nameof(blobPath));
+
+            var container = _blobServiceClient.GetBlobContainerClient(_containerName);
+            await container.CreateIfNotExistsAsync();
+
+            var blobClient = container.GetBlobClient(blobPath);
+
+            var sasBuilder = new BlobSasBuilder
+            {
+                BlobContainerName = _containerName,
+                BlobName = blobPath,
+                Resource = "b",
+                StartsOn = DateTimeOffset.UtcNow.AddMinutes(-5),
+                ExpiresOn = DateTimeOffset.UtcNow.Add(ttl <= TimeSpan.Zero ? _defaultTtl : ttl),
+                ContentDisposition = $"attachment; filename={fileName}"
             };
             sasBuilder.SetPermissions(BlobSasPermissions.Read);
 

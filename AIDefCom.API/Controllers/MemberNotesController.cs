@@ -84,7 +84,7 @@ namespace AIDefCom.API.Controllers
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] MemberNoteCreateDto dto)
         {
-            _logger.LogInformation("Creating new member note for session {SessionId} by committee assignment {CommitteeAssignmentId}", dto.SessionId, dto.CommitteeAssignmentId);
+            _logger.LogInformation("Creating new member note for session {SessionId} by lecturer {LecturerId}", dto.SessionId, dto.LecturerId);
             var id = await _service.AddAsync(dto);
             var created = await _service.GetByIdAsync(id);
             _logger.LogInformation("Member note created with ID: {Id}", id);

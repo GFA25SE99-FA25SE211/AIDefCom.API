@@ -3,6 +3,7 @@ using AIDefCom.Service.Dto.Common;
 using AIDefCom.Service.Dto.DefenseReport;
 using AIDefCom.Service.Services.DefenseReportService;
 using AIDefCom.Service.Services.FileStorageService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;

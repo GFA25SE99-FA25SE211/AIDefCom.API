@@ -1,6 +1,7 @@
 ﻿using AIDefCom.Repository.Entities;
 using AIDefCom.Repository.UnitOfWork;
 using AIDefCom.Service.Dto.MemberNote;
+using AIDefCom.Service.Services.CommitteeAssignmentService;
 using AutoMapper;
 using System;
 using System.Collections.Generic;
@@ -14,11 +15,13 @@ namespace AIDefCom.Service.Services.MemberNoteService
     {
         private readonly IUnitOfWork _uow;
         private readonly IMapper _mapper;
+        private readonly ICommitteeAssignmentService _committeeAssignmentService;
 
-        public MemberNoteService(IUnitOfWork uow, IMapper mapper)
+        public MemberNoteService(IUnitOfWork uow, IMapper mapper, ICommitteeAssignmentService committeeAssignmentService)
         {
             _uow = uow;
             _mapper = mapper;
+            _committeeAssignmentService = committeeAssignmentService;
         }
 
         public async Task<IEnumerable<MemberNoteReadDto>> GetAllAsync()
@@ -55,8 +58,21 @@ namespace AIDefCom.Service.Services.MemberNoteService
 
         public async Task<int> AddAsync(MemberNoteCreateDto dto)
         {
-            var entity = _mapper.Map<MemberNote>(dto);
-            entity.CreatedAt = DateTime.UtcNow;
+            // Get CommitteeAssignmentId from LecturerId and SessionId
+            var committeeAssignmentId = await _committeeAssignmentService.GetIdByLecturerIdAndSessionIdAsync(dto.LecturerId, dto.SessionId);
+            
+            if (string.IsNullOrEmpty(committeeAssignmentId))
+            {
+                throw new KeyNotFoundException($"No committee assignment found for lecturer '{dto.LecturerId}' in session {dto.SessionId}. The lecturer must be assigned to the council for this defense session.");
+            }
+
+            var entity = new MemberNote
+            {
+                CommitteeAssignmentId = committeeAssignmentId,
+                SessionId = dto.SessionId,
+                NoteContent = dto.NoteContent,
+                CreatedAt = DateTime.UtcNow
+            };
 
             await _uow.MemberNotes.AddAsync(entity);
             await _uow.SaveChangesAsync();
