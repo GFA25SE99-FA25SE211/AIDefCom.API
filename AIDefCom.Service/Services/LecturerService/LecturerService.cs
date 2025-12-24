@@ -164,6 +164,20 @@ namespace AIDefCom.Service.Services.LecturerService
                 var academicRank = worksheet.Cells[row, 8].Text?.Trim();
                 var degree = worksheet.Cells[row, 9].Text?.Trim();
 
+                // BỎ QUA DÒNG TRỐNG
+                if (string.IsNullOrWhiteSpace(userName) &&
+                    string.IsNullOrWhiteSpace(email) &&
+                    string.IsNullOrWhiteSpace(fullName) &&
+                    string.IsNullOrWhiteSpace(dateOfBirthStr) &&
+                    string.IsNullOrWhiteSpace(gender) &&
+                    string.IsNullOrWhiteSpace(phoneNumber) &&
+                    string.IsNullOrWhiteSpace(department) &&
+                    string.IsNullOrWhiteSpace(academicRank) &&
+                    string.IsNullOrWhiteSpace(degree))
+                {
+                    continue;
+                }
+
                 // Validation 1: Required fields
                 if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(fullName))
                 {

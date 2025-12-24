@@ -589,6 +589,19 @@ namespace AIDefCom.Service.Services.StudentService
                 var topicTitleEN = worksheet.Cells[row, 7].Text?.Trim();
                 var topicTitleVN = worksheet.Cells[row, 8].Text?.Trim();
 
+                // BỎ QUA DÒNG TRỐNG
+                if (string.IsNullOrEmpty(mssv) &&
+                    string.IsNullOrEmpty(fullName) &&
+                    string.IsNullOrEmpty(email) &&
+                    string.IsNullOrEmpty(roleInGroup) &&
+                    string.IsNullOrEmpty(groupCode) &&
+                    string.IsNullOrEmpty(projectCode) &&
+                    string.IsNullOrEmpty(topicTitleEN) &&
+                    string.IsNullOrEmpty(topicTitleVN))
+                {
+                    continue;
+                }
+
                 // ✅ VALIDATION: Required fields
                 var missingFields = new List<string>();
                 if (string.IsNullOrEmpty(mssv)) missingFields.Add("MSSV");
