@@ -16,5 +16,6 @@ namespace AIDefCom.Repository.Repositories.StudentRepository
         Task AddAsync(Student student);
         Task UpdateAsync(Student student);
         Task DeleteAsync(string id);
+        IQueryable<Student> Query(); // Add Query method for advanced queries
     }
 }
