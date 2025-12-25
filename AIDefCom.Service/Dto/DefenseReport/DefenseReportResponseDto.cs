@@ -145,95 +145,76 @@ namespace AIDefCom.Service.Dto.DefenseReport
         [JsonPropertyName("actualEndTime")]
         public string? ActualEndTime { get; set; }
 
-        // Student presentations summary
+        /// <summary>
+        /// Tóm tắt phần trình bày của nhóm/sinh viên
+        /// </summary>
         [JsonPropertyName("studentPresentations")]
         public List<StudentPresentationDto> StudentPresentations { get; set; } = new();
 
-        // Questions and answers summary
+        /// <summary>
+        /// Câu hỏi từ Hội đồng và Nội dung trả lời từ Nhóm
+        /// </summary>
         [JsonPropertyName("questionsAndAnswers")]
         public List<QuestionAnswerDto> QuestionsAndAnswers { get; set; } = new();
 
         // Overall summary from AI
         [JsonPropertyName("overallSummary")]
         public string? OverallSummary { get; set; }
-
-        // Student performance evaluation
-        [JsonPropertyName("studentPerformance")]
-        public string? StudentPerformance { get; set; }
-
-        // Main discussion topics
-        [JsonPropertyName("discussionFocus")]
-        public string? DiscussionFocus { get; set; }
     }
 
     /// <summary>
-    /// Individual student presentation (AI analyzed)
+    /// Tóm tắt phần trình bày của sinh viên
+    /// Format: Sinh viên | Nội dung trình bày
     /// </summary>
     public class StudentPresentationDto
     {
+        /// <summary>
+        /// Tên sinh viên
+        /// </summary>
         [JsonPropertyName("studentName")]
         public string StudentName { get; set; } = string.Empty;
 
-        [JsonPropertyName("presentationContent")]
-        public List<string> PresentationContent { get; set; } = new();
-
-        [JsonPropertyName("presentationQuality")]
-        public string? PresentationQuality { get; set; } // Clear/Good/Needs improvement
-
-        [JsonPropertyName("notes")]
-        public string? Notes { get; set; } // Special notes about presentation
+        /// <summary>
+        /// Nội dung trình bày - danh sách các ý chính (bullet points)
+        /// </summary>
+        [JsonPropertyName("presentationPoints")]
+        public List<string> PresentationPoints { get; set; } = new();
     }
 
     /// <summary>
-    /// Question from council and answer from group (AI analyzed) - DETAILED VERSION
+    /// Câu hỏi từ Hội đồng và Nội dung trả lời từ Nhóm
+    /// Format: Câu hỏi từ Hội đồng | Nội dung trả lời từ Nhóm
     /// </summary>
     public class QuestionAnswerDto
     {
-        [JsonPropertyName("lecturer")]
-        public string Lecturer { get; set; } = string.Empty;
+        /// <summary>
+        /// Tên giảng viên đặt câu hỏi
+        /// </summary>
+        [JsonPropertyName("lecturerName")]
+        public string LecturerName { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Nội dung câu hỏi (tóm tắt)
+        /// </summary>
         [JsonPropertyName("question")]
         public string Question { get; set; } = string.Empty;
 
-        [JsonPropertyName("respondent")]
-        public string Respondent { get; set; } = string.Empty; // Student name or "Group"
+        /// <summary>
+        /// Tên sinh viên trả lời
+        /// </summary>
+        [JsonPropertyName("respondentName")]
+        public string RespondentName { get; set; } = string.Empty;
 
-        [JsonPropertyName("answerContent")]
-        public string AnswerContent { get; set; } = string.Empty; // Full summary of answer with arguments and evidence
+        /// <summary>
+        /// Nội dung trả lời - danh sách các ý chính (bullet points)
+        /// </summary>
+        [JsonPropertyName("answerPoints")]
+        public List<string> AnswerPoints { get; set; } = new();
 
+        /// <summary>
+        /// Nhận xét/thảo luận của Hội đồng về câu trả lời
+        /// </summary>
         [JsonPropertyName("councilDiscussion")]
-        public string? CouncilDiscussion { get; set; } // Council's reaction and discussion about the answer
-
-        [JsonPropertyName("lecturerFollowUp")]
-        public string? LecturerFollowUp { get; set; } // Follow-up from lecturer: explanation, correction, hints, or next question
-
-        [JsonPropertyName("answerQuality")]
-        public string AnswerQuality { get; set; } = string.Empty;
-        // "Trả lời xuất sắc" - Excellent answer
-        // "Trả lời tốt" - Good answer
-        // "Trả lời khá" - Fair answer
-        // "Trả lời yếu" - Weak answer
-        // "Trả lời sai" - Wrong answer
-        // "Không trả lời được" - Unable to answer
-        // "Trả lời sau khi được gợi ý" - Answered after hints
-        // "Không nhận được phản hồi" - No response received
-
-        [JsonPropertyName("answerAttitude")]
-        public string? AnswerAttitude { get; set; }
-        // "Tự tin, lưu loát" - Confident, fluent
-        // "Do dự, ngập ngừng" - Hesitant, stammering
-        // "Cần suy nghĩ lâu" - Needed time to think
-        // "Không chắc chắn" - Not confident
-        // "N/A" - Not applicable
-
-        [JsonPropertyName("finalOutcome")]
-        public string? FinalOutcome { get; set; }
-        // "Câu trả lời được chấp nhận" - Answer accepted
-        // "Cần bổ sung thêm" - Needs more information
-        // "Chưa thỏa đáng" - Not satisfactory
-        // "Vấn đề vẫn còn tồn đọng" - Issue still pending
-
-        [JsonPropertyName("additionalNotes")]
-        public string? AdditionalNotes { get; set; } // Extra notes based on transcript
+        public string? CouncilDiscussion { get; set; }
     }
 }
