@@ -76,10 +76,17 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
         }
 
         public async Task DeleteAsync(int id)
-        {
-            var note = await _set.FindAsync(id);
-            if (note != null)
-                _set.Remove(note);
+            {
+                var note = await _set.FindAsync(id);
+                if (note != null)
+                    _set.Remove(note);
+            }
+
+            public async Task HardDeleteBySessionIdsAsync(IEnumerable<int> sessionIds)
+            {
+                var entities = await _set.Where(x => sessionIds.Contains(x.SessionId)).ToListAsync();
+                if (entities.Any())
+                    _set.RemoveRange(entities);
+            }
         }
-    }
 }

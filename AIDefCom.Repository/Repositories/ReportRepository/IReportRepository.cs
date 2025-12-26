@@ -14,7 +14,8 @@ namespace AIDefCom.Repository.Repositories.ReportRepository
         Task<IEnumerable<Report>> GetBySessionIdAsync(int sessionId);
         Task<IEnumerable<Report>> GetByLecturerIdAsync(string lecturerId);
         Task AddAsync(Report report);
-        Task UpdateAsync(Report report);
-        Task DeleteAsync(int id);
-    }
+            Task UpdateAsync(Report report);
+            Task DeleteAsync(int id);
+            Task HardDeleteBySessionIdsAsync(IEnumerable<int> sessionIds);
+        }
 }

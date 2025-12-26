@@ -14,7 +14,8 @@ namespace AIDefCom.Repository.Repositories.MemberNoteRepository
         Task<IEnumerable<MemberNote>> GetBySessionIdAsync(int sessionId);
         Task<IEnumerable<MemberNote>> GetByUserIdAsync(string userId);
         Task AddAsync(MemberNote note);
-        Task UpdateAsync(MemberNote note);
-        Task DeleteAsync(int id);
-    }
+            Task UpdateAsync(MemberNote note);
+            Task DeleteAsync(int id);
+            Task HardDeleteBySessionIdsAsync(IEnumerable<int> sessionIds);
+        }
 }

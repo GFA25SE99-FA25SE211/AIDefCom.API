@@ -1,4 +1,4 @@
-using AIDefCom.Repository.Entities;
+﻿using AIDefCom.Repository.Entities;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,6 +17,7 @@ namespace AIDefCom.Repository.Repositories.ScoreRepository
         Task AddAsync(Score score);
         Task UpdateAsync(Score score);
         Task DeleteAsync(int id);
+        Task HardDeleteBySessionIdsAsync(IEnumerable<int> sessionIds);
         IQueryable<Score> Query();
     }
 }

@@ -1,4 +1,4 @@
-using AIDefCom.Repository.Entities;
+﻿using AIDefCom.Repository.Entities;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
@@ -60,6 +60,13 @@ namespace AIDefCom.Repository.Repositories.TranscriptRepository
         {
             var entity = await _set.FindAsync(id);
             if (entity != null) _set.Remove(entity);
+        }
+
+        public async Task HardDeleteBySessionIdsAsync(IEnumerable<int> sessionIds)
+        {
+            var entities = await _set.Where(x => sessionIds.Contains(x.SessionId)).ToListAsync();
+            if (entities.Any())
+                _set.RemoveRange(entities);
         }
 
         public async Task<bool> ExistsByIdAsync(int id)

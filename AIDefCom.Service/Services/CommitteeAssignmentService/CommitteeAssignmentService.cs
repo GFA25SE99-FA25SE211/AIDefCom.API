@@ -2,6 +2,7 @@
 using AIDefCom.Repository.UnitOfWork;
 using AIDefCom.Service.Dto.CommitteeAssignment;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -125,6 +126,9 @@ namespace AIDefCom.Service.Services.CommitteeAssignmentService
             if (!council.IsActive)
                 throw new InvalidOperationException($"Cannot assign to inactive Council {dto.CouncilId}. Please activate the council first.");
 
+            // ✅ NEW: Check for schedule conflicts with other councils the lecturer is assigned to
+            await ValidateLecturerScheduleConflictAsync(dto.LecturerId, dto.CouncilId, lecturer.FullName);
+
             var entity = _mapper.Map<CommitteeAssignment>(dto);
             entity.Id = Guid.NewGuid().ToString();
             entity.IsDeleted = false;
@@ -194,6 +198,12 @@ namespace AIDefCom.Service.Services.CommitteeAssignmentService
             if (hasActiveTasks && (existing.LecturerId != dto.LecturerId || existing.CouncilId != dto.CouncilId))
                 throw new InvalidOperationException(
                     $"Cannot change Lecturer or Council for this assignment because it has associated project tasks. Please remove or reassign the tasks first.");
+
+            // ✅ NEW: Check for schedule conflicts when changing lecturer or council
+            if (existing.LecturerId != dto.LecturerId || existing.CouncilId != dto.CouncilId)
+            {
+                await ValidateLecturerScheduleConflictAsync(dto.LecturerId, dto.CouncilId, lecturer.FullName, id);
+            }
 
             _mapper.Map(dto, existing);
             await _uow.CommitteeAssignments.UpdateAsync(existing);
@@ -296,9 +306,95 @@ namespace AIDefCom.Service.Services.CommitteeAssignmentService
                 throw new InvalidOperationException(
                     $"Cannot restore this assignment because Council {existing.CouncilId} is inactive. Please activate the council first.");
 
+            // ✅ NEW: Check for schedule conflicts when restoring
+            await ValidateLecturerScheduleConflictAsync(existing.LecturerId, existing.CouncilId, lecturer.FullName, id);
+
             await _uow.CommitteeAssignments.RestoreAsync(id);
             await _uow.SaveChangesAsync();
             return true;
+        }
+
+        /// <summary>
+        /// Validates that a lecturer doesn't have schedule conflicts with defense sessions
+        /// from other councils they are already assigned to.
+        /// </summary>
+        /// <param name="lecturerId">The lecturer ID to check</param>
+        /// <param name="newCouncilId">The council ID being assigned to</param>
+        /// <param name="lecturerName">The lecturer's name for error messages</param>
+        /// <param name="excludeAssignmentId">Optional: Assignment ID to exclude (for updates)</param>
+        private async Task ValidateLecturerScheduleConflictAsync(
+            string lecturerId, 
+            int newCouncilId, 
+            string lecturerName, 
+            string? excludeAssignmentId = null)
+        {
+            // Get all councils the lecturer is currently assigned to (excluding the one being updated)
+            var lecturerAssignments = await _uow.CommitteeAssignments.GetByLecturerIdAsync(lecturerId);
+            var existingCouncilIds = lecturerAssignments
+                .Where(a => !a.IsDeleted && 
+                           a.CouncilId != newCouncilId &&
+                           (excludeAssignmentId == null || a.Id != excludeAssignmentId))
+                .Select(a => a.CouncilId)
+                .Distinct()
+                .ToList();
+
+            if (!existingCouncilIds.Any())
+                return; // No existing assignments to other councils, no conflict possible
+
+            // Get all active defense sessions for the new council
+            var newCouncilSessions = await _uow.DefenseSessions.Query()
+                .Where(s => s.CouncilId == newCouncilId && 
+                           !s.IsDeleted && 
+                           s.Status != "Cancelled" && 
+                           s.Status != "Completed")
+                .ToListAsync();
+
+            if (!newCouncilSessions.Any())
+                return; // No active sessions in the new council, no conflict possible
+
+            // Get all active defense sessions for the lecturer's existing councils
+            var existingSessions = await _uow.DefenseSessions.Query()
+                .Where(s => existingCouncilIds.Contains(s.CouncilId) && 
+                           !s.IsDeleted && 
+                           s.Status != "Cancelled" && 
+                           s.Status != "Completed")
+                .ToListAsync();
+
+            if (!existingSessions.Any())
+                return; // No active sessions in existing councils, no conflict possible
+
+            // Check for time overlaps between new council sessions and existing council sessions
+            foreach (var newSession in newCouncilSessions)
+            {
+                foreach (var existingSession in existingSessions)
+                {
+                    // Check if same date
+                    if (newSession.DefenseDate.Date == existingSession.DefenseDate.Date)
+                    {
+                        // Check if time ranges overlap
+                        if (TimeRangesOverlap(newSession.StartTime, newSession.EndTime, 
+                                              existingSession.StartTime, existingSession.EndTime))
+                        {
+                            throw new InvalidOperationException(
+                                $"Cannot assign lecturer '{lecturerName}' to Council {newCouncilId}. " +
+                                $"Schedule conflict detected: " +
+                                $"Council {newCouncilId} has a defense session on {newSession.DefenseDate:dd/MM/yyyy} " +
+                                $"({newSession.StartTime:hh\\:mm}-{newSession.EndTime:hh\\:mm}), " +
+                                $"but the lecturer is already assigned to Council {existingSession.CouncilId} " +
+                                $"which has a session at the same time " +
+                                $"({existingSession.StartTime:hh\\:mm}-{existingSession.EndTime:hh\\:mm}).");
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Checks if two time ranges overlap
+        /// </summary>
+        private bool TimeRangesOverlap(TimeSpan start1, TimeSpan end1, TimeSpan start2, TimeSpan end2)
+        {
+            return start1 < end2 && end1 > start2;
         }
     }
 }
