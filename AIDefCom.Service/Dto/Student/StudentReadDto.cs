@@ -14,5 +14,6 @@ namespace AIDefCom.Service.Dto.Student
         public DateTime? DateOfBirth { get; set; }
         public string? Gender { get; set; }
         public string? GroupId { get; set; }
+        public string? GroupRole { get; set; } // Role của student trong group (Leader, Member)
     }
 }

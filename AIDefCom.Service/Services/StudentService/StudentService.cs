@@ -47,17 +47,22 @@ namespace AIDefCom.Service.Services.StudentService
         {
             var list = await _uow.Students.GetAllAsync();
             
-            // Lấy tất cả StudentGroup để mapping GroupId
+            // Lấy tất cả StudentGroup để mapping GroupId và GroupRole
             var allStudentGroups = await _uow.StudentGroups.GetAllAsync();
             
-            return list.Select(s => new StudentReadDto
+            return list.Select(s => 
             {
-                Id = s.Id,
-                UserName = s.FullName,
-                Email = s.Email,
-                DateOfBirth = s.DateOfBirth,
-                Gender = s.Gender,
-                GroupId = allStudentGroups.FirstOrDefault(sg => sg.UserId == s.Id)?.GroupId
+                var studentGroup = allStudentGroups.FirstOrDefault(sg => sg.UserId == s.Id);
+                return new StudentReadDto
+                {
+                    Id = s.Id,
+                    UserName = s.FullName,
+                    Email = s.Email,
+                    DateOfBirth = s.DateOfBirth,
+                    Gender = s.Gender,
+                    GroupId = studentGroup?.GroupId,
+                    GroupRole = studentGroup?.GroupRole
+                };
             });
         }
 
@@ -69,8 +74,32 @@ namespace AIDefCom.Service.Services.StudentService
 
         public async Task<IEnumerable<StudentReadDto>> GetByGroupIdAsync(string groupId)
         {
-            var list = await _uow.Students.GetByGroupIdAsync(groupId);
-            return _mapper.Map<IEnumerable<StudentReadDto>>(list);
+            // Lấy StudentGroups để có GroupRole
+            var studentGroups = await _uow.StudentGroups.GetByGroupIdAsync(groupId);
+            
+            // Lấy danh sách student IDs
+            var studentIds = studentGroups.Select(sg => sg.UserId).ToList();
+            
+            // Lấy students
+            var students = await _uow.Students.Query()
+                .Where(s => studentIds.Contains(s.Id))
+                .ToListAsync();
+            
+            // Map kết quả và gắn GroupRole từ StudentGroup
+            return students.Select(s => 
+            {
+                var studentGroup = studentGroups.FirstOrDefault(sg => sg.UserId == s.Id);
+                return new StudentReadDto
+                {
+                    Id = s.Id,
+                    UserName = s.FullName,
+                    Email = s.Email,
+                    DateOfBirth = s.DateOfBirth,
+                    Gender = s.Gender,
+                    GroupId = groupId,
+                    GroupRole = studentGroup?.GroupRole
+                };
+            });
         }
 
         public async Task<IEnumerable<StudentReadDto>> GetByUserIdAsync(string userId)

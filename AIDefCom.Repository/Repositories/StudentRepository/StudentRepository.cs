@@ -76,5 +76,10 @@ namespace AIDefCom.Repository.Repositories.StudentRepository
             if (entity != null)
                 _set.Remove(entity);
         }
+
+        public IQueryable<Student> Query()
+        {
+            return _set.AsQueryable();
+        }
     }
 }
