@@ -137,6 +137,13 @@ namespace AIDefCom.Repository.Repositories.DefenseSessionRepository
                 _set.Remove(entity);
         }
 
+        public async Task HardDeleteByGroupIdAsync(string groupId)
+        {
+            var entities = await _set.Where(x => x.GroupId == groupId).ToListAsync();
+            if (entities.Any())
+                _set.RemoveRange(entities);
+        }
+
         public async Task SoftDeleteAsync(int id)
         {
             var entity = await _set.FirstOrDefaultAsync(x => x.Id == id);

@@ -125,15 +125,21 @@ namespace AIDefCom.Service.Services.GroupService
             if (existing == null) 
                 return false;
 
-            // Check if group has defense sessions
-            var defenseSessions = await _uow.DefenseSessions.GetByGroupIdAsync(id);
-            if (defenseSessions.Any())
-                throw new InvalidOperationException($"Cannot delete group '{existing.ProjectCode}' because it has defense sessions. Please remove defense sessions first.");
-
             // Check if group has students
             var studentGroups = await _uow.StudentGroups.GetByGroupIdAsync(id);
             if (studentGroups.Any())
                 throw new InvalidOperationException($"Cannot delete group '{existing.ProjectCode}' because it has {studentGroups.Count()} student(s) assigned. Please remove students first.");
+
+            // Check defense sessions - only allow delete if all are Cancelled
+            var defenseSessions = await _uow.DefenseSessions.GetByGroupIdAsync(id);
+            var nonCancelledSessions = defenseSessions.Where(ds => ds.Status != "Cancelled").ToList();
+            
+            if (nonCancelledSessions.Any())
+                throw new InvalidOperationException($"Cannot delete group '{existing.ProjectCode}' because it has defense sessions. Please remove defense sessions first.");
+
+            // Hard delete all cancelled defense sessions for this group (cascade delete)
+            if (defenseSessions.Any())
+                await _uow.DefenseSessions.HardDeleteByGroupIdAsync(id);
 
             await _uow.Groups.DeleteAsync(id);
             await _uow.SaveChangesAsync();
