@@ -16,6 +16,7 @@ namespace AIDefCom.Repository.Repositories.DefenseSessionRepository
         Task AddAsync(DefenseSession session);
         Task UpdateAsync(DefenseSession session);
         Task DeleteAsync(int id);
+        Task HardDeleteByGroupIdAsync(string groupId);
         Task SoftDeleteAsync(int id);
         Task RestoreAsync(int id);
         IQueryable<DefenseSession> Query();
