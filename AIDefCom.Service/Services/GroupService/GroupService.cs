@@ -2,6 +2,7 @@
 using AIDefCom.Repository.UnitOfWork;
 using AIDefCom.Service.Dto.Group;
 using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -130,16 +131,38 @@ namespace AIDefCom.Service.Services.GroupService
             if (studentGroups.Any())
                 throw new InvalidOperationException($"Cannot delete group '{existing.ProjectCode}' because it has {studentGroups.Count()} student(s) assigned. Please remove students first.");
 
-            // Check defense sessions - only allow delete if all are Cancelled
+            // Check defense sessions - only allow delete if all are Cancelled or soft deleted
             var defenseSessions = await _uow.DefenseSessions.GetByGroupIdAsync(id);
             var nonCancelledSessions = defenseSessions.Where(ds => ds.Status != "Cancelled").ToList();
             
             if (nonCancelledSessions.Any())
-                throw new InvalidOperationException($"Cannot delete group '{existing.ProjectCode}' because it has defense sessions. Please remove defense sessions first.");
+                throw new InvalidOperationException($"Cannot delete group '{existing.ProjectCode}' because it has {nonCancelledSessions.Count} active defense session(s) (status not 'Cancelled'). Please cancel all defense sessions first.");
 
-            // Hard delete all cancelled defense sessions for this group (cascade delete)
-            if (defenseSessions.Any())
+            // Get all defense session IDs (including soft-deleted ones) for cascade delete
+            var allDefenseSessions = await _uow.DefenseSessions.Query()
+                .Where(ds => ds.GroupId == id)
+                .ToListAsync();
+
+            if (allDefenseSessions.Any())
+            {
+                var sessionIds = allDefenseSessions.Select(ds => ds.Id).ToList();
+
+                // Cascade delete all related entities before deleting defense sessions
+                // 1. Delete all Scores related to these sessions
+                await _uow.Scores.HardDeleteBySessionIdsAsync(sessionIds);
+
+                // 2. Delete all Reports related to these sessions
+                await _uow.Reports.HardDeleteBySessionIdsAsync(sessionIds);
+
+                // 3. Delete all Transcripts related to these sessions
+                await _uow.Transcripts.HardDeleteBySessionIdsAsync(sessionIds);
+
+                // 4. Delete all MemberNotes related to these sessions
+                await _uow.MemberNotes.HardDeleteBySessionIdsAsync(sessionIds);
+
+                // 5. Finally, delete all defense sessions
                 await _uow.DefenseSessions.HardDeleteByGroupIdAsync(id);
+            }
 
             await _uow.Groups.DeleteAsync(id);
             await _uow.SaveChangesAsync();

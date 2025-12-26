@@ -74,10 +74,17 @@ namespace AIDefCom.Repository.Repositories.ReportRepository
         }
 
         public async Task DeleteAsync(int id)
-        {
-            var report = await _set.FindAsync(id);
-            if (report != null)
-                _set.Remove(report);
+            {
+                var report = await _set.FindAsync(id);
+                if (report != null)
+                    _set.Remove(report);
+            }
+
+            public async Task HardDeleteBySessionIdsAsync(IEnumerable<int> sessionIds)
+            {
+                var entities = await _set.Where(x => sessionIds.Contains(x.SessionId)).ToListAsync();
+                if (entities.Any())
+                    _set.RemoveRange(entities);
+            }
         }
-    }
 }

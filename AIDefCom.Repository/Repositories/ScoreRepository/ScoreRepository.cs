@@ -1,4 +1,4 @@
-using AIDefCom.Repository.Entities;
+﻿using AIDefCom.Repository.Entities;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -114,6 +114,13 @@ namespace AIDefCom.Repository.Repositories.ScoreRepository
             var entity = await _set.FindAsync(id);
             if (entity != null)
                 _set.Remove(entity);
+        }
+
+        public async Task HardDeleteBySessionIdsAsync(IEnumerable<int> sessionIds)
+        {
+            var entities = await _set.Where(x => sessionIds.Contains(x.SessionId)).ToListAsync();
+            if (entities.Any())
+                _set.RemoveRange(entities);
         }
 
         public IQueryable<Score> Query()
