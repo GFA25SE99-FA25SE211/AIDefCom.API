@@ -329,10 +329,15 @@ namespace AIDefCom.Service.Services.DefenseReportService
                 prompt.AppendLine();
                 prompt.AppendLine("**VÍ DỤ councilDiscussion:**");
                 prompt.AppendLine("- Có tranh luận: 'TS. Mai: KHÔNG ĐỒNG Ý, chỉ ra lỗi về message persistence. ThS. Nam: ĐỒNG Ý với cô Mai. Kết luận: Cần bổ sung durable queue.'");
-                prompt.AppendLine("- Đơn giản: 'ThS. Hùng: ĐỒNG Ý, câu trả lời đúng.'");
-                prompt.AppendLine("- Có hỏi thêm: 'ThS. Nam: Hỏi thêm về mock. Sau giải thích: ĐỒNG Ý.'");
+                prompt.AppendLine("- Có phản hồi tích cực: 'ThS. Hùng: Nhận xét câu trả lời ổn/đúng/hợp lý.'");
+                prompt.AppendLine("- Hỏi thêm rồi đồng ý: 'ThS. Nam: Hỏi thêm về mock. Sau khi sinh viên giải thích, thầy Nam nhận xét câu trả lời rõ ràng.'");
+                prompt.AppendLine("- Giảng viên im lặng (không nhận xét gì): 'Không có thảo luận'");
                 prompt.AppendLine();
-                prompt.AppendLine("**LƯU Ý:** councilDiscussion PHẢI có TÊN GIẢNG VIÊN cụ thể. Trả về JSON hợp lệ, KHÔNG markdown.");
+                prompt.AppendLine("**LƯU Ý QUAN TRỌNG về councilDiscussion:**");
+                prompt.AppendLine("- CHỈ ghi ý kiến khi giảng viên THỰC SỰ NÓI/NHẬN XÉT trong transcript");
+                prompt.AppendLine("- Nếu giảng viên im lặng hoặc không có phản hồi rõ ràng → ghi 'Không có thảo luận'");
+                prompt.AppendLine("- ĐỒNG Ý chỉ ghi khi giảng viên XÁC NHẬN rõ ràng (ổn, đúng, hợp lý, good, correct, etc.)");
+                prompt.AppendLine("- TUYỆT ĐỐI KHÔNG suy đoán ý kiến của giảng viên nếu không có trong transcript");
             
                 return prompt.ToString();
             }
